@@ -1,0 +1,32 @@
+Sponsorenlogos für die Herrenabend-App
+
+Logo-Dateien mit genau diesen Namen in diesen Ordner «logos» legen
+und den Ordner mit auf GitHub hochladen. Erlaubt: .png, .jpg, .svg oder .webp
+(z.B. brauerei-thun-ag.png). Ideal: querformatig, weisser oder transparenter Hintergrund, ca. 300×150 Pixel.
+Fehlt ein Logo, zeigt die App den Anfangsbuchstaben.
+
+anneler-hungerbuehler-ag.png   ← Anneler Hungerbühler AG
+autohaus-von-kaenel-ag.png   ← Autohaus von Känel AG
+brauerei-thun-ag.png   ← Brauerei Thun AG
+cta-ag.png   ← CTA AG
+enoteca-italia.png   ← Enoteca Italia
+frieden-ag-creative-design.png   ← Frieden AG – Creative Design
+grunder-treuhand.png   ← Grunder Treuhand
+hotspring-hewoo-ag.png   ← HotSpring Hewoo AG
+hoergeraete-aare-ag.png   ← Hörgeräte Aare AG
+in-memoria.png   ← In Memoria
+kilchherr-immobilien-ag.png   ← Kilchherr Immobilien AG
+kino-rex.png   ← Kino Rex
+krebser-ag.png   ← Krebser AG
+leumet-ag.png   ← LeuMet AG
+reda-line-ag.png   ← Reda Line AG
+refa-reymondin-ag.png   ← REFA Reymondin AG
+sabag-bern.png   ← Sabag Bern
+schmutz-soehne-ag.png   ← Schmutz Söhne AG
+schoder-messerschmiede.png   ← Schoder Messerschmiede
+stadtoptik-thun.png   ← Stadtoptik Thun
+tapisa-ag.png   ← Tapisa AG
+ubs-ag.png   ← UBS AG
+wpc-waermepumpencenter-ag.png   ← WPC WärmepumpenCenter AG
+zahntechnik-deckard.png   ← Zahntechnik Deckard
+zaugg-bau-ag.png   ← Zaugg Bau AG
