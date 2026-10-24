@@ -291,11 +291,11 @@ const PROG=[
   {p:"Apéro",z:"17:15",t:"Lautsprecher & Beleuchtung bereit",i:"Infrastruktur für Begrüssung",v:"Technik",int:1},
   {p:"Apéro",z:"17:45",t:"Saalöffnung – Einlass aller Gäste",i:"Platz siehe App oder Tischplan am Eingang",v:"Service-Leitung"},
   {p:"Apéro",z:"18:00",t:"Weinbestellung",i:"Bestellung pro Tisch über den Gruppen- bzw. Tischchef oder den Service",v:"Moderation"},
-  {p:"1. Teil",z:"18:30",t:"Nationalhymne mit Chor und Jodlern",i:"Text auf der Leinwand – alle singen mit",v:"Präsident"},
+  {p:"1. Teil",z:"18:30",t:"Nationalhymne mit Chor und Jodlern",i:"Mit den Tambouren · Text auf der Leinwand – alle singen mit",v:"Präsident"},
   {p:"1. Teil",z:"18:35",t:"Eröffnungslied & Begrüssung der Gäste",i:"Kein Getränkeservice während der Darbietung",v:"Präsident"},
-  {p:"1. Teil",z:"18:40",t:"1. Gesangsblock Männerchor",i:"Leitung Monika Nagy / Urs Schneiter",v:"Dirigentin"},
+  {p:"1. Teil",z:"18:40",t:"1. Gesangsblock Männerchor",i:"Leitung Monika Nagy / Urs Schneiter · mit den Tambouren",v:"Dirigentin"},
   {p:"1. Teil",z:"19:00",t:"Grussbotschaft Gemeinderat",i:"",v:"Präsident"},
-  {p:"1. Teil",z:"19:15",t:"2. Gesangsblock Gesamtchor",i:"Leitung Monika Nagy / Urs Schneiter · anschliessend Verdankung Dirigentin & Vize-Dirigenten",v:"Dirigentin"},
+  {p:"1. Teil",z:"19:15",t:"2. Gesangsblock Gesamtchor",i:"Leitung Monika Nagy / Urs Schneiter · mit den Tambouren · anschliessend Verdankung Dirigentin & Vize-Dirigenten",v:"Dirigentin"},
   {p:"2. Teil",z:"19:30",t:"Getränkeservice",i:"",v:"Service"},
   {p:"2. Teil",z:"19:45",t:"1. Vorspeise",i:"",v:"Service"},
   {p:"2. Teil",z:"20:05",t:"2. Vorspeise",i:"",v:"Service"},
@@ -309,19 +309,19 @@ const PROG=[
   {p:"2. Teil",z:"23:20",t:"Bechermupf",i:"Fahne, Kelch und Wein bereitgestellt",v:"Präsident"},
   {p:"2. Teil",z:"23:30",t:"Pause (45 Min.)",i:"Durchsage weiterer Verlauf & Angebot Reithalle",v:"Moderation"},
   {p:"3. Teil",z:"00:15",t:"Ankündigung Bierbar",i:"Durchsage via Lautsprecher",v:"Moderation"},
-  {p:"3. Teil",z:"00:30",t:"3. Teil: «Mau luege u lose»",i:"Lassen Sie sich überraschen!",v:"Dirigentin"},
+  {p:"3. Teil",z:"00:30",t:"3. Teil: «Mau luege u lose»",i:"Lassen Sie sich überraschen! · Schluss mit «Zapfenstreich» und den Tambouren",v:"Dirigentin"},
   {p:"3. Teil",z:"01:00",t:"Reithalle offen",i:"Suppen, Würstli, Bretzel, Thunbier",v:"Moderation"},
   {p:"3. Teil",z:"01:45",t:"Letzte Runde Bar Halle 0",i:"",v:"Service"},
   {p:"3. Teil",z:"02:00",t:"Schliessung Bar · Ausklang in der Reithalle",i:"Musik live",v:""},
 ];
 const SONGS=[
-  {b:"Eröffnung",t:"Schweizerpsalm (Nationalhymne)",w:"Chor & Jodler",sing:1,i:"Text auf der Leinwand"},
-  {b:"Eröffnung",t:null,w:"Männerchor",i:"Eröffnungslied"},
+  {b:"Eröffnung",t:"Schweizerpsalm (Nationalhymne)",w:"Chor, Jodler & Tambouren",sing:1,i:"Text auf der Leinwand"},
+  {b:"Eröffnung",t:null,w:"Männerchor & Tambouren",i:"Eröffnungslied"},
   {b:"1. Gesangsblock",t:null,w:"Männerchor"},{b:"1. Gesangsblock",t:null,w:"Männerchor"},{b:"1. Gesangsblock",t:null,w:"Männerchor"},
   {b:"2. Gesangsblock",t:null,w:"Gesamtchor"},{b:"2. Gesangsblock",t:null,w:"Gesamtchor"},{b:"2. Gesangsblock",t:null,w:"Gesamtchor"},
   {b:"Jodler",t:null,w:"Jodlerklub",i:"Zwei Lieder allein"},{b:"Jodler",t:null,w:"Jodler & Chor",i:"Gemeinsames Lied"},
   {b:"3. Teil",t:"Gemeinsames Singen",w:"Jodler, Chor & Publikum",sing:1},
-  {b:"Schluss",t:"«Zapfenstreich»",w:"Alle, mit Trommler",sing:1},
+  {b:"Schluss",t:"«Zapfenstreich»",w:"Alle, mit den Tambouren",sing:1},
 ];
 const MENU=[
   {z:"19:45",g:"Vorspeise",d:"Hummer Thermidor, begleitet von sämigem Weissweinrisotto"},
@@ -950,7 +950,7 @@ function artistList(list){let h="",grp="";for(const a of list){if(a.g!==grp){grp
 function vKuenstler(){
   return back()+`<h1>Gastmusiker & Solisten</h1><p class="muted">Wer neben dem Männerchor Thun musiziert – am Herrenabend und im Konzert vom November.</p>
   <div class="sec-h"><h2>Am Herrenabend</h2></div>
-  <p class="small muted" style="margin:-4px 0 4px">Die Tambouren begleiten unter anderem das Schlusslied «Zapfenstreich».</p>
+  <p class="small muted" style="margin:-4px 0 4px">Die beiden Tambouren wirken bei der Eröffnung, im Konzert des Männerchors und beim «Zapfenstreich» mit.</p>
   ${artistList(HA_ARTISTS)}
   <div class="sec-h" style="margin-top:28px"><h2>Konzert «${esc(CONCERT.titel)}»</h2></div>
   <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Männerchor Thun unter der Leitung von Monika Nagy</p>${CONCERT.daten.map(d=>`<h3 style="margin:0 0 4px">${esc(d)}</h3>`).join("")}
