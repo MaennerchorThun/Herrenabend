@@ -1195,8 +1195,11 @@ function vAdmin(){
     <input id="apf" class="input" placeholder="Funktion (optional, z.B. Gemeinderat Stadt Thun)" style="margin-top:8px">
     <button class="btn sm primary" style="margin-top:8px" data-act="addperson">Hinzufügen</button></div>`;
   if(LIVE)h+=`<div class="card"><h3>1. Zugangscodes importieren</h3><p class="muted small">CSV mit den Spalten <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>, <code>Login-Code für App</code> hochladen (die Liste aus dem Webling-Versand). Gespeichert werden nur Name und eine Prüfsumme des Codes – keine E-Mail-Adressen.</p>
-    <input type="file" id="codefile" accept=".csv,text/csv" class="input"></div>`;
-  h+=`<div class="card"><h3>${LIVE?"2. Teilnehmer importieren":"Import aus Webling"}</h3><p class="muted small">Webling-Export direkt hochladen (Spalten <code>Vorname</code>, <code>Name</code>, <code>Teilnahme Herrenabend</code>, <code>Herrenabend-Tisch</code>, <code>Gruppen</code>). Es werden nur Name, Gruppe und Typ übernommen – keine E-Mail, Telefon oder Bemerkungen. Die Gruppen werden danach automatisch auf die Tische verteilt.</p>
+    ${S.stats&&S.stats.with_code>2?`<div class="okmsg" style="margin:0 0 10px">✓ In der Datenbank: <b>${S.stats.members} Mitglieder</b>, ${S.stats.with_code} Zugangscodes insgesamt (inkl. Admin und Zusatzcodes).${S.codeInfo?`<br>Letzter Import: ${S.codeInfo.neu} neu, ${S.codeInfo.aktualisiert} aktualisiert.`:""}</div>`:""}
+    ${S.busy?`<div class="note">⏳ ${esc(S.busy)}</div>`:""}
+    <label class="small muted" for="codefile">CSV-Datei wählen – der Import startet automatisch:</label>
+    <input type="file" id="codefile" accept=".csv,text/csv" class="input" style="margin-top:4px"></div>`;
+  h+=`<div class="card"><h3>${LIVE?"2. Teilnehmer importieren":"Import aus Webling"}</h3>${LIVE&&S.busy?`<div class="note">⏳ ${esc(S.busy)}</div>`:""}<p class="muted small">Webling-Export direkt hochladen (Spalten <code>Vorname</code>, <code>Name</code>, <code>Teilnahme Herrenabend</code>, <code>Herrenabend-Tisch</code>, <code>Gruppen</code>). Es werden nur Name, Gruppe und Typ übernommen – keine E-Mail, Telefon oder Bemerkungen. Die Gruppen werden danach automatisch auf die Tische verteilt.</p>
     <input type="file" id="csvfile" accept=".csv,text/csv" class="input" style="margin-bottom:8px">
     <details><summary class="small muted" style="cursor:pointer">CSV-Text einfügen</summary><textarea id="csvtxt" class="input" style="margin-top:6px" placeholder="Vorname,Name,Teilnahme Herrenabend,Herrenabend-Tisch,Gruppen"></textarea>
     <button class="btn primary sm" style="margin-top:8px" data-act="import">Importieren</button></details>
@@ -1347,21 +1350,22 @@ async function doImportLive(txt){
     if(hd.some(h=>h.startsWith("login-code"))){
       const iI=hd.indexOf("mitglieder id"),iV=hd.indexOf("vorname"),iN=hd.indexOf("name"),iC=hd.findIndex(h=>h.startsWith("login-code"));
       const data=rows.slice(1).map(r=>({member_id:(r[iI]||"").trim(),vorname:(r[iV]||"").trim(),name:(r[iN]||"").trim(),code:(r[iC]||"").trim()})).filter(x=>x.member_id&&x.code);
-      toast("Codes werden importiert …");
+      if(!data.length){return toast("Keine Codes gefunden – Spalten «Mitglieder ID» und «Login-Code für App» nötig")}
+      S.busy=`${data.length} Zugangscodes werden importiert …`;render();
       const res=await rpc("admin_import_codes",{p_code:S.code,p_rows:data});
-      await loadLive();render();return toast(`Zugangscodes: ${res.neu} neu, ${res.aktualisiert} aktualisiert`);
+      S.busy=null;S.codeInfo=res;await loadLive();render();return toast(`Zugangscodes importiert: ${res.neu} neu, ${res.aktualisiert} aktualisiert`);
     }
     const info=importCSV(txt);if(!info||info.err)return toast(info?.err||"Import fehlgeschlagen");
     const payload=S.people.map(p=>{const g=G(p.gruppe);return{vorname:p.vorname,name:p.name,typ:p.typ,gruppe:g?g.name:"",guest:!!(g&&g.guest),chef:!!(g&&g.chef===p.id),funktion:p.funktion||""}});
-    toast("Teilnehmer werden importiert …");
+    S.busy=`${payload.length} Teilnehmer werden importiert und verteilt …`;render();
     const res=await rpc("admin_import_participants",{p_code:S.code,p_rows:payload});
     await loadLive();
     allocateGroups(PLAN);
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero)await rpc("set_group_apero",{p_code:S.code,p_group:g.id,p_zeit:ga.zeit,p_ort:ga.ort})}
-    await loadLive();S.importInfo={...info,live:res};render();
+    S.busy=null;await loadLive();S.importInfo={...info,live:res};render();
     toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen`);
-  }catch(e){toast(e.message)}
+  }catch(e){S.busy=null;render();toast(e.message)}
 }
 const LIVEA={
   apero:()=>{const on=!S.apero.has(S.meId);call("set_apero",{p_on:on},on?"Apéro: angemeldet":"Apéro: abgemeldet").catch(()=>{})},
@@ -1394,7 +1398,7 @@ const LIVEA={
 if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
   A.sendfb=()=>{if(FEEDBACK.formUrl)return fb();const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
     call("send_feedback",{p_cat:$("#fbcat").value,p_txt:txt,p_anon:$("#fbanon").checked},"Danke! Das OK hat dein Feedback erhalten.").catch(()=>{})};
-  setInterval(()=>{if(!S.unlocked||!S.code||document.hidden||!$("#modal").hidden)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
+  setInterval(()=>{if(S.busy||!S.unlocked||!S.code||document.hidden||!$("#modal").hidden)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
     if(Object.values(S.cart).some(q=>q>0)||["laut","lied"].includes(route()))return;loadLive().then(render).catch(()=>{})},30000);
 }
 
