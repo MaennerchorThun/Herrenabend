@@ -732,7 +732,7 @@ function render(){
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
   const V={start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
-  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · ${esc(full(ME()))} · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?(S.userId?`Demo · angemeldet als <b>${esc(full(P(S.userId)))}</b> · <a href="#" data-act="whoami">wechseln</a>`:`Demo mit fiktiven Daten · <a href="#" data-act="whoami">Namen wählen</a>`):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
+  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
   const navKey=(VORAB?NAV_VORAB:NAV).some(n=>n.r===r)?r:"mehr";
@@ -770,7 +770,7 @@ function vStart(){
   if(S.role==="ok"){const k=kpi();
     h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>
       <div class="kpis" style="margin:8px 0 12px">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.newOrders,"neue Bestellungen")}${kpiBox(k.urgent,"dringendes Feedback")}</div>
-      <div class="row"><button class="btn primary sm" data-act="go" data-r="service">Service-Board</button><button class="btn sm" data-act="go" data-r="admin">Verwaltung & Import</button></div></div>`}
+      <div class="row"><button class="btn primary sm" data-act="go" data-r="service">Service-Board</button><button class="btn sm" data-act="go" data-r="admin">Verwaltung & Import</button>${LIVE?`<button class="btn sm" data-act="demoview">So sehen es die Teilnehmer</button>`:""}</div></div>`}
   if(t&&me.platz){const gs=groupsAt(t.id),cm=colorMap(t.id);
     h+=`<div class="card"><div class="row between"><h3 style="margin:0">An deinem Tisch</h3><span class="muted small">${gs.length} Gruppe${gs.length>1?"n":""}</span></div>
       ${gs.map(e=>{const ps=S.people.filter(p=>p.tisch===t.id&&p.platz&&(p.gruppe||"_")===(e.g?.id||"_")&&p.id!==me.id).sort((a,b)=>a.platz-b.platz);
@@ -1315,7 +1315,7 @@ const A={
   close:()=>closeModal(),
   whoami:()=>{if(!S.demo)return toast("Nur in der Demo");askUser()},
   iam:d=>{S.userId=d.p||null;closeModal();const p=S.userId&&P(S.userId);
-    try{history.replaceState(null,"",location.pathname+(p?"?t="+p.token:"")+"#/start")}catch(e){}
+    try{const u=new URL(location.href);if(p)u.searchParams.set("t",p.token);else u.searchParams.delete("t");u.hash="#/start";history.replaceState(null,"",u.toString())}catch(e){}
     setRole(p&&isChef(p)?"chef":"gast");render();scrollTo(0,0);toast(p?`Grüessech ${p.vorname}!`:"Demo als Gast")},
   table:d=>{S.selTable=d.id;render();document.getElementById("tdetail")?.scrollIntoView({behavior:"smooth",block:"start"})},
   seat:d=>openSeat(d.t,+d.s),
@@ -1512,9 +1512,10 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
 
 /* ================= OK-Zugang aus der Vorabversion / Event-Vorschau ================= */
 function checkOk(){if(!S.code)return;rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me&&s.me.role==="ok"){S.vorabOk=true;render()}}).catch(()=>{})}
-function gotoMode(m){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
+function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
 A.okevent=()=>gotoMode("event");
+A.demoview=()=>gotoMode("event",true);
 A.govorab=()=>gotoMode(null);
 
 /* ================= Vollbild ================= */
@@ -1550,6 +1551,7 @@ A.govorab=()=>gotoMode(null);
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
       loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
     return}
+  if(S.unlocked&&qc)S.code=qc;
   const tk=new URLSearchParams(location.search).get("t");
   const p=tk&&S.people.find(x=>x.token===tk);
   if(p){S.userId=p.real?p.id:null;S.meId=p.id;S.role=isChef(p)?"chef":"gast";$("#role").value=S.role}else setRole("gast");
