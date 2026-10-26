@@ -313,6 +313,8 @@ const ACCESS={required:true,salt:"MCT195:",hashes:new Set(["0011165a34ec7165","0
    resultsUrl: Link zur Excel-Datei mit den Antworten (nur für das OK sichtbar)
    Leer lassen = Feedback bleibt wie im Prototyp nur in der App. */
 const FEEDBACK={formUrl:"",resultsUrl:""};
+/* Umfrage nach dem Anlass: Microsoft Forms (Antwort-Link für Teilnehmer, Design-Link für das OK) */
+const SURVEY={formUrl:"https://forms.office.com/Pages/ResponsePage.aspx?id=BbNUin6khUKLzMcpJh3RPCtOOaDgJ1lAvDZSvOVKAchUMFZZOFpBS0ZYUzA1T1pGS0xQNE1KOURITi4u",resultsUrl:"https://forms.cloud.microsoft/Pages/DesignPageV2.aspx?origin=NeoPortalPage&subpage=design&id=BbNUin6khUKLzMcpJh3RPCtOOaDgJ1lAvDZSvOVKAchUMFZZOFpBS0ZYUzA1T1pGS0xQNE1KOURITi4u"};
 const FB_CATS=["Problem jetzt","Verbesserung","Lob","Allergie / Essen","Sonstiges"];
 function feedbackLink(cat,txt,name,tisch){
   let u;try{u=new URL(FEEDBACK.formUrl)}catch(e){return null}
@@ -1041,6 +1043,9 @@ function vUmfrage(){
   if(!S.surveyOpen&&S.role!=="ok")return h+`<div class="card lock"><div class="big">🔒</div><h3>Die Umfrage öffnet nach dem Anlass</h3><p class="muted small">Du erhältst einen Hinweis, sobald sie freigeschaltet ist.</p><button class="btn sm" data-act="opensurvey">Demo: jetzt freischalten</button></div>`;
   if(S.surveyDone.has(S.meId))return h+`<div class="card lock"><div class="big">🙏</div><h3>Merci für deine Rückmeldung!</h3><p class="muted small">Wir sehen uns am Herrenabend 2027.</p></div>`;
   if(S.role==="ok"&&!S.surveyOpen)h+=`<div class="note">Umfrage ist für Teilnehmer noch gesperrt. Freischalten unter Verwaltung.</div>`;
+  if(SURVEY.formUrl)return h+`<div class="card" style="text-align:center;padding:28px 16px"><div style="font-size:40px">📝</div><h2>Wie war der ${EVENT.nr}. Herrenabend?</h2>
+    <p class="muted">Deine Meinung hilft uns, den Herrenabend 2027 noch besser zu machen. Die Umfrage dauert nur wenige Minuten.</p>
+    <a class="btn primary" href="${esc(SURVEY.formUrl)}" target="_blank" rel="noopener">Zur Umfrage ↗</a></div>`;
   S._r=S._r||{};
   return h+`<p class="muted">Dauert eine Minute. 1 = schlecht, 5 = super.</p><div class="card">${QS.map(([k,l])=>`<div class="rate"><span>${l}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${(S._r[k]||0)>=n?"on":""}" data-act="rate" data-k="${k}" data-n="${n}" aria-label="${n} Sterne">★</button>`).join("")}</div></div>`).join("")}
     <div class="rate"><span>Kommst du 2027 wieder?</span><div class="row"><button class="btn sm ${S._r.wieder===true?"on":""}" data-act="rate" data-k="wieder" data-n="1">Ja</button><button class="btn sm ${S._r.wieder===false?"on":""}" data-act="rate" data-k="wieder" data-n="0">Eher nicht</button></div></div>
@@ -1259,10 +1264,10 @@ function vAdmin(){
   if(!LIVE)h+=`<div class="card"><div class="row between"><h3 style="margin:0">Persönliche Zugangslinks</h3><button class="btn sm" data-act="exportlinks">Alle Links als CSV</button></div>
     <p class="muted small">Jede Person erhält einen Link (per Mail oder als QR-Code auf der Tischkarte). Der Link eines Gruppenchefs schaltet automatisch dessen Gruppe frei.${S.demo?"":" Im Prototyp funktionieren die Links nur mit den Demo-Daten."}</p>
     <div class="scroll"><table class="t"><tr><th>Name</th><th>Rolle</th><th>Link</th></tr>${S.people.slice(0,6).map(p=>`<tr><td>${esc(full(p))}</td><td>${isChef(p)?chefLbl(chefOf(p)):"Teilnehmer"}</td><td><button class="btn sm" data-act="copylink" data-p="${p.id}">Kopieren</button></td></tr>`).join("")}</table></div><p class="small muted">… und ${Math.max(0,S.people.length-6)} weitere. Basis-URL: <code>${esc(baseUrl())}</code></p></div>`;
-  h+=`<div class="card"><div class="row between"><h3 style="margin:0">Umfrage</h3><button class="btn sm ${S.surveyOpen?"on":""}" data-act="opensurvey">${S.surveyOpen?"✓ Freigeschaltet":"Für alle freischalten"}</button></div>
-    <p class="muted small">${S.survey.length} Antworten · ${S.survey.length?Math.round(S.survey.filter(s=>s.wieder).length/S.survey.length*100):0}% kommen wieder</p>
+  h+=`<div class="card"><div class="row between"><h3 style="margin:0">Umfrage</h3>${SURVEY.resultsUrl?`<a class="btn sm" href="${esc(SURVEY.resultsUrl)}" target="_blank" rel="noopener">Ergebnisse in Forms ↗</a>`:""}<button class="btn sm ${S.surveyOpen?"on":""}" data-act="opensurvey">${S.surveyOpen?"✓ Freigeschaltet":"Für alle freischalten"}</button></div>
+    ${SURVEY.formUrl?`<p class="muted small" style="margin:8px 0 0">Die Antworten werden in Microsoft Forms gesammelt. «Für alle freischalten» zeigt den Teilnehmern nach dem Anlass den Umfrage-Knopf in der App.</p>`:`<p class="muted small">${S.survey.length} Antworten · ${S.survey.length?Math.round(S.survey.filter(s=>s.wieder).length/S.survey.length*100):0}% kommen wieder</p>
     ${QS.map(([kk,l])=>{const a=S.survey.length?S.survey.reduce((s,x)=>s+(x.r[kk]||0),0)/S.survey.length:0;return`<div class="row" style="padding:4px 0"><span style="width:150px" class="small">${l}</span><div class="bar"><i style="width:${a/5*100}%"></i></div><b class="small" style="width:30px;text-align:right">${a.toFixed(1)}</b></div>`}).join("")}
-    ${S.survey.filter(s=>s.txt).map(s=>`<div class="card soft small" style="margin:8px 0 0">${esc(s.txt)}</div>`).join("")}</div>`;
+    ${S.survey.filter(s=>s.txt).map(s=>`<div class="card soft small" style="margin:8px 0 0">${esc(s.txt)}</div>`).join("")}`}</div>`;
   h+=`<div class="sec-h"><h2>Feedback-Eingang${FEEDBACK.formUrl?"":` (${S.feedback.length})`}</h2>${FEEDBACK.resultsUrl?`<a class="btn sm" href="${esc(FEEDBACK.resultsUrl)}" target="_blank" rel="noopener">Excel öffnen ↗</a>`:""}</div>
     ${FEEDBACK.formUrl?`<p class="small muted">Meldungen kommen über Microsoft Forms in die Excel-Datei im Vorstandsordner; das OK erhält bei jeder Meldung eine Benachrichtigung. Unten nur die Testeinträge der Demo.</p>`:`<p class="small muted">Prototyp: Meldungen bleiben in diesem Browser. Für den Live-Betrieb Microsoft Forms anbinden (siehe Anleitung).</p>`}${S.feedback.slice().reverse().map(f=>`<div class="card small" style="${f.cat==="Problem jetzt"?"border-color:var(--brand)":""}"><div class="row between"><b>${esc(f.cat)}</b><span class="muted">${f.zeit} · ${f.by?esc(full(P(f.by))):"anonym"}</span></div><div style="margin-top:4px">${esc(f.txt)}</div></div>`).join("")}`;
   return h;
