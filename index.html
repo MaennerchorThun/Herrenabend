@@ -528,27 +528,50 @@ function planMatch(plan){const m=new Map();
   for(const[tid,toks]of Object.entries(plan))for(const tk of toks){const g=S.groups.find(g=>{const w=words(g.name);return tk.every(x=>w.includes(x))});
     if(g){if(!m.has(g.id))m.set(g.id,[]);if(!m.get(g.id).includes(tid))m.get(g.id).push(tid)}}
   return m}
+/* Sitzplan Vorjahr (CSV Vorname;Name;Tisch;Platz) – wird nur lokal in der Verwaltung geladen */
+let PREV=null,PREV_INFO=null;
+const nameKey=(v,n)=>words(v+" "+n).sort().join(" ");
+function parsePrev(txt){
+  const rows=csvRows(txt);if(rows.length<2)return{err:"Keine Daten gefunden."};
+  const hd=rows[0].map(h=>h.trim().toLowerCase());
+  const iV=hd.indexOf("vorname"),iN=hd.findIndex(h=>h==="name"||h==="nachname"),iT=hd.findIndex(h=>h.startsWith("tisch")),iP=hd.findIndex(h=>h.startsWith("platz"));
+  if(iN<0||iP<0)return{err:"Spalten «Name» und «Platz» nötig (dazu «Vorname», «Tisch»)."};
+  const m=new Map();let n=0;
+  for(const r of rows.slice(1)){const pl=parseInt(r[iP]);if(!pl||pl<1||pl>336)continue;const t=iT>=0&&parseInt(r[iT])?parseInt(r[iT]):Math.ceil(pl/16);
+    if(pl<(t-1)*16+1||pl>t*16)continue;m.set(nameKey(iV>=0?r[iV]:"",r[iN]||""),{tisch:String(t),platz:pl});n++}
+  if(!n)return{err:"Keine gültigen Plätze gefunden."};
+  return{map:m,n};
+}
 function allocateGroups(plan=null){
   for(const p of S.people){p.tisch=null;p.platz=null}
   const free=new Map(TABLES.map(t=>[t.id,seatOrder(t)]));
   const normal=TABLES.filter(t=>!t.front).map(t=>t.id);
+  // 1. Wer letztes Jahr dabei war, erhält wieder seinen Platz (sofern frei)
+  let prevPlaced=0;
+  if(PREV)for(const p of S.people){const x=PREV.get(nameKey(p.vorname,p.name));if(!x)continue;const q=free.get(x.tisch);const k=q?q.indexOf(x.platz):-1;
+    if(k<0)continue;q.splice(k,1);p.tisch=x.tisch;p.platz=x.platz;prevPlaced++}
+  S.prevPlaced=prevPlaced;
   const place=(ms,tid)=>{const q=free.get(tid);for(const p of ms){const s=q.shift();if(s==null)break;p.tisch=tid;p.platz=s}};
-  const sortM=g=>members(g).sort((a,b)=>(b.id===g.chef)-(a.id===g.chef)||byName(a,b));
+  const sortM=g=>members(g).filter(p=>!p.platz).sort((a,b)=>(b.id===g.chef)-(a.id===g.chef)||byName(a,b));
+  // Tische, an denen die Gruppe schon sitzt, zuerst
+  const pref=(g,pool)=>{const own=g?[...new Set(members(g).filter(p=>p.tisch).map(p=>p.tisch))]:[];return[...own.filter(t=>pool.includes(t)),...pool.filter(t=>!own.includes(t))]};
   const done=new Set(),leftovers=[];
   if(plan){const pm=planMatch(plan);
     for(const tid of Object.keys(plan).sort((a,b)=>a-b))for(const[gid,tabs]of pm){if(done.has(gid)||tabs[0]!==tid)continue;
-      const g=G(gid),ms=sortM(g);for(const t of tabs){if(!ms.length)break;place(ms.splice(0,free.get(t).length),t)}
-      if(ms.length)leftovers.push(ms);done.add(gid)}}
-  const fit=(ms,pool)=>{
+      const g=G(gid),ms=sortM(g),own=[...new Set(members(g).filter(p=>p.tisch).map(p=>p.tisch))];for(const t of pref(g,[...own,...tabs.filter(t=>!own.includes(t))])){if(!ms.length)break;place(ms.splice(0,free.get(t).length),t)}
+      if(ms.length)leftovers.push([g,ms]);done.add(gid)}}
+  const fit=(ms,pool,g)=>{
+    pool=pref(g,pool);
+    for(const t of pool){if(!ms.length)break;if(g&&members(g).some(p=>p.tisch===t)){const k=free.get(t).length;if(k)place(ms.splice(0,k),t)}}
     while(ms.length>=16){const t=pool.find(id=>free.get(id).length===16);if(!t)break;place(ms.splice(0,16),t)}
     if(!ms.length)return;
     const c=pool.filter(id=>free.get(id).length>=ms.length).sort((a,b)=>free.get(a).length-free.get(b).length)[0];
     if(c){place(ms.splice(0),c);return}
     for(const id of[...pool].sort((a,b)=>free.get(b).length-free.get(a).length)){if(!ms.length)break;const k=free.get(id).length;if(k)place(ms.splice(0,k),id)}
   };
-  for(const g of S.groups.filter(g=>g.guest&&!done.has(g.id)))fit(sortM(g),[EHREN_TISCH,...normal]);
-  for(const g of S.groups.filter(g=>!g.guest&&!done.has(g.id)).sort((a,b)=>members(b).length-members(a).length))fit(sortM(g),normal);
-  for(const ms of leftovers.sort((a,b)=>b.length-a.length))fit(ms,normal);
+  for(const g of S.groups.filter(g=>g.guest&&!done.has(g.id)))fit(sortM(g),[EHREN_TISCH,...normal],g);
+  for(const g of S.groups.filter(g=>!g.guest&&!done.has(g.id)).sort((a,b)=>members(b).length-members(a).length))fit(sortM(g),normal,g);
+  for(const[g,ms]of leftovers.sort((a,b)=>b[1].length-a[1].length))fit(ms,normal,g);
   return plan?planMatch(plan).size:0;
 }
 function freeSeats(tid){return seatOrder(T(tid)).filter(s=>!at(tid,s))}
@@ -709,7 +732,7 @@ function render(){
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
   const V={start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
-  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`:S.demo?(S.userId?`Demo · angemeldet als <b>${esc(full(P(S.userId)))}</b> · <a href="#" data-act="whoami">wechseln</a>`:`Demo mit fiktiven Daten · <a href="#" data-act="whoami">Namen wählen</a>`):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
+  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · ${esc(full(ME()))} · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?(S.userId?`Demo · angemeldet als <b>${esc(full(P(S.userId)))}</b> · <a href="#" data-act="whoami">wechseln</a>`:`Demo mit fiktiven Daten · <a href="#" data-act="whoami">Namen wählen</a>`):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
   const navKey=(VORAB?NAV_VORAB:NAV).some(n=>n.r===r)?r:"mehr";
@@ -772,6 +795,9 @@ function vStartVorab(){
   const concertOn=new Date()<new Date("2026-11-16T00:00:00");
   const h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><span class="chip y" style="margin-bottom:8px">Vorabversion</span><p class="eyebrow">Männerchor Thun · Einladung zum ${EVENT.nr}. Herrenabend</p>
     <h1>${S.vname?`Grüessech ${esc(S.vname)}`:`${EVENT.nr}. Herrenabend`}</h1><p class="muted" style="margin:0">${esc(EVENT.datum)} · ${esc(EVENT.ort)}</p></section>
+  ${S.vorabOk?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">OK-Team</p><h3 style="margin:0 0 6px">Du hast OK-Rechte</h3>
+    <p class="small" style="margin:0 0 10px">Öffne die Event-Version als Vorschau: Verwaltung, Saalplan, Service-Board und Benachrichtigungen – mit den echten Daten. Die Mitglieder sehen weiterhin die Vorabversion.</p>
+    <button class="btn primary sm" data-act="okevent">OK-Bereich & Event-Vorschau öffnen</button></div>`:""}
   <div class="card" style="border-color:var(--accent);background:var(--accent-soft)"><p class="eyebrow" style="color:var(--text)">Vorabversion</p>
     <h3 style="margin:0 0 6px">Die definitive Version folgt am ${esc(EVENT_SWITCH)}</h3>
     <p class="small" style="margin:0">Du siehst jetzt die Vorabinformationen. Ab dem 5.12.26 findest du hier mit dem gleichen Link deinen <b>Tisch und Platz</b>, deine <b>Gruppe</b>, den <b>Apéro deiner Tischgemeinschaft</b> und die <b>Weinbestellung</b> für deinen Tisch.</p></div>
@@ -1255,6 +1281,9 @@ function vAdmin(){
     <div class="card soft small" style="margin:0 0 10px"><b>Tischplan-Vorlage</b> (CSV mit Spalten <code>Tisch;Gruppe</code>, eine Zeile pro Gruppe und Tisch; Gruppen über mehrere Tische mehrfach aufführen)<br>
     ${PLAN?`<span style="color:var(--ok)">✓ Vorlage geladen: ${PLAN_INFO.n} Einträge für ${PLAN_INFO.tables} Tische · ${planMatch(PLAN).size} Gruppen erkannt</span> <button class="btn sm ghost" data-act="planclear">entfernen</button>`:`<span class="muted">Keine Vorlage geladen.</span>`}
     <input type="file" id="planfile" accept=".csv,text/csv" class="input" style="margin-top:8px"></div>
+    <div class="card soft small" style="margin:0 0 10px"><b>Sitzplan Vorjahr</b> (CSV mit <code>Vorname;Name;Tisch;Platz</code>) – wer wieder angemeldet ist, erhält seinen Platz vom Vorjahr, sofern frei. Neue Personen werden bei ihrer Gruppe ergänzt.<br>
+    ${PREV?`<span style="color:var(--ok)">✓ ${PREV.size} Plätze aus dem Vorjahr geladen${S.prevPlaced!=null?` · ${S.prevPlaced} davon zuletzt übernommen`:""}</span> <button class="btn sm ghost" data-act="prevclear">entfernen</button>`:`<span class="muted">Kein Vorjahres-Sitzplan geladen.</span>`}
+    <input type="file" id="prevfile" accept=".csv,text/csv" class="input" style="margin-top:8px"></div>
     <div class="row"><button class="btn primary sm" data-act="allocask" data-m="plan" ${PLAN?"":"disabled"}>Nach Vorlage</button><button class="btn sm" data-act="allocask" data-m="auto">Automatisch</button><button class="btn sm" data-act="fillall">${k.noSeat} ohne Platz auffüllen</button><button class="btn sm" data-act="go" data-r="saal">Manuell im Saalplan</button></div></div>`;
   const gs=[...S.groups].sort((a,b)=>members(b).length-members(a).length);
   h+=`<div class="card"><h3>Gruppen (${gs.length})</h3><div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Pers.</th><th>Gruppenchef</th><th>Tische</th></tr>${gs.map(g=>{const ms=members(g);
@@ -1307,8 +1336,9 @@ const A={
   gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!z||!o)return toast("Bitte Zeit und Ort angeben");chefGroup().apero={zeit:z,ort:o};render();toast("Gruppen-Apéro gespeichert")},
   gaperoclear:()=>{chefGroup().apero=null;render();toast("Gruppen-Apéro entfernt")},
   allocask:d=>modal(`<h2>${d.m==="plan"?"Nach Vorlage verteilen?":"Automatisch neu verteilen?"}</h2><p class="muted">Alle bisherigen Tisch- und Platzzuteilungen werden ersetzt.</p><div class="row"><button class="btn primary" data-act="allocate" data-m="${d.m}">Neu verteilen</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`),
+  prevclear:()=>{PREV=null;PREV_INFO=null;S.prevPlaced=null;render();toast("Vorjahres-Sitzplan entfernt")},
   planclear:()=>{PLAN=null;PLAN_INFO=null;render();toast("Vorlage entfernt")},
-  allocate:d=>{const n=allocateGroups(d.m==="plan"?PLAN:null);closeModal();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert${d.m==="plan"?` · ${n} Gruppen nach Vorlage`:""}`)},
+  allocate:d=>{const n=allocateGroups(d.m==="plan"?PLAN:null);closeModal();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert${d.m==="plan"?` · ${n} Gruppen nach Vorlage`:""}${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`)},
   fillall:()=>{const n=fillSingles(S.people.filter(p=>!p.platz));render();toast(n?`${n} Personen platziert`:"Nichts zu verteilen")},
   sendfb:()=>{const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
     if(FEEDBACK.formUrl){const me=ME(),anon=$("#fbanon").checked||me.id==="ok",t=me.tisch?T(me.tisch).short:"",g=G(me.gruppe);
@@ -1325,6 +1355,7 @@ const A={
     if(!ACCESS.hashes.has(sha256(ACCESS.salt+c).slice(0,16)))return toast("Code unbekannt – bitte prüfen");
     S.unlocked=true;S.code=c;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;
     try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}
+    if(VORAB)checkOk();
     render();if(!VORAB&&S.demo&&!S.userId)askUser()},
   ics:d=>{const st=["20261114T193000","20261115T170000"][+d.i],en=["20261114T213000","20261115T190000"][+d.i];
     const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Maennerchor Thun//Herrenabend-App//DE","BEGIN:VEVENT","UID:mct-konzert-"+d.i+"@maennerchor.ch","DTSTAMP:20261025T000000Z",
@@ -1354,6 +1385,8 @@ document.addEventListener("change",e=>{
   if(el.dataset.chg==="chef"){const g=G(el.dataset.g);const prev=S.groups.find(x=>x.chef===el.value&&x!==g);if(prev&&el.value){prev.chef=null}g.chef=el.value||null;toast(prev&&el.value?`Gruppenchef geändert (bei ${prev.name} entfernt)`:"Gruppenchef geändert");render()}
   if(el.dataset.chg==="pgroup"){S.pGroup=el.value;renderPeople()}
   if(el.dataset.chg==="otable"){S.orderTable=el.value;render()}
+  if(el.id==="prevfile"&&el.files[0]){const r=new FileReader();r.onload=()=>{const x=parsePrev(String(r.result));if(x.err)return toast(x.err);PREV=x.map;PREV_INFO=x;S.prevPlaced=null;render();
+    A.allocask({m:PLAN?"plan":"auto"});toast(`${x.n} Plätze aus dem Vorjahr geladen`)};r.readAsText(el.files[0],"utf-8")}
   if(el.id==="planfile"&&el.files[0]){const r=new FileReader();r.onload=()=>{const x=parsePlan(String(r.result));if(x.err)return toast(x.err);PLAN=x.plan;PLAN_INFO=x;render();
     A.allocask({m:"plan"});toast(`Vorlage geladen: ${planMatch(PLAN).size} Gruppen erkannt`)};r.readAsText(el.files[0],"utf-8")}
   if(el.id==="codefile"&&el.files[0]){const r=new FileReader();r.onload=()=>doImportLive(String(r.result));r.readAsText(el.files[0],"utf-8")}
@@ -1390,7 +1423,7 @@ function applySession(s){
 }
 async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[]);S.tg=await rpc("admin_tg_info",{p_code:S.code}).catch(()=>S.tg||{});S.mail=await rpc("admin_mail_info",{p_code:S.code}).catch(()=>S.mail||{})}}
 async function saveSeatsAll(fn){fn();try{await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
-    await loadLive();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert`)}catch(e){toast(e.message);await loadLive().catch(()=>{});render()}}
+    await loadLive();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`)}catch(e){toast(e.message);await loadLive().catch(()=>{});render()}}
 async function saveSeatsDiff(fn){const before=new Map(S.people.map(p=>[p.id,p.platz]));fn();const ch=S.people.filter(p=>p.platz&&p.platz!==before.get(p.id));
   if(!ch.length){render();return toast("Keine freien Plätze an deinen Tischen – bitte OK kontaktieren")}
   try{for(const p of ch)await rpc("assign_seat",{p_code:S.code,p_person:p.id,p_tisch:+p.tisch,p_platz:p.platz});toast(`${ch.length} Personen platziert`)}catch(e){toast(e.message)}
@@ -1416,7 +1449,7 @@ async function doImportLive(txt){
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero)await rpc("set_group_apero",{p_code:S.code,p_group:g.id,p_zeit:ga.zeit,p_ort:ga.ort})}
     S.busy=null;await loadLive();S.importInfo={...info,live:res};render();
-    toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen`);
+    toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`);
   }catch(e){S.busy=null;render();toast(e.message)}
 }
 const LIVEA={
@@ -1465,7 +1498,7 @@ const LIVEA={
   wdel:d=>call("admin_delete_target",{p_id:d.id},"Empfänger gelöscht").catch(()=>{}),
   reload:()=>loadLive().then(()=>{render();toast("Aktualisiert")}).catch(e=>toast(e.message)),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;S.code=c;
-    loadLive().then(()=>{S.unlocked=true;try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}render()}).catch(e=>toast(e.message))},
+    loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser){toast("Die Event-Version öffnet am 5.12.");return setTimeout(leaveEventPreview,1200)}S.unlocked=true;try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}render()}).catch(e=>toast(e.message))},
 };
 /* Vorabversion: Feedback ebenfalls in die Datenbank (mit dem persönlichen Code) */
 if(VORAB){const fb0=A.sendfb;A.sendfb=()=>{if(FEEDBACK.formUrl||!S.code)return fb0();const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
@@ -1476,6 +1509,13 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
   setInterval(()=>{if(S.busy||!S.unlocked||!S.code||document.hidden||!$("#modal").hidden)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
     if(Object.values(S.cart).some(q=>q>0)||["laut","lied"].includes(route()))return;loadLive().then(render).catch(()=>{})},30000);
 }
+
+/* ================= OK-Zugang aus der Vorabversion / Event-Vorschau ================= */
+function checkOk(){if(!S.code)return;rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me&&s.me.role==="ok"){S.vorabOk=true;render()}}).catch(()=>{})}
+function gotoMode(m){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
+function leaveEventPreview(){gotoMode(null)}
+A.okevent=()=>gotoMode("event");
+A.govorab=()=>gotoMode(null);
 
 /* ================= Vollbild ================= */
 (function fullscreen(){
@@ -1505,10 +1545,10 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
   const qc=normCode(new URLSearchParams(location.search).get("c"));
   S.vname=cleanName(new URLSearchParams(location.search).get("n"));
   S.unlocked=!ACCESS.required||(qc&&ACCESS.hashes.has(sha256(ACCESS.salt+qc).slice(0,16)));
-  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc)S.code=qc;render();return}
+  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc)S.code=qc;render();if(S.code)checkOk();return}
   if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
-      loadLive().then(()=>{S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
+      loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
     return}
   const tk=new URLSearchParams(location.search).get("t");
   const p=tk&&S.people.find(x=>x.token===tk);
