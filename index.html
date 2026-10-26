@@ -1183,13 +1183,29 @@ function vAdmin(){
   let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
   <div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}</div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
-  if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp"};
+  if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
     h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht an die hier eingetragenen Empfänger – an einzelne Personen oder an eine ganze Telegram-Gruppe (z.B. «OK Herrenabend»).</p>
-    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">${t.channel==="whatsapp"?"📱":"✈️"}</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${chName[t.channel]||t.channel}${t.channel==="tgbot"?"":" "+esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
+    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">${t.channel==="whatsapp"?"📱":t.channel==="email"?"✉️":"✈️"}</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${chName[t.channel]||t.channel}${t.channel==="tgbot"?"":" "+esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
       <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="wtest" data-id="${t.id}">Test</button><button class="btn sm ghost" data-act="wtoggle" data-id="${t.id}">${t.active?"Pause":"Aktiv"}</button><button class="btn sm ghost" data-act="wdel" data-id="${t.id}" aria-label="löschen">✕</button></div></div>`).join("")||`<p class="muted small">Noch keine Empfänger.</p>`}</div>
-    <div class="row small" style="margin:12px 0 4px"><span class="muted">Neue Empfänger erhalten:</span><label class="row"><input type="checkbox" id="wfb" checked> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
-    <div class="filter" style="margin-top:8px"><button class="chip ${ch==="tgbot"?"on":""}" data-act="wch" data-c="tgbot">Telegram (eigener Bot)</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
-    ${ch==="tgbot"?(!tg.has_token?`<div class="card soft small" style="margin:0"><b>Schritt 1 – eigenen Bot erstellen (einmalig, 2 Minuten)</b>
+    <div class="row small" style="margin:12px 0 4px"><span class="muted">Neue Empfänger erhalten:</span><label class="row"><input type="checkbox" id="wfb" ${ch==="email"?"":"checked"}> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
+    <div class="filter" style="margin-top:8px"><button class="chip ${ch==="tgbot"?"on":""}" data-act="wch" data-c="tgbot">Telegram (eigener Bot)</button><button class="chip ${ch==="email"?"on":""}" data-act="wch" data-c="email">E-Mail</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
+    ${ch==="email"?(!ml.has_key?`<div class="card soft small" style="margin:0"><b>Schritt 1 – E-Mail-Versand einrichten (einmalig, ca. 5 Minuten)</b>
+      <ol style="margin:8px 0;padding-left:18px"><li>Gratis-Konto bei <a href="https://www.brevo.com" target="_blank" rel="noopener"><b>brevo.com</b></a> eröffnen (bis 300 E-Mails pro Tag gratis).</li>
+      <li>Unter <b>Senders, Domains & Dedicated IPs → Senders</b> die Absender-Adresse hinzufügen (z.B. herrenabend@mcthun.ch) und den Bestätigungslink im Postfach anklicken.</li>
+      <li>Unter <b>SMTP & API → API Keys</b> einen neuen API-Key erstellen (beginnt mit <i>xkeysib-</i>) und hier einfügen:</li></ol>
+      <input id="mkey" class="input" autocapitalize="off" spellcheck="false" placeholder="xkeysib-…">
+      <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:8px"><input id="msender" class="input" inputmode="email" placeholder="Absender, z.B. herrenabend@mcthun.ch"><input id="mname" class="input" placeholder="Absendername" value="Herrenabend-App MCT"></div>
+      <button class="btn sm primary" style="margin-top:8px" data-act="msave">E-Mail-Versand speichern</button></div>`
+     :`<div class="card soft small" style="margin:0"><p style="margin:0 0 8px">✓ E-Mail-Versand eingerichtet · Absender <b>${esc(ml.name||"")}</b> &lt;${esc(ml.sender||"")}&gt;</p>
+      <b>Empfänger hinzufügen</b> <span class="muted">(z.B. Service-Leitung oder Bar – ideal für Weinbestellungen)</span>
+      <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:6px"><input id="ename" class="input" placeholder="Name, z.B. Service"><input id="email" class="input" inputmode="email" placeholder="E-Mail-Adresse"></div>
+      <button class="btn sm primary" style="margin-top:8px" data-act="eadd">Empfänger hinzufügen</button>
+      <details style="margin-top:8px"><summary style="cursor:pointer">Absender oder API-Key ändern</summary>
+        <input id="mkey" class="input" autocapitalize="off" spellcheck="false" placeholder="neuer API-Key (leer = unverändert)" style="margin-top:6px">
+        <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:6px"><input id="msender" class="input" value="${esc(ml.sender||"")}"><input id="mname" class="input" value="${esc(ml.name||"")}"></div>
+        <button class="btn sm" style="margin-top:6px" data-act="msave">Speichern</button></details>
+      <p class="muted" style="margin:8px 0 0">Tipp: E-Mails landen anfangs evtl. im Spam-Ordner – Absender als «kein Spam» markieren.</p></div>`)
+    :ch==="tgbot"?(!tg.has_token?`<div class="card soft small" style="margin:0"><b>Schritt 1 – eigenen Bot erstellen (einmalig, 2 Minuten)</b>
       <ol style="margin:8px 0;padding-left:18px"><li>In Telegram <a href="https://t.me/BotFather" target="_blank" rel="noopener"><b>@BotFather</b></a> öffnen und <b>/newbot</b> senden.</li>
       <li>Einen Namen eingeben (z.B. <i>Herrenabend MCT</i>) und einen Benutzernamen, der auf <i>bot</i> endet (z.B. <i>herrenabend_mct_bot</i>).</li>
       <li>BotFather antwortet mit einem <b>Token</b> (lange Zeichenkette mit Doppelpunkt). Diesen hier einfügen:</li></ol>
@@ -1367,7 +1383,7 @@ function applySession(s){
   if(S.role==="ok"&&!S.isOkUser)S.role="gast";
   const rs=document.querySelector(".role");if(rs){if(rs.firstChild&&rs.firstChild.nodeType===3)rs.firstChild.textContent="Ansicht ";rs.style.display=S.isOkUser||S.groups.some(g=>g.chef===me.id)?"":"none";$("#role").value=S.role}
 }
-async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[]);S.tg=await rpc("admin_tg_info",{p_code:S.code}).catch(()=>S.tg||{})}}
+async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[]);S.tg=await rpc("admin_tg_info",{p_code:S.code}).catch(()=>S.tg||{});S.mail=await rpc("admin_mail_info",{p_code:S.code}).catch(()=>S.mail||{})}}
 async function saveSeatsAll(fn){fn();try{await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     await loadLive();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert`)}catch(e){toast(e.message);await loadLive().catch(()=>{});render()}}
 async function saveSeatsDiff(fn){const before=new Map(S.people.map(p=>[p.id,p.platz]));fn();const ch=S.people.filter(p=>p.platz&&p.platz!==before.get(p.id));
@@ -1422,7 +1438,11 @@ const LIVEA={
   setrole:d=>{const id=d.p;if(!id)return toast("Bitte eine Person wählen");call("admin_set_role",{p_person:id,p_role:d.r},d.r==="ok"?"OK-Recht erteilt":"OK-Recht entfernt").catch(()=>{})},
   addperson:()=>{const v=$("#apv").value.trim(),n=$("#apn").value.trim();if(!v||!n)return toast("Bitte Vor- und Nachname angeben");
     call("admin_add_person",{p_vorname:v,p_name:n,p_typ:$("#apt").value,p_gruppe:$("#apg").value.trim(),p_funktion:$("#apf").value.trim()},`${v} ${n} hinzugefügt – Platz im Saalplan zuteilen`).catch(()=>{})},
-  wch:d=>{S.wch=d.c;render()},
+  wch:d=>{S.wch=d.c;if(d.c==="email"){const o=$("#word"),f=$("#wfb");S.wdef={fb:false,ord:true}}render()},
+  msave:()=>{const k=$("#mkey").value.trim(),snd=$("#msender").value.trim(),n=$("#mname").value.trim();if(!snd)return toast("Bitte die Absender-Adresse angeben");
+    call("admin_set_mail",{p_key:k,p_sender:snd,p_name:n},"E-Mail-Versand gespeichert").catch(()=>{})},
+  eadd:()=>{const n=$("#ename").value.trim(),m=$("#email").value.trim();if(!n||!m)return toast("Bitte Name und E-Mail-Adresse angeben");
+    call("admin_save_target",{p_id:null,p_name:n,p_channel:"email",p_to:m,p_apikey:"",p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger gespeichert – jetzt «Test» drücken").catch(()=>{})},
   tgtoken:()=>{const t=$("#tgtoken").value.trim();if(!t)return toast("Bitte den Token einfügen");
     rpc("admin_set_tg_token",{p_code:S.code,p_token:t}).then(()=>{toast("Bot wird verbunden …");setTimeout(()=>loadLive().then(()=>{render();toast(S.tg&&S.tg.token_error?"Token ungültig":"Bot verbunden")}),3000)}).catch(e=>toast(e.message))},
   tgfetch:()=>rpc("admin_tg_fetch",{p_code:S.code}).then(()=>{toast("Suche Chats …");setTimeout(()=>loadLive().then(()=>{render();if(!(S.tg&&S.tg.chats&&S.tg.chats.length))toast("Noch keine Chats gefunden")}),3500)}).catch(e=>toast(e.message)),
@@ -1433,7 +1453,7 @@ const LIVEA={
   wtest:d=>rpc("admin_test_target",{p_code:S.code,p_id:d.id}).then(()=>{toast("Testnachricht wird gesendet …");
     setTimeout(()=>rpc("admin_send_status",{p_code:S.code}).then(r=>{
       if(r&&r.status==="error"){const m=String(r.message||"");modal(`<h2>Nachricht nicht zugestellt</h2><p class="small">CallMeBot meldet:</p><div class="card soft small">${esc(m)}</div>
-        ${/chat not found|bot was blocked|Forbidden/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss den Bot zuerst öffnen und «Starten» tippen bzw. der Bot muss Mitglied der Gruppe sein.</p>`:""}${/authorize|Permission/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss CallMeBot einmalig erlauben, ihr zu schreiben. Am einfachsten über diesen Link auf dem Handy: <a href="https://api2.callmebot.com/txt/login.php" target="_blank" rel="noopener">Telegram-Berechtigung erteilen ↗</a> (mit Telegram anmelden und bestätigen). Danach erneut «Test».</p>`:""}
+        ${/Brevo/i.test(m)?`<p class="small"><b>Lösung:</b> Prüfe in Brevo, ob der Absender bestätigt und der API-Key aktiv ist. Bei «IP address» unter <i>Security → Authorized IPs</i> die IP-Sperre deaktivieren.</p>`:""}${/chat not found|bot was blocked|Forbidden/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss den Bot zuerst öffnen und «Starten» tippen bzw. der Bot muss Mitglied der Gruppe sein.</p>`:""}${/authorize|Permission/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss CallMeBot einmalig erlauben, ihr zu schreiben. Am einfachsten über diesen Link auf dem Handy: <a href="https://api2.callmebot.com/txt/login.php" target="_blank" rel="noopener">Telegram-Berechtigung erteilen ↗</a> (mit Telegram anmelden und bestätigen). Danach erneut «Test».</p>`:""}
         <div class="row"><button class="btn primary" data-act="close">OK</button></div>`)}
       else toast("✓ Zugestellt – bitte im Handy prüfen")}).catch(()=>{}),4000)}).catch(e=>toast(e.message)),
   wtoggle:d=>{const t=(S.targets||[]).find(x=>x.id===d.id);if(!t)return;call("admin_save_target",{p_id:t.id,p_name:t.name,p_channel:t.channel,p_to:t.phone,p_apikey:"",p_feedback:t.on_feedback,p_order:t.on_order,p_active:!t.active},t.active?"Pausiert":"Aktiviert").catch(()=>{})},
