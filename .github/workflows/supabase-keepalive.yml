@@ -1,6 +1,4 @@
-Supabase keepalive · YML
 name: Supabase wach halten
-# Gratis-Projekte pausieren nach 7 Tagen ohne Zugriff. Dieser Ablauf ruft die Datenbank alle 3 Tage kurz auf.
 on:
   schedule:
     - cron: "0 6 */3 * *"
@@ -10,10 +8,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Datenbank aufrufen
-        run: |
-          curl -s -o /dev/null -w "Status %{http_code}\n" -X POST \
-            "https://tvygwnawrkxdhzghxgfv.supabase.co/rest/v1/rpc/app_session" \
-            -H "apikey: sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd" \
-            -H "Content-Type: application/json" \
-            -d '{"p_code":"KEEPALIVE"}'
- 
+        run: 'curl -s -o /dev/null -w "Status %{http_code}\n" -X POST "https://tvygwnawrkxdhzghxgfv.supabase.co/rest/v1/rpc/app_session" -H "apikey: sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd" -H "Content-Type: application/json" -d "{\"p_code\":\"KEEPALIVE\"}"'
