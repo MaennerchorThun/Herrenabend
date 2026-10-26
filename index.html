@@ -1183,16 +1183,22 @@ function vAdmin(){
   let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
   <div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}</div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
-  if(LIVE){const ts=S.targets||[];
-    h+=`<div class="card"><h3>WhatsApp-Benachrichtigungen</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine WhatsApp-Nachricht an die hier eingetragenen Personen (über den Gratisdienst CallMeBot).</p>
-    <details class="small" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">So holt sich jede Person ihren API-Key (einmalig, 1 Minute)</summary>
-      <ol style="margin:8px 0 0;padding-left:18px"><li>Die Nummer <b>+34 694 25 79 52</b> im Handy als Kontakt speichern (z.B. «CallMeBot»).</li>
-      <li>Diesem Kontakt per WhatsApp schreiben: <b>I allow callmebot to send me messages</b></li>
-      <li>Nach kurzer Zeit kommt die Antwort mit dem <b>APIKEY</b> (eine Zahl). Diese hier zusammen mit der eigenen Handynummer eintragen.</li></ol></details>
-    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">📱</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
+  if(LIVE){const ts=S.targets||[],ch=S.wch||"telegram";
+    h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht per <b>Telegram</b> oder <b>WhatsApp</b> an die hier eingetragenen Personen (über den Gratisdienst CallMeBot).</p>
+    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">${t.channel==="telegram"?"✈️":"📱"}</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${t.channel==="telegram"?"Telegram":"WhatsApp"} ${esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
       <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="wtest" data-id="${t.id}">Test</button><button class="btn sm ghost" data-act="wtoggle" data-id="${t.id}">${t.active?"Pause":"Aktiv"}</button><button class="btn sm ghost" data-act="wdel" data-id="${t.id}" aria-label="löschen">✕</button></div></div>`).join("")||`<p class="muted small">Noch keine Empfänger.</p>`}</div>
-    <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:10px"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" inputmode="tel" placeholder="+41 79 123 45 67"></div>
-    <input id="wkey" class="input" inputmode="numeric" placeholder="API-Key von CallMeBot" style="margin-top:8px">
+    <div class="filter" style="margin-top:12px"><button class="chip ${ch==="telegram"?"on":""}" data-act="wch" data-c="telegram">Telegram</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
+    ${ch==="telegram"?`<details class="small" style="margin-bottom:10px" open><summary style="cursor:pointer;font-weight:600">Einmalig in Telegram (1 Minute)</summary>
+      <ol style="margin:8px 0 0;padding-left:18px"><li>In Telegram unter <b>Einstellungen → Benutzername</b> einen Benutzernamen festlegen (falls noch keiner, z.B. @rene_steiner).</li>
+      <li>Den Bot <a href="https://t.me/CallMeBot_txtbot" target="_blank" rel="noopener"><b>@CallMeBot_txtbot</b></a> öffnen und <b>/start</b> senden – damit erlaubst du ihm, dir zu schreiben.</li>
+      <li>Hier Name und Benutzernamen eintragen, dann «Test».</li></ol></details>
+    <div class="form2" style="grid-template-columns:1fr 1fr"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" autocapitalize="off" placeholder="@benutzername"></div>`
+    :`<details class="small" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">Einmalig in WhatsApp (API-Key holen)</summary>
+      <ol style="margin:8px 0 0;padding-left:18px"><li>Die Nummer <b>+34 694 25 79 52</b> als Kontakt speichern.</li>
+      <li>Per WhatsApp senden: <b>I allow callmebot to send me messages</b></li>
+      <li>Die Antwort enthält den <b>APIKEY</b>. Kommt keine Antwort innerhalb weniger Minuten, frühestens nach 24 Stunden erneut versuchen.</li></ol></details>
+    <div class="form2" style="grid-template-columns:1fr 1fr"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" inputmode="tel" placeholder="+41 79 123 45 67"></div>
+    <input id="wkey" class="input" inputmode="numeric" placeholder="API-Key von CallMeBot" style="margin-top:8px">`}
     <div class="row small" style="margin:8px 0"><label class="row"><input type="checkbox" id="wfb" checked> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
     <button class="btn sm primary" data-act="wsave">Empfänger hinzufügen</button>
     <p class="small muted" style="margin:10px 0 0">Hinweis: CallMeBot ist ein kostenloser Dienst ohne Garantie und für den persönlichen Gebrauch gedacht. Die Nachrichten laufen über dessen Server.</p></div>`}
@@ -1410,10 +1416,12 @@ const LIVEA={
   setrole:d=>{const id=d.p;if(!id)return toast("Bitte eine Person wählen");call("admin_set_role",{p_person:id,p_role:d.r},d.r==="ok"?"OK-Recht erteilt":"OK-Recht entfernt").catch(()=>{})},
   addperson:()=>{const v=$("#apv").value.trim(),n=$("#apn").value.trim();if(!v||!n)return toast("Bitte Vor- und Nachname angeben");
     call("admin_add_person",{p_vorname:v,p_name:n,p_typ:$("#apt").value,p_gruppe:$("#apg").value.trim(),p_funktion:$("#apf").value.trim()},`${v} ${n} hinzugefügt – Platz im Saalplan zuteilen`).catch(()=>{})},
-  wsave:()=>{const n=$("#wname").value.trim(),ph=$("#wphone").value.trim(),k=$("#wkey").value.trim();if(!n||!ph||!k)return toast("Bitte Name, Nummer und API-Key angeben");
-    call("admin_save_target",{p_id:null,p_name:n,p_phone:ph,p_apikey:k,p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger gespeichert – jetzt «Test» drücken").catch(()=>{})},
+  wch:d=>{S.wch=d.c;render()},
+  wsave:()=>{const ch=S.wch||"telegram",n=$("#wname").value.trim(),ph=$("#wphone").value.trim(),k=$("#wkey")?$("#wkey").value.trim():"";
+    if(!n||!ph||(ch==="whatsapp"&&!k))return toast(ch==="telegram"?"Bitte Name und Telegram-Benutzernamen angeben":"Bitte Name, Nummer und API-Key angeben");
+    call("admin_save_target",{p_id:null,p_name:n,p_channel:ch,p_to:ph,p_apikey:k,p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger gespeichert – jetzt «Test» drücken").catch(()=>{})},
   wtest:d=>rpc("admin_test_target",{p_code:S.code,p_id:d.id}).then(()=>toast("Testnachricht gesendet – kommt in wenigen Sekunden")).catch(e=>toast(e.message)),
-  wtoggle:d=>{const t=(S.targets||[]).find(x=>x.id===d.id);if(!t)return;call("admin_save_target",{p_id:t.id,p_name:t.name,p_phone:t.phone,p_apikey:"",p_feedback:t.on_feedback,p_order:t.on_order,p_active:!t.active},t.active?"Pausiert":"Aktiviert").catch(()=>{})},
+  wtoggle:d=>{const t=(S.targets||[]).find(x=>x.id===d.id);if(!t)return;call("admin_save_target",{p_id:t.id,p_name:t.name,p_channel:t.channel,p_to:t.phone,p_apikey:"",p_feedback:t.on_feedback,p_order:t.on_order,p_active:!t.active},t.active?"Pausiert":"Aktiviert").catch(()=>{})},
   wdel:d=>call("admin_delete_target",{p_id:d.id},"Empfänger gelöscht").catch(()=>{}),
   reload:()=>loadLive().then(()=>{render();toast("Aktualisiert")}).catch(e=>toast(e.message)),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;S.code=c;
