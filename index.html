@@ -1183,6 +1183,19 @@ function vAdmin(){
   let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
   <div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}</div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
+  if(LIVE){const ts=S.targets||[];
+    h+=`<div class="card"><h3>WhatsApp-Benachrichtigungen</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine WhatsApp-Nachricht an die hier eingetragenen Personen (über den Gratisdienst CallMeBot).</p>
+    <details class="small" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">So holt sich jede Person ihren API-Key (einmalig, 1 Minute)</summary>
+      <ol style="margin:8px 0 0;padding-left:18px"><li>Die Nummer <b>+34 694 25 79 52</b> im Handy als Kontakt speichern (z.B. «CallMeBot»).</li>
+      <li>Diesem Kontakt per WhatsApp schreiben: <b>I allow callmebot to send me messages</b></li>
+      <li>Nach kurzer Zeit kommt die Antwort mit dem <b>APIKEY</b> (eine Zahl). Diese hier zusammen mit der eigenen Handynummer eintragen.</li></ol></details>
+    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">📱</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
+      <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="wtest" data-id="${t.id}">Test</button><button class="btn sm ghost" data-act="wtoggle" data-id="${t.id}">${t.active?"Pause":"Aktiv"}</button><button class="btn sm ghost" data-act="wdel" data-id="${t.id}" aria-label="löschen">✕</button></div></div>`).join("")||`<p class="muted small">Noch keine Empfänger.</p>`}</div>
+    <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:10px"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" inputmode="tel" placeholder="+41 79 123 45 67"></div>
+    <input id="wkey" class="input" inputmode="numeric" placeholder="API-Key von CallMeBot" style="margin-top:8px">
+    <div class="row small" style="margin:8px 0"><label class="row"><input type="checkbox" id="wfb" checked> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
+    <button class="btn sm primary" data-act="wsave">Empfänger hinzufügen</button>
+    <p class="small muted" style="margin:10px 0 0">Hinweis: CallMeBot ist ein kostenloser Dienst ohne Garantie und für den persönlichen Gebrauch gedacht. Die Nachrichten laufen über dessen Server.</p></div>`}
   if(LIVE){const oks=S.okList||[];
     h+=`<div class="card"><h3>OK-Berechtigungen</h3><p class="muted small">Personen mit OK-Recht sehen Verwaltung, Service-Board, alle Bestellungen und das Feedback. Sie melden sich mit ihrem eigenen Zugangscode an.</p>
     <div class="chips" style="margin-bottom:10px">${oks.map(p=>`<span class="chip b">${esc(full(p))}${p.id===S.meId?"":` <button class="btn sm ghost" style="padding:0 4px" data-act="setrole" data-p="${p.id}" data-r="member" aria-label="OK-Recht entfernen">✕</button>`}</span>`).join("")||`<span class="muted small">Noch niemand.</span>`}</div>
@@ -1277,7 +1290,7 @@ const A={
   exportlinks:()=>download("herrenabend-links.csv","Vorname;Name;Rolle;Gruppe;Tisch;Platz;Link\n"+S.people.map(p=>[p.vorname,p.name,isChef(p)?chefLbl(chefOf(p)):"Teilnehmer",G(p.gruppe)?.name||"",p.tisch||"",p.platz||"",linkOf(p)].join(";")).join("\n")),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");
     if(!ACCESS.hashes.has(sha256(ACCESS.salt+c).slice(0,16)))return toast("Code unbekannt – bitte prüfen");
-    S.unlocked=true;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;
+    S.unlocked=true;S.code=c;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;
     try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}
     render();if(!VORAB&&S.demo&&!S.userId)askUser()},
   ics:d=>{const st=["20261114T193000","20261115T170000"][+d.i],en=["20261114T213000","20261115T190000"][+d.i];
@@ -1342,7 +1355,7 @@ function applySession(s){
   if(S.role==="ok"&&!S.isOkUser)S.role="gast";
   const rs=document.querySelector(".role");if(rs){if(rs.firstChild&&rs.firstChild.nodeType===3)rs.firstChild.textContent="Ansicht ";rs.style.display=S.isOkUser||S.groups.some(g=>g.chef===me.id)?"":"none";$("#role").value=S.role}
 }
-async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser)S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[])}
+async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[])}}
 async function saveSeatsAll(fn){fn();try{await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     await loadLive();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert`)}catch(e){toast(e.message);await loadLive().catch(()=>{});render()}}
 async function saveSeatsDiff(fn){const before=new Map(S.people.map(p=>[p.id,p.platz]));fn();const ch=S.people.filter(p=>p.platz&&p.platz!==before.get(p.id));
@@ -1382,7 +1395,7 @@ const LIVEA={
   takeprop:d=>{const x=S.proposals.find(p=>p.id===d.id);if(!x)return;S.cart[x.w]=(S.cart[x.w]||0)+1;call("delete_proposal",{p_id:d.id}).catch(()=>{})},
   order:()=>{const cg=chefGroup();const items=Object.entries(S.cart).filter(([,q])=>q>0).map(([w,q])=>({w,q}));if(!items.length||!S.orderTable||!cg)return;
     const total=items.reduce((s,i)=>s+W(i.w).p*i.q,0),cart=S.cart;S.cart={};
-    call("place_order",{p_group:cg.id,p_tisch:+S.orderTable,p_items:items,p_total:total},"Bestellung an den Service gesendet").catch(()=>{S.cart=cart;render()})},
+    call("place_order",{p_group:cg.id,p_tisch:+S.orderTable,p_items:items.map(i=>({...i,n:W(i.w).n+(W(i.w).cl===150?" (Magnum)":"")})),p_total:total},"Bestellung an den Service gesendet").catch(()=>{S.cart=cart;render()})},
   ost:d=>call("set_order_status",{p_id:d.id,p_status:d.s}).catch(()=>{}),
   groupfill:()=>saveSeatsDiff(()=>fillSingles(members(chefGroup()))),
   gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!z||!o)return toast("Bitte Zeit und Ort angeben");call("set_group_apero",{p_group:chefGroup().id,p_zeit:z,p_ort:o},"Gruppen-Apéro gespeichert").catch(()=>{})},
@@ -1397,10 +1410,18 @@ const LIVEA={
   setrole:d=>{const id=d.p;if(!id)return toast("Bitte eine Person wählen");call("admin_set_role",{p_person:id,p_role:d.r},d.r==="ok"?"OK-Recht erteilt":"OK-Recht entfernt").catch(()=>{})},
   addperson:()=>{const v=$("#apv").value.trim(),n=$("#apn").value.trim();if(!v||!n)return toast("Bitte Vor- und Nachname angeben");
     call("admin_add_person",{p_vorname:v,p_name:n,p_typ:$("#apt").value,p_gruppe:$("#apg").value.trim(),p_funktion:$("#apf").value.trim()},`${v} ${n} hinzugefügt – Platz im Saalplan zuteilen`).catch(()=>{})},
+  wsave:()=>{const n=$("#wname").value.trim(),ph=$("#wphone").value.trim(),k=$("#wkey").value.trim();if(!n||!ph||!k)return toast("Bitte Name, Nummer und API-Key angeben");
+    call("admin_save_target",{p_id:null,p_name:n,p_phone:ph,p_apikey:k,p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger gespeichert – jetzt «Test» drücken").catch(()=>{})},
+  wtest:d=>rpc("admin_test_target",{p_code:S.code,p_id:d.id}).then(()=>toast("Testnachricht gesendet – kommt in wenigen Sekunden")).catch(e=>toast(e.message)),
+  wtoggle:d=>{const t=(S.targets||[]).find(x=>x.id===d.id);if(!t)return;call("admin_save_target",{p_id:t.id,p_name:t.name,p_phone:t.phone,p_apikey:"",p_feedback:t.on_feedback,p_order:t.on_order,p_active:!t.active},t.active?"Pausiert":"Aktiviert").catch(()=>{})},
+  wdel:d=>call("admin_delete_target",{p_id:d.id},"Empfänger gelöscht").catch(()=>{}),
   reload:()=>loadLive().then(()=>{render();toast("Aktualisiert")}).catch(e=>toast(e.message)),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;S.code=c;
     loadLive().then(()=>{S.unlocked=true;try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}render()}).catch(e=>toast(e.message))},
 };
+/* Vorabversion: Feedback ebenfalls in die Datenbank (mit dem persönlichen Code) */
+if(VORAB){const fb0=A.sendfb;A.sendfb=()=>{if(FEEDBACK.formUrl||!S.code)return fb0();const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
+  rpc("send_feedback",{p_code:S.code,p_cat:$("#fbcat").value,p_txt:txt,p_anon:$("#fbanon").checked}).then(()=>{S.feedback.push({id:uid(),cat:$("#fbcat").value,txt,by:S.meId,zeit:now()});render();toast("Danke! Das OK hat dein Feedback erhalten.")}).catch(e=>toast(e.message))}}
 if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
   A.sendfb=()=>{if(FEEDBACK.formUrl)return fb();const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
     call("send_feedback",{p_cat:$("#fbcat").value,p_txt:txt,p_anon:$("#fbanon").checked},"Danke! Das OK hat dein Feedback erhalten.").catch(()=>{})};
@@ -1436,7 +1457,7 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
   const qc=normCode(new URLSearchParams(location.search).get("c"));
   S.vname=cleanName(new URLSearchParams(location.search).get("n"));
   S.unlocked=!ACCESS.required||(qc&&ACCESS.hashes.has(sha256(ACCESS.salt+qc).slice(0,16)));
-  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;render();return}
+  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc)S.code=qc;render();return}
   if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
       loadLive().then(()=>{S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
