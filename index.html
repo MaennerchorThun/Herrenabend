@@ -509,7 +509,13 @@ const DEMO_PLAN={};for(const[n,,t]of DEMO_GROUPS)for(const id of t.split(","))(D
 let PLAN=null,PLAN_INFO=null;
 /* Gruppen-Apéros 2026 (fest hinterlegt, wird nach Import automatisch zugeordnet) */
 const BEKB="Foyer Berner Kantonalbank, Bahnhofstrasse 1, 3600 Thun";
-const GROUP_APEROS=[{n:"Bautisch",g:["bautisch"],zeit:"17:00",ort:BEKB},{n:"Junioren",g:["junioren"],zeit:"17:00",ort:BEKB},{n:"N2",g:["n2"],zeit:"17:00",ort:BEKB}];
+const GROUP_APEROS=[{n:"Bautisch",g:["bautisch"],zeit:"17:00",ort:BEKB},{n:"Junioren",g:["junioren"],zeit:"17:00",ort:BEKB},{n:"N2",g:["n2"],zeit:"17:00",ort:BEKB},
+  {n:"Tisch Hansueli Haldimann",g:["haldimann"],zeit:"17:00",ort:"Hotel Seepark, Thun"},
+  {n:"Tisch Barni Wittwer",g:["wittwer"],zeit:"16:00",ort:"Bierhalle"},
+  {n:"Tisch Thomas Zumthurm",g:["zumthurm"],zeit:"",ort:"Spontan organisiert – wende dich an Thomas"},
+  {n:"Tisch Jürg Messerli",g:["messerli"],zeit:"",ort:"Spontan organisiert – wende dich an Jürg"}];
+/* Gruppen-Apéro anzeigen: mit Zeit → «17:00 Uhr · Ort (Karte)», ohne Zeit → nur Hinweistext */
+const aperoTxt=a=>a.zeit?`<b>${esc(a.zeit)} Uhr</b> · ${aperoOrt(a)}`:esc(a.ort);
 function applyGroupAperos(){let n=0;for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero){g.apero={zeit:ga.zeit,ort:ga.ort};n++}}return n}
 const mapsUrl=o=>"https://maps.google.com/?q="+encodeURIComponent(o);
 const aperoOrt=a=>`<a href="${mapsUrl(a.ort)}" target="_blank" rel="noopener">${esc(a.ort)}</a>`;
@@ -745,7 +751,7 @@ const back=(r="mehr",l="Zurück")=>`<button class="btn ghost sm" data-act="go" d
 const kpiBox=(v,l,cls="")=>`<div class="kpi"><b class="${cls}">${v}</b><span>${l}</span></div>`;
 
 /* ================= Views ================= */
-function aperoLine(g){return g&&g.apero?`Deine Gruppe hat einen eigenen Apéro: <b>${esc(g.apero.zeit)} Uhr</b> · ${aperoOrt(g.apero)}`:""}
+function aperoLine(g){return g&&g.apero?`Apéro deiner Gruppe: ${aperoTxt(g.apero)}`:""}
 function vStart(){
   const me=ME(),notReg=typeof LIVE!=="undefined"&&LIVE&&S.meObj&&!S.meObj.angemeldet,isOk=me.id==="ok"||(notReg&&S.role==="ok"),g=G(me.gruppe),t=me.tisch?T(me.tisch):null,cg=chefGroup();
   let h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><p class="eyebrow">${EVENT.datum} · ${EVENT.ort}</p>
@@ -903,7 +909,7 @@ function vGruppe(){
     <div class="kpis">${kpiBox(ms.length,"Personen")}${kpiBox(ms.length-uns.length,"platziert")}${kpiBox(uns.length,"ohne Platz",uns.length?"st-neu":"")}${kpiBox(tabs.map(t=>"T"+t).join(", ")||"–","Tische")}</div>
     <div class="row" style="margin-bottom:12px">${uns.length?`<button class="btn primary sm" data-act="groupfill">${uns.length} ohne Platz auf freie Plätze setzen</button>`:""}<button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button></div>`;
   h+=`<div class="card"><h3>Gruppen-Apéro (optional)</h3><p class="muted small">Der Apéro für alle ist um ${EVENT.apero} Uhr in der ${EVENT.aperoOrt}. Wenn deine Gruppe sich vorher separat trifft, trag es hier ein – deine Leute sehen es in der App.</p>
-    <div class="form2"><input id="gaz" class="input" type="time" value="${esc(g.apero?.zeit||"")}"><input id="gao" class="input" placeholder="Ort, z.B. Bistro Halle 2" value="${esc(g.apero?.ort||"")}"></div>
+    <div class="form2"><input id="gaz" class="input" type="time" value="${esc(g.apero?.zeit||"")}"><input id="gao" class="input" placeholder="Ort oder Hinweis, z.B. Hotel Seepark / spontan" value="${esc(g.apero?.ort||"")}"></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="gaperosave">Speichern</button>${g.apero?`<button class="btn sm" data-act="gaperoclear">Entfernen</button>`:""}</div></div>`;
   if(!tabs.length)h+=`<div class="note">Deine Gruppe hat noch keinen Tisch – das OK teilt die Tische zu.</div>`;
   for(const tid of tabs){const others=groupsAt(tid).filter(e=>e.g?.id!==g.id);
@@ -947,7 +953,7 @@ function vAperoVorab(){
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Eröffnung Bierbar 16:00 Uhr · Saalöffnung ${EVENT.saal} Uhr</p></div>
     <div class="sec-h"><h2>Apéros der Tischgemeinschaften</h2></div>
-    ${[...m.values()].map(e=>`<div class="card"><h3 style="margin:0 0 4px">${esc(e.a.zeit)} Uhr</h3><div class="small">${aperoOrt(e.a)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}
+    ${[...m.values()].sort((p,q)=>(p.a.zeit||"99").localeCompare(q.a.zeit||"99")).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${e.a.zeit?esc(e.a.zeit)+" Uhr":"Spontan"}</h3><div class="small">${e.a.zeit?aperoOrt(e.a):esc(e.a.ort)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}
     <p class="small muted">Weitere Gruppen-Apéros erscheinen in der Event-Version.</p>`;
 }
 function vApero(){
@@ -959,12 +965,12 @@ function vApero(){
     <p class="muted" style="margin:0 0 12px">Baröffnung 16:00 Uhr · Saalöffnung ${EVENT.saal} Uhr</p>
     ${isOk?"":`<button class="btn sm" data-act="apero">${ap?"✓ Ich komme – abmelden":"Ich komme zum Apéro"}</button>`}</div>`;
   if(g){const ms=members(g).filter(p=>S.apero.has(p.id));
-    h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${g.apero?`Eigener Gruppen-Apéro um <b>${esc(g.apero.zeit)} Uhr</b> · ${aperoOrt(g.apero)}`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Biertheke."}</p>
+    h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${g.apero?`Gruppen-Apéro: ${aperoTxt(g.apero)}`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Biertheke."}</p>
       ${cg&&cg.id===g.id?`<button class="btn sm" data-act="go" data-r="gruppe" style="margin-bottom:10px">Gruppen-Apéro festlegen</button>`:""}
       <div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div></div>`}
   h+=`<div class="card soft small"><b>Ehrengäste:</b> separater Empfang ab 17:00 Uhr mit Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
   if(withA.length){const m=new Map();for(const x of withA){const k=x.apero.zeit+"|"+x.apero.ort;if(!m.has(k))m.set(k,{a:x.apero,gs:[]});m.get(k).gs.push(x.name)}
-    h+=`<div class="sec-h"><h2>Gruppen-Apéros</h2></div>${[...m.values()].sort((p,q)=>p.a.zeit.localeCompare(q.a.zeit)).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${esc(e.a.zeit)} Uhr</h3><div class="small">${aperoOrt(e.a)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}`}
+    h+=`<div class="sec-h"><h2>Gruppen-Apéros</h2></div>${[...m.values()].sort((p,q)=>(p.a.zeit||"99").localeCompare(q.a.zeit||"99")).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${e.a.zeit?esc(e.a.zeit)+" Uhr":"Spontan"}</h3><div class="small">${e.a.zeit?aperoOrt(e.a):esc(e.a.ort)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}`}
   const rows=S.groups.map(x=>({g:x,n:members(x).length,a:members(x).filter(p=>S.apero.has(p.id)).length})).filter(r=>r.a).sort((a,b)=>b.a-a.a);
   h+=`<div class="sec-h"><h2>Wer kommt? (${S.apero.size})</h2></div><div class="card scroll"><table class="t"><tr><th>Gruppe</th><th>Zusagen</th></tr>${rows.map(r=>`<tr><td>${esc(r.g.name)}</td><td>${r.a} von ${r.n}</td></tr>`).join("")||`<tr><td colspan="2" class="muted">Noch keine Zusagen.</td></tr>`}</table></div>`;
   return h;
@@ -1287,7 +1293,7 @@ function vAdmin(){
     <div class="row"><button class="btn primary sm" data-act="allocask" data-m="plan" ${PLAN?"":"disabled"}>Nach Vorlage</button><button class="btn sm" data-act="allocask" data-m="auto">Automatisch</button><button class="btn sm" data-act="fillall">${k.noSeat} ohne Platz auffüllen</button><button class="btn sm" data-act="go" data-r="saal">Manuell im Saalplan</button></div></div>`;
   const gs=[...S.groups].sort((a,b)=>members(b).length-members(a).length);
   h+=`<div class="card"><h3>Gruppen (${gs.length})</h3><div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Pers.</th><th>Gruppenchef</th><th>Tische</th></tr>${gs.map(g=>{const ms=members(g);
-    return`<tr><td><b>${esc(g.name)}</b>${g.apero?`<br><span class="small muted">Apéro ${esc(g.apero.zeit)}</span>`:""}</td><td>${ms.length}${ms.some(p=>!p.platz)?` <span class="chip w">${ms.filter(p=>!p.platz).length} offen</span>`:""}</td>
+    return`<tr><td><b>${esc(g.name)}</b>${g.apero?`<br><span class="small muted">Apéro ${esc(g.apero.zeit||"spontan")}</span>`:""}</td><td>${ms.length}${ms.some(p=>!p.platz)?` <span class="chip w">${ms.filter(p=>!p.platz).length} offen</span>`:""}</td>
     <td>${`<select class="input" data-chg="chef" data-g="${g.id}" style="padding:5px;min-width:150px"><option value="">– keiner –</option>${(()=>{const opts=[...ms];const c=P(g.chef);if(c&&!opts.includes(c))opts.unshift(c);return opts.sort(byName).map(p=>`<option value="${p.id}" ${g.chef===p.id?"selected":""}>${esc(full(p))}${p.gruppe!==g.id?" (andere Gruppe)":""}</option>`).join("")})()}</select>`}</td>
     <td>${groupTables(g).join(", ")||"–"}</td></tr>`}).join("")}</table></div></div>`;
   if(!LIVE)h+=`<div class="card"><div class="row between"><h3 style="margin:0">Persönliche Zugangslinks</h3><button class="btn sm" data-act="exportlinks">Alle Links als CSV</button></div>
@@ -1333,7 +1339,7 @@ const A={
     S.orders.push({id:uid(),tisch:S.orderTable,gruppe:cg.id,items,status:"neu",zeit:now(),by:S.meId});S.cart={};render();toast("Bestellung an den Service gesendet")},
   ost:d=>{S.orders.find(o=>o.id===d.id).status=d.s;render()},
   groupfill:()=>{const n=fillSingles(members(chefGroup()));render();toast(n?`${n} Personen platziert`:"Keine freien Plätze an deinen Tischen – bitte OK kontaktieren")},
-  gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!z||!o)return toast("Bitte Zeit und Ort angeben");chefGroup().apero={zeit:z,ort:o};render();toast("Gruppen-Apéro gespeichert")},
+  gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!o)return toast("Bitte Ort oder Hinweis angeben (Zeit freiwillig)");chefGroup().apero={zeit:z,ort:o};render();toast("Gruppen-Apéro gespeichert")},
   gaperoclear:()=>{chefGroup().apero=null;render();toast("Gruppen-Apéro entfernt")},
   allocask:d=>modal(`<h2>${d.m==="plan"?"Nach Vorlage verteilen?":"Automatisch neu verteilen?"}</h2><p class="muted">Alle bisherigen Tisch- und Platzzuteilungen werden ersetzt.</p><div class="row"><button class="btn primary" data-act="allocate" data-m="${d.m}">Neu verteilen</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`),
   prevclear:()=>{PREV=null;PREV_INFO=null;S.prevPlaced=null;render();toast("Vorjahres-Sitzplan entfernt")},
@@ -1408,7 +1414,7 @@ function call(fn,args,msg){return rpc(fn,{p_code:S.code,...args}).then(async x=>
 function applySession(s){
   const me=s.me,hm=t=>new Date(t).toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
   S.meObj={...me,gruppe:me.group_id,tisch:me.tisch?String(me.tisch):null,platz:me.platz,token:""};
-  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:g.apero_zeit?{zeit:g.apero_zeit,ort:g.apero_ort||""}:null}));
+  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:(g.apero_zeit||g.apero_ort)?{zeit:g.apero_zeit||"",ort:g.apero_ort||""}:null}));
   S.people=s.people.map(p=>({id:p.id,vorname:p.vorname,name:p.name,typ:p.typ,funktion:p.funktion||undefined,gruppe:p.group_id,tisch:p.tisch?String(p.tisch):null,platz:p.platz,menu:p.menu||"normal",token:"",hasCode:p.has_code,role:p.role}));
   S.apero=new Set(s.people.filter(p=>p.apero).map(p=>p.id));if(me.apero)S.apero.add(me.id);
   S.orders=s.orders.map(o=>({id:o.id,tisch:String(o.tisch),gruppe:o.group_id,items:o.items,status:o.status,zeit:hm(o.created_at),by:o.by_person}));
@@ -1464,7 +1470,7 @@ const LIVEA={
     call("place_order",{p_group:cg.id,p_tisch:+S.orderTable,p_items:items.map(i=>({...i,n:W(i.w).n+(W(i.w).cl===150?" (Magnum)":"")})),p_total:total},"Bestellung an den Service gesendet").catch(()=>{S.cart=cart;render()})},
   ost:d=>call("set_order_status",{p_id:d.id,p_status:d.s}).catch(()=>{}),
   groupfill:()=>saveSeatsDiff(()=>fillSingles(members(chefGroup()))),
-  gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!z||!o)return toast("Bitte Zeit und Ort angeben");call("set_group_apero",{p_group:chefGroup().id,p_zeit:z,p_ort:o},"Gruppen-Apéro gespeichert").catch(()=>{})},
+  gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!o)return toast("Bitte Ort oder Hinweis angeben (Zeit freiwillig)");call("set_group_apero",{p_group:chefGroup().id,p_zeit:z,p_ort:o},"Gruppen-Apéro gespeichert").catch(()=>{})},
   gaperoclear:()=>call("set_group_apero",{p_group:chefGroup().id,p_zeit:"",p_ort:""},"Gruppen-Apéro entfernt").catch(()=>{}),
   allocate:d=>{closeModal();saveSeatsAll(()=>allocateGroups(d.m==="plan"?PLAN:null))},
   fillall:()=>saveSeatsAll(()=>fillSingles(S.people.filter(p=>!p.platz))),
