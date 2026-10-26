@@ -1183,25 +1183,31 @@ function vAdmin(){
   let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
   <div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}</div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
-  if(LIVE){const ts=S.targets||[],ch=S.wch||"telegram";
-    h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht per <b>Telegram</b> oder <b>WhatsApp</b> an die hier eingetragenen Personen (über den Gratisdienst CallMeBot).</p>
-    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">${t.channel==="telegram"?"✈️":"📱"}</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${t.channel==="telegram"?"Telegram":"WhatsApp"} ${esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
+  if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp"};
+    h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht an die hier eingetragenen Empfänger – an einzelne Personen oder an eine ganze Telegram-Gruppe (z.B. «OK Herrenabend»).</p>
+    <div class="list">${ts.map(t=>`<div class="li" style="cursor:default"><div class="av">${t.channel==="whatsapp"?"📱":"✈️"}</div><div class="grow"><div class="nm">${esc(t.name)}${t.active?"":` <span class="chip w">pausiert</span>`}</div><div class="sub">${chName[t.channel]||t.channel}${t.channel==="tgbot"?"":" "+esc(t.phone)} · ${[t.on_feedback?"Feedback":"",t.on_order?"Bestellungen":""].filter(Boolean).join(" + ")||"nichts"}</div></div>
       <div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="wtest" data-id="${t.id}">Test</button><button class="btn sm ghost" data-act="wtoggle" data-id="${t.id}">${t.active?"Pause":"Aktiv"}</button><button class="btn sm ghost" data-act="wdel" data-id="${t.id}" aria-label="löschen">✕</button></div></div>`).join("")||`<p class="muted small">Noch keine Empfänger.</p>`}</div>
-    <div class="filter" style="margin-top:12px"><button class="chip ${ch==="telegram"?"on":""}" data-act="wch" data-c="telegram">Telegram</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
-    ${ch==="telegram"?`<details class="small" style="margin-bottom:10px" open><summary style="cursor:pointer;font-weight:600">Einmalig in Telegram (1 Minute)</summary>
-      <ol style="margin:8px 0 0;padding-left:18px"><li>In Telegram unter <b>Einstellungen → Benutzername</b> einen Benutzernamen festlegen (falls noch keiner, z.B. @rene_steiner).</li>
-      <li>Den Bot <a href="https://t.me/CallMeBot_txtbot" target="_blank" rel="noopener"><b>@CallMeBot_txtbot</b></a> öffnen und <b>/start</b> senden – damit erlaubst du ihm, dir zu schreiben.</li>
-      <li>Hier Name und Benutzernamen eintragen, dann «Test».</li></ol></details>
-    <div class="form2" style="grid-template-columns:1fr 1fr"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" autocapitalize="off" placeholder="@benutzername"></div>`
-    :`<details class="small" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">Einmalig in WhatsApp (API-Key holen)</summary>
-      <ol style="margin:8px 0 0;padding-left:18px"><li>Die Nummer <b>+34 694 25 79 52</b> als Kontakt speichern.</li>
-      <li>Per WhatsApp senden: <b>I allow callmebot to send me messages</b></li>
-      <li>Die Antwort enthält den <b>APIKEY</b>. Kommt keine Antwort innerhalb weniger Minuten, frühestens nach 24 Stunden erneut versuchen.</li></ol></details>
+    <div class="row small" style="margin:12px 0 4px"><span class="muted">Neue Empfänger erhalten:</span><label class="row"><input type="checkbox" id="wfb" checked> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
+    <div class="filter" style="margin-top:8px"><button class="chip ${ch==="tgbot"?"on":""}" data-act="wch" data-c="tgbot">Telegram (eigener Bot)</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
+    ${ch==="tgbot"?(!tg.has_token?`<div class="card soft small" style="margin:0"><b>Schritt 1 – eigenen Bot erstellen (einmalig, 2 Minuten)</b>
+      <ol style="margin:8px 0;padding-left:18px"><li>In Telegram <a href="https://t.me/BotFather" target="_blank" rel="noopener"><b>@BotFather</b></a> öffnen und <b>/newbot</b> senden.</li>
+      <li>Einen Namen eingeben (z.B. <i>Herrenabend MCT</i>) und einen Benutzernamen, der auf <i>bot</i> endet (z.B. <i>herrenabend_mct_bot</i>).</li>
+      <li>BotFather antwortet mit einem <b>Token</b> (lange Zeichenkette mit Doppelpunkt). Diesen hier einfügen:</li></ol>
+      <input id="tgtoken" class="input" autocapitalize="off" spellcheck="false" placeholder="123456789:ABC…"><button class="btn sm primary" style="margin-top:8px" data-act="tgtoken">Bot verbinden</button></div>`
+     :`<div class="card soft small" style="margin:0">${tg.token_error?`<p style="color:var(--danger)"><b>Token-Fehler:</b> ${esc(tg.token_error)}</p>`:""}
+      <p style="margin:0 0 8px">✓ Bot verbunden${tg.bot?`: <a href="https://t.me/${esc(tg.bot)}" target="_blank" rel="noopener"><b>@${esc(tg.bot)}</b></a>`:""}</p>
+      <b>Schritt 2 – Empfänger verbinden</b>
+      <ul style="margin:6px 0;padding-left:18px"><li><b>Einzelperson:</b> öffnet ${tg.bot?`<a href="https://t.me/${esc(tg.bot)}" target="_blank" rel="noopener">t.me/${esc(tg.bot)}</a>`:"den Bot"} und tippt <b>Starten</b>.</li>
+      <li><b>Gruppe (empfohlen):</b> Telegram-Gruppe «OK Herrenabend» erstellen, den Bot als Mitglied hinzufügen und eine Nachricht in die Gruppe schreiben.</li></ul>
+      <button class="btn sm primary" data-act="tgfetch">Chats suchen</button>
+      ${(tg.chats||[]).length?`<div class="list" style="margin-top:8px">${tg.chats.map(c=>{const added=ts.some(t=>t.channel==="tgbot"&&t.phone===String(c.id));return`<div class="li" style="cursor:default"><div class="av">${c.type==="private"?"👤":"👥"}</div><div class="grow"><div class="nm">${esc(c.name||c.username||c.id)}</div><div class="sub">${c.type==="private"?"Person":"Gruppe"}${c.username?" · @"+esc(c.username):""}</div></div>${added?`<span class="chip g">verbunden</span>`:`<button class="btn sm primary" data-act="tgadd" data-id="${esc(c.id)}" data-n="${esc(c.name||c.username||"Telegram")}">hinzufügen</button>`}</div>`}).join("")}</div>`:(tg.updates_ready?`<p class="muted" style="margin:8px 0 0">Noch keine Chats gefunden – hat schon jemand dem Bot geschrieben?</p>`:"")}
+      <details style="margin-top:8px"><summary style="cursor:pointer">Bot-Token ändern</summary><input id="tgtoken" class="input" autocapitalize="off" spellcheck="false" placeholder="neuer Token" style="margin-top:6px"><button class="btn sm" style="margin-top:6px" data-act="tgtoken">Speichern</button></details></div>`)
+    :`<details class="small" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:600">Einmalig in WhatsApp (API-Key von CallMeBot)</summary>
+      <p style="margin:6px 0">Achtung: Der WhatsApp-Bot von CallMeBot nimmt zurzeit keine neuen Personen an («This Bot is full»). Sobald eine neue Nummer verfügbar ist, steht sie auf callmebot.com.</p>
+      <ol style="margin:8px 0 0;padding-left:18px"><li>Die Bot-Nummer von callmebot.com als Kontakt speichern.</li><li>Per WhatsApp senden: <b>I allow callmebot to send me messages</b></li><li>Die Antwort enthält den <b>APIKEY</b>.</li></ol></details>
     <div class="form2" style="grid-template-columns:1fr 1fr"><input id="wname" class="input" placeholder="Name"><input id="wphone" class="input" inputmode="tel" placeholder="+41 79 123 45 67"></div>
-    <input id="wkey" class="input" inputmode="numeric" placeholder="API-Key von CallMeBot" style="margin-top:8px">`}
-    <div class="row small" style="margin:8px 0"><label class="row"><input type="checkbox" id="wfb" checked> Feedback</label><label class="row"><input type="checkbox" id="word" checked> Weinbestellungen</label></div>
-    <button class="btn sm primary" data-act="wsave">Empfänger hinzufügen</button>
-    <p class="small muted" style="margin:10px 0 0">Hinweis: CallMeBot ist ein kostenloser Dienst ohne Garantie und für den persönlichen Gebrauch gedacht. Die Nachrichten laufen über dessen Server.</p></div>`}
+    <input id="wkey" class="input" inputmode="numeric" placeholder="API-Key von CallMeBot" style="margin-top:8px">
+    <button class="btn sm primary" style="margin-top:8px" data-act="wsave">Empfänger hinzufügen</button>`}</div>`}
   if(LIVE){const oks=S.okList||[];
     h+=`<div class="card"><h3>OK-Berechtigungen</h3><p class="muted small">Personen mit OK-Recht sehen Verwaltung, Service-Board, alle Bestellungen und das Feedback. Sie melden sich mit ihrem eigenen Zugangscode an.</p>
     <div class="chips" style="margin-bottom:10px">${oks.map(p=>`<span class="chip b">${esc(full(p))}${p.id===S.meId?"":` <button class="btn sm ghost" style="padding:0 4px" data-act="setrole" data-p="${p.id}" data-r="member" aria-label="OK-Recht entfernen">✕</button>`}</span>`).join("")||`<span class="muted small">Noch niemand.</span>`}</div>
@@ -1361,7 +1367,7 @@ function applySession(s){
   if(S.role==="ok"&&!S.isOkUser)S.role="gast";
   const rs=document.querySelector(".role");if(rs){if(rs.firstChild&&rs.firstChild.nodeType===3)rs.firstChild.textContent="Ansicht ";rs.style.display=S.isOkUser||S.groups.some(g=>g.chef===me.id)?"":"none";$("#role").value=S.role}
 }
-async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[])}}
+async function loadLive(){const s=await rpc("app_session",{p_code:S.code});if(!s||s.error)throw new Error("Code unbekannt – bitte prüfen");applySession(s);if(S.isOkUser){S.okList=await rpc("admin_list_oks",{p_code:S.code}).catch(()=>S.okList||[]);S.targets=await rpc("admin_list_targets",{p_code:S.code}).catch(()=>S.targets||[]);S.tg=await rpc("admin_tg_info",{p_code:S.code}).catch(()=>S.tg||{})}}
 async function saveSeatsAll(fn){fn();try{await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     await loadLive();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert`)}catch(e){toast(e.message);await loadLive().catch(()=>{});render()}}
 async function saveSeatsDiff(fn){const before=new Map(S.people.map(p=>[p.id,p.platz]));fn();const ch=S.people.filter(p=>p.platz&&p.platz!==before.get(p.id));
@@ -1417,10 +1423,19 @@ const LIVEA={
   addperson:()=>{const v=$("#apv").value.trim(),n=$("#apn").value.trim();if(!v||!n)return toast("Bitte Vor- und Nachname angeben");
     call("admin_add_person",{p_vorname:v,p_name:n,p_typ:$("#apt").value,p_gruppe:$("#apg").value.trim(),p_funktion:$("#apf").value.trim()},`${v} ${n} hinzugefügt – Platz im Saalplan zuteilen`).catch(()=>{})},
   wch:d=>{S.wch=d.c;render()},
+  tgtoken:()=>{const t=$("#tgtoken").value.trim();if(!t)return toast("Bitte den Token einfügen");
+    rpc("admin_set_tg_token",{p_code:S.code,p_token:t}).then(()=>{toast("Bot wird verbunden …");setTimeout(()=>loadLive().then(()=>{render();toast(S.tg&&S.tg.token_error?"Token ungültig":"Bot verbunden")}),3000)}).catch(e=>toast(e.message))},
+  tgfetch:()=>rpc("admin_tg_fetch",{p_code:S.code}).then(()=>{toast("Suche Chats …");setTimeout(()=>loadLive().then(()=>{render();if(!(S.tg&&S.tg.chats&&S.tg.chats.length))toast("Noch keine Chats gefunden")}),3500)}).catch(e=>toast(e.message)),
+  tgadd:d=>call("admin_save_target",{p_id:null,p_name:d.n,p_channel:"tgbot",p_to:d.id,p_apikey:"",p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger verbunden – jetzt «Test» drücken").catch(()=>{}),
   wsave:()=>{const ch=S.wch||"telegram",n=$("#wname").value.trim(),ph=$("#wphone").value.trim(),k=$("#wkey")?$("#wkey").value.trim():"";
     if(!n||!ph||(ch==="whatsapp"&&!k))return toast(ch==="telegram"?"Bitte Name und Telegram-Benutzernamen angeben":"Bitte Name, Nummer und API-Key angeben");
     call("admin_save_target",{p_id:null,p_name:n,p_channel:ch,p_to:ph,p_apikey:k,p_feedback:$("#wfb").checked,p_order:$("#word").checked,p_active:true},"Empfänger gespeichert – jetzt «Test» drücken").catch(()=>{})},
-  wtest:d=>rpc("admin_test_target",{p_code:S.code,p_id:d.id}).then(()=>toast("Testnachricht gesendet – kommt in wenigen Sekunden")).catch(e=>toast(e.message)),
+  wtest:d=>rpc("admin_test_target",{p_code:S.code,p_id:d.id}).then(()=>{toast("Testnachricht wird gesendet …");
+    setTimeout(()=>rpc("admin_send_status",{p_code:S.code}).then(r=>{
+      if(r&&r.status==="error"){const m=String(r.message||"");modal(`<h2>Nachricht nicht zugestellt</h2><p class="small">CallMeBot meldet:</p><div class="card soft small">${esc(m)}</div>
+        ${/chat not found|bot was blocked|Forbidden/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss den Bot zuerst öffnen und «Starten» tippen bzw. der Bot muss Mitglied der Gruppe sein.</p>`:""}${/authorize|Permission/i.test(m)?`<p class="small"><b>Lösung:</b> Die Person muss CallMeBot einmalig erlauben, ihr zu schreiben. Am einfachsten über diesen Link auf dem Handy: <a href="https://api2.callmebot.com/txt/login.php" target="_blank" rel="noopener">Telegram-Berechtigung erteilen ↗</a> (mit Telegram anmelden und bestätigen). Danach erneut «Test».</p>`:""}
+        <div class="row"><button class="btn primary" data-act="close">OK</button></div>`)}
+      else toast("✓ Zugestellt – bitte im Handy prüfen")}).catch(()=>{}),4000)}).catch(e=>toast(e.message)),
   wtoggle:d=>{const t=(S.targets||[]).find(x=>x.id===d.id);if(!t)return;call("admin_save_target",{p_id:t.id,p_name:t.name,p_channel:t.channel,p_to:t.phone,p_apikey:"",p_feedback:t.on_feedback,p_order:t.on_order,p_active:!t.active},t.active?"Pausiert":"Aktiviert").catch(()=>{})},
   wdel:d=>call("admin_delete_target",{p_id:d.id},"Empfänger gelöscht").catch(()=>{}),
   reload:()=>loadLive().then(()=>{render();toast("Aktualisiert")}).catch(e=>toast(e.message)),
