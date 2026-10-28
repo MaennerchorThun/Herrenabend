@@ -1450,7 +1450,8 @@ function modal(html){const m=$("#modal");m.innerHTML=`<div class="sheet" role="d
 function closeModal(){$("#modal").hidden=true}
 $("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
 function download(name,txt){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+txt],{type:"text/csv"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
-function doImport(txt){const r=importCSV(txt);if(!r||r.err)return toast(r?.err||"Import fehlgeschlagen");setRole("ok");render();toast(`${r.n} Personen in ${r.groups} Gruppen importiert`)}
+function doImport(txt){
+  if(new URLSearchParams(location.search).get("demo")==="1"&&SUPA.url)return modal(`<h2>Das ist die Teilnehmer-Vorschau</h2><p>Hier arbeitet die App mit fiktiven Personen. Ein Import wird <b>nicht gespeichert</b> und ist nach dem Neuladen weg.</p><p>Die echten Teilnehmer importierst du in der <b>OK-Version</b>: Verwaltung → Einstellungen &amp; Import → 2. Teilnehmer importieren.</p><div class="row">${S.code?`<button class="btn primary" data-act="okevent">Zur OK-Version</button>`:""}<button class="btn" data-act="close">Schliessen</button></div>`);const r=importCSV(txt);if(!r||r.err)return toast(r?.err||"Import fehlgeschlagen");setRole("ok");render();toast(`${r.n} Personen in ${r.groups} Gruppen importiert`)}
 
 /* ================= Aktionen ================= */
 const A={
