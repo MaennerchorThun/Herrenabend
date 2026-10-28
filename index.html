@@ -695,6 +695,7 @@ function vAdmin(){
   const vs=S.wishes.filter(w=>wishState(w)==="verletzt").length,open=S.orders.filter(o=>o.status!=="serviert").length;
   h+=`<div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}${kpiBox(open,"offene Weinbest.",open?"st-neu":"")}${kpiBox(S.wishes.length?`${S.wishes.length-vs}/${S.wishes.length}`:"–","Sitzwünsche erfüllt",vs?"st-neu":"")}</div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
+  if(LIVE&&!S.people.length)h+=`<div class="note">Noch keine Teilnehmer in der Datenbank. <button class="btn sm primary" data-act="atab" data-t="einst">Zum Teilnehmer-Import</button></div>`;
   return h+feedbackBox();
 }
 function adminPeople(){
@@ -784,10 +785,10 @@ function importCSV(txt){
   const hd=rows[0].map(h=>h.trim().toLowerCase());
   const col=(...ns)=>{for(const n of ns){const i=hd.indexOf(n);if(i>=0)return i}return-1};
   const iV=col("vorname"),iN=col("name","nachname"),iG=col("herrenabend-tisch","gruppe","tischgruppe"),iT=col("teilnahme herrenabend","teilnahme"),
-        iGs=col("gruppen"),iTyp=col("typ"),iTi=col("tisch"),iPl=col("platz");
+        iGs=col("gruppen"),iTyp=col("typ"),iTi=col("tisch"),iPl=col("platz"),iM=col("mitglieder id","mitglieder-id","member_id");
   if(iV<0||iN<0)return{err:"Spalten «Vorname» und «Name» fehlen."};
   const cell=(r,i)=>i>=0?String(r[i]??"").trim():"";
-  let data=rows.slice(1).map(r=>({v:cell(r,iV),n:cell(r,iN),g:cell(r,iG),t:cell(r,iT),gs:cell(r,iGs).split(",").map(s=>s.trim()).filter(Boolean),typ:cell(r,iTyp).toLowerCase(),ti:cell(r,iTi),pl:parseInt(cell(r,iPl))})).filter(x=>x.v||x.n);
+  let data=rows.slice(1).map(r=>({v:cell(r,iV),n:cell(r,iN),g:cell(r,iG),t:cell(r,iT),gs:cell(r,iGs).split(",").map(s=>s.trim()).filter(Boolean),typ:cell(r,iTyp).toLowerCase(),ti:cell(r,iTi),pl:parseInt(cell(r,iPl)),mid:cell(r,iM)})).filter(x=>x.v||x.n);
   let year=null,skipped=0;
   if(iT>=0){const c={};data.forEach(x=>(x.t.match(/\d{4} Ja/g)||[]).forEach(m=>{const y=m.slice(0,4);c[y]=(c[y]||0)+1}));
     year=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
@@ -801,7 +802,7 @@ function importCSV(txt){
   const tm={"sänger":"aktiv","saenger":"aktiv","aktiv":"aktiv","aktivmitglied":"aktiv","mitglied":"passiv","passiv":"passiv","passivmitglied":"passiv","gast":"sponsor","sponsorgast":"sponsor","ehrengast":"ehrengast"};
   const people=data.map((x,i)=>{const g=groups.find(g=>g.key===x.k);let typ=tm[x.typ];
     if(!typ)typ=/sponsorgast/i.test(x.t)?"sponsor":x.gs.some(s=>/aktive s/i.test(s))?"aktiv":g&&g.guest?"ehrengast":"passiv";
-    return{id:"i"+i,vorname:x.v,name:x.n,typ,gruppe:g?g.id:null,tisch:null,platz:null,token:rndTok(),menu:"normal",_gc:x.gs.some(s=>/gruppenchef/i.test(s)),_alt:x.alt,_ti:x.ti,_pl:x.pl}});
+    return{id:"i"+i,mid:x.mid||"",vorname:x.v,name:x.n,typ,gruppe:g?g.id:null,tisch:null,platz:null,token:rndTok(),menu:"normal",_gc:x.gs.some(s=>/gruppenchef/i.test(s)),_alt:x.alt,_ti:x.ti,_pl:x.pl}});
   // Gruppenchefs: Gruppe trägt den Namen der Person → sonst Mitglied mit Gruppe «Gruppenchef»
   // Gästetisch: Tischchef ist der Präsident (ad interim) = Mitglied des Gästetischs mit Gruppe «Gruppenchef»
   for(const g of groups){const ms=people.filter(p=>p.gruppe===g.id);
@@ -908,7 +909,7 @@ function vStart(){
       <div class="kpis" style="margin:12px 0">${kpiBox(ms.length,"Personen")}${kpiBox(ms.filter(p=>p.platz).length,"platziert")}${kpiBox(groupTables(cg).length,"Tische")}${kpiBox(pr,"Weinwünsche")}${kpiBox(op,"offene Bestellungen")}</div>
       <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button></div></div>`}
   if(S.role==="ok"){const k=kpi();
-    h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>
+    h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>${LIVE&&!S.people.length?`<div class="note" style="margin:0 0 10px">Noch keine Teilnehmer in der Datenbank. Die angemeldeten Teilnehmer lädst du unter <b>Verwaltung → Einstellungen &amp; Import → 2. Teilnehmer importieren</b> (Webling-Export «Teilnehmer Herrenabend»).</div>`:""}
       <div class="kpis" style="margin:8px 0 12px">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.newOrders,"neue Bestellungen")}${kpiBox(k.urgent,"dringendes Feedback")}</div>
       <div class="row"><button class="btn primary sm" data-act="go" data-r="service">Service-Board</button><button class="btn sm" data-act="go" data-r="admin">Verwaltung & Import</button>${LIVE?`<button class="btn sm" data-act="demoview">So sehen es die Teilnehmer</button>`:""}</div></div>`}
   if(t&&me.platz){const gs=groupsAt(t.id),cm=colorMap(t.id);
@@ -1590,7 +1591,7 @@ async function doImportLive(txt){
       S.busy=null;S.codeInfo=res;await loadLive();render();return toast(`Zugangscodes importiert: ${res.neu} neu, ${res.aktualisiert} aktualisiert`);
     }
     const info=importCSV(txt);if(!info||info.err)return toast(info?.err||"Import fehlgeschlagen");
-    const payload=S.people.map(p=>{const g=G(p.gruppe);return{vorname:p.vorname,name:p.name,typ:p.typ,gruppe:g?g.name:"",guest:!!(g&&g.guest),chef:!!(g&&g.chef===p.id),funktion:p.funktion||""}});
+    const payload=S.people.map(p=>{const g=G(p.gruppe);return{member_id:p.mid||"",vorname:p.vorname,name:p.name,typ:p.typ,gruppe:g?g.name:"",guest:!!(g&&g.guest),chef:!!(g&&g.chef===p.id),funktion:p.funktion||""}});
     S.busy=`${payload.length} Teilnehmer werden importiert und verteilt …`;render();
     const res=await rpc("admin_import_participants",{p_code:S.code,p_rows:payload});
     await loadLive();
