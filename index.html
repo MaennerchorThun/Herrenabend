@@ -1601,7 +1601,7 @@ async function doImportLive(txt){
     for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero)await rpc("set_group_apero",{p_code:S.code,p_group:g.id,p_zeit:ga.zeit,p_ort:ga.ort})}
     S.busy=null;await loadLive();S.importInfo={...info,live:res};render();
     toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`);
-  }catch(e){S.busy=null;render();toast(e.message)}
+  }catch(e){S.busy=null;S.importInfo=null;await loadLive().catch(()=>{});render();modal(`<h2>Import fehlgeschlagen</h2><p>Die Teilnehmer wurden <b>nicht</b> gespeichert.</p><div class="card soft small">${esc(e.message)}</div><div class="row"><button class="btn primary" data-act="close">OK</button></div>`)}
 }
 const LIVEA={
   wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
