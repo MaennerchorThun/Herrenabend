@@ -350,7 +350,7 @@ const PROG=[
   {p:"Apéro",z:"16:30",t:"Apéro für alle",i:"Empfangshalle, Biertheke · einzelne Gruppen organisieren ihren Apéro selbst",v:"Service-Leitung"},
   {p:"Apéro",z:"16:30",t:"Sitzordnung Halle 1 abgeschlossen",i:"Tischplan für Einweisung der Gäste",v:"OK",int:1},
   {p:"Apéro",z:"17:00",t:"Chor: Besammlung Bühne & Einsingen",i:"17:00–17:45, Bühne Halle 1",v:"Dirigentin",int:1},
-  {p:"Apéro",z:"17:00",t:"Empfang & Apéro Ehrengäste",i:"Begrüssung und Betreuung der Ehrengäste",v:"Präsident"},
+  {p:"Apéro",z:"17:00",t:"Apéro Gästetisch & Sponsoren",i:"Expo Halle 0, separater Bereich · Begrüssung und Betreuung der Gäste",v:"Präsident"},
   {p:"Apéro",z:"17:10",t:"Offizielle Begrüssung Ehrengäste",i:"Grussworte, Ablauf bekannt geben",v:"Präsident"},
   {p:"Apéro",z:"17:15",t:"Lautsprecher & Beleuchtung bereit",i:"Infrastruktur für Begrüssung",v:"Technik",int:1},
   {p:"Apéro",z:"17:45",t:"Saalöffnung – Einlass aller Gäste",i:"Platz siehe App oder Tischplan am Eingang",v:"Service-Leitung"},
@@ -531,7 +531,7 @@ const DEMO_PLAN={};for(const[n,,t]of DEMO_GROUPS)for(const id of t.split(","))(D
 let PLAN=null,PLAN_INFO=null;
 /* Gruppen-Apéros 2026 (fest hinterlegt, wird nach Import automatisch zugeordnet) */
 const BEKB="Foyer Berner Kantonalbank, Bahnhofstrasse 1, 3600 Thun";
-const GROUP_APEROS=[{n:"Bautisch",g:["bautisch"],zeit:"17:00",ort:BEKB},{n:"Junioren",g:["junioren"],zeit:"17:00",ort:BEKB},{n:"N2",g:["n2"],zeit:"17:00",ort:BEKB},
+const GROUP_APEROS=[{n:"Gästetisch & Sponsoren",g:["gastetisch"],zeit:"17:00",ort:"Thun-Expo Halle 0 · separater Bereich"},{n:"Bautisch",g:["bautisch"],zeit:"17:00",ort:BEKB},{n:"Junioren",g:["junioren"],zeit:"17:00",ort:BEKB},{n:"N2",g:["n2"],zeit:"17:00",ort:BEKB},
   {n:"Tisch Hansueli Haldimann",g:["haldimann"],zeit:"17:00",ort:"Hotel Seepark, Thun"},
   {n:"Kadettentisch",g:["kadettentisch"],zeit:"16:00",ort:"Bierhalle Thun-Expo"},
   {n:"Tisch active Thun",g:["active","thun"],zeit:"15:30",ort:"MS Oberhofen, Thunersee · Apéro mit der alljährlichen HV der «la Table – aktivTHUN»"},
@@ -539,8 +539,8 @@ const GROUP_APEROS=[{n:"Bautisch",g:["bautisch"],zeit:"17:00",ort:BEKB},{n:"Juni
   {n:"Tisch Ernst Bühler",g:["ernst","buhler"],zeit:"ca. 17:30",ort:"Direkt an der Bar in der Thun-Expo"},
   {n:"Tisch Thomas Zumthurm",g:["zumthurm"],zeit:"",ort:"Spontan organisiert – wende dich an Thomas"},
   {n:"Tisch Jürg Messerli",g:["messerli"],zeit:"",ort:"Spontan organisiert – wende dich an Jürg"}];
-/* Gruppen-Apéro in der Vorabversion: Prüfsumme des Codes → Gruppe (keine Namen). Neu erzeugen, wenn sich Gruppen ändern. */
-const APERO_CODES=new Map("active thun:16db403736ab,21730ff5b1b8,228bed064f48,291293d70bc9,2cf321696e25,4778f28cd5f2,47c96255d6e5,524fadc9212b,5360f948cd73,70406f9846e6,7ff78ee7716e,8f53678654c1,b774173a155d,b8a8b9dbfdc0,bcb447d98eb3,d7bd72bedcd4,dfea539105d7;bautisch:01b7d3336256,033a64dbb9b2,0629994f3f0c,104a23ec185f,12081ab57fb1,14353eb1035d,19a0a3f71569,1f8ac46b165a,1f9cf656b0a3,20a6092a4883,217615d07885,22287f884810,2302f73ea21f,231fe26ae6f8,25a7779b0a0f,281945a69c27,2a1280f61220,2c3f3cc95441,306349c65f8f,3271b064d9d2,3727a36fee47,386981f27154,3fd2d7345e02,466ba59863fc,46d604b981c5,5083a6d61550,5cb2b03b2364,6988a799934f,6ba2f3341520,6bf6d6a86c1d,72e41c3e0f5a,73146f09ddbc,7681d88f3e7c,76db73b7885a,7bcdd637366c,7bf2e213a1a8,7cabb87769fa,7f88e9208788,8129de834712,8dcec306a628,8fb6293946db,8fc0f9005cce,91742c2ac9d5,91938e0e935e,92b50bc9e4ef,9da003f03a7b,a0672a39a390,a545ad8c344b,a7dda68c88a9,aa8049f472c1,ae2fb9190be8,b41476089d07,bb2fff92a53e,be60734045cc,bfa5549339b4,c6e0ae9e0cda,c762dcd0d1f4,cd5df12a1649,d5e5c6786d28,e0fb95b04b14,e6197b785953,e8fd963a4366,ebd005747121,ec73c620db23,f13de16cac39,f401750488ab,f431adfe51f8,f67cf45ceec4,f7b9456c85e7,fd2e8dd3022b,fed5767923ba;ernst buhler:031a269c8b6b,03373159ee85,043c601392b2,08a9b9273553,1814b628cf42,1df1e72b4bb7,2893d226e466,2d329de52690,2f67d5c61efc,36798e3aca5b,3bf4da760348,3d9a62c87ad5,461e45146379,49f39b329a15,52a803865502,5f81ab2d068a,63993b7bf61f,6ed83248f8d8,716645543022,74c01794862e,7ae4aeca306c,7d7f34fe43d8,83fddf5beb1d,850ee160b867,876f3d110b19,95869c5d7fb6,9696ef3f8ada,9be17feff418,9c5cd5a1aea6,b3bcdb721bb2,c280c5d31f74,cdf3e7547e5c,da8f2f538365,e39267ad04de,ed23d339d47d;haldimann:0950d1d5f28e,130a4bfd657a,146ef2dd4a33,2a5e96ed0ee3,2afcc8a474e1,3063a9495306,3e73ccd7ae2d,415ac22e47d5,42de7523492b,42e314e48794,55c61b8408ee,5fb033abc5bb,68741ee6a612,6b3d55f6cf14,7e0b6509897f,96f322fe2a0b,a8594562e9db,aa9f819d9d95,b83c6a00157e,c118585a1d13,c1bc10a6b252,d0b245b44e1f,d19bc74aedce,e6f8a3222419,f0b53465db14,fe08d5898bdc;junioren:0432241b0a01,0812fe6fa05f,179bdf4f0140,1d1214c2a72e,30fea2913b1e,3a7565e8405a,42d6069042c5,56a71ce06f49,5c5006b75be4,6641c8f80e65,6bc45ca355dd,6eee0999e1a7,7bea8c837414,886deb7b1f83,a7e63cc6144e,b003aef8d77b,b6e97e89acfd,bd54494ab50a,be6f8dff4150,c5d76ca221b3,c938e013564c,db64adb37d85,e90520e60706,e9e46c3284f0,f29128ae936e,f611a6732183,fb053e60a2f2,fb8c234afa63;kadettentisch:014fe1ff14cc,097adb8e1507,0a030f005188,0c53a6fd37a0,0d39fc3c0784,11c792dea7f2,141c48054a4e,15ba91796146,168ad838eb96,1b014e2d4a72,2173689a2312,2999b33e5e07,3a55bd705fdc,3bc5f5e1c3b2,3da574f2e055,45054838373c,49ba0ef82c6d,5fb514d57666,7a080bbde0ce,7ece842b0fb0,870fbd9b7497,91ee23108ec8,a77e3724bd4a,a7fcf769acd3,ac410b3c7c29,ac6e41932a74,b0d1a9411a23,c3d3969a6b35,e3a61ed99f38,e4a0246e8479,e5b2cd70252b,eafc2a6c83c6,f8420482ca7c,ff629378d46d;messerli:2b8dafca1fa1,32a3c3328b88,82c4641d7dcd,ae1041fb7626,f8ba70743f95;n2:011af70b620c,03c60ec04a69,17b7ca10f111,25484d40ad16,2be1d4d4ca0e,4944ffb04686,5b7febd7cb34,81182dc5f02b,a360dfbaeaf8,b92027555525,c91243454f9f,d997398daf90,e42c5e1f5476,ed11b4728afd;peter lohri:10233ab8f727,21846baa41fe,2d21d285cb30,3b712f89daaa,5bf9b06b622c,6f08a299fbfe,78af65728001,8314bb628f00,90868c8b1bfa,9e45056f5257,a8896b0794b8,b04e54932315,b1b4fe72e70f,b3d9d5faeabc,cd9567392b45,e791686a0d80,f23847cae573;zumthurm:1c653d6f4185,2d2c1639b74b,450866eeff35,620770c21d42,8e107a42dfa3,b28e7976c090,c77e2a63b0c8,e37063ccc089,ec6870b5b1cf".split(";").flatMap(e=>{const[k,hs]=e.split(":");return hs.split(",").map(h=>[h,k])}));
+/* Vorabversion: Prüfsumme des Codes → Tischgruppe aus Webling. Den Apéro dazu liefert Supabase (my_apero), gepflegt in Verwaltung → Apéros. */
+const APERO_CODES=new Map("active thun:16db403736ab,21730ff5b1b8,228bed064f48,291293d70bc9,2cf321696e25,4778f28cd5f2,47c96255d6e5,524fadc9212b,5360f948cd73,70406f9846e6,7ff78ee7716e,8f53678654c1,b774173a155d,b8a8b9dbfdc0,bcb447d98eb3,d7bd72bedcd4,dfea539105d7;bautisch:01b7d3336256,033a64dbb9b2,0629994f3f0c,104a23ec185f,12081ab57fb1,14353eb1035d,19a0a3f71569,1f8ac46b165a,1f9cf656b0a3,20a6092a4883,217615d07885,22287f884810,2302f73ea21f,231fe26ae6f8,25a7779b0a0f,281945a69c27,2a1280f61220,2c3f3cc95441,306349c65f8f,3271b064d9d2,3727a36fee47,386981f27154,3fd2d7345e02,466ba59863fc,46d604b981c5,5083a6d61550,5cb2b03b2364,6988a799934f,6ba2f3341520,6bf6d6a86c1d,72e41c3e0f5a,73146f09ddbc,7681d88f3e7c,76db73b7885a,7bcdd637366c,7bf2e213a1a8,7cabb87769fa,7f88e9208788,8129de834712,8dcec306a628,8fb6293946db,8fc0f9005cce,91742c2ac9d5,91938e0e935e,92b50bc9e4ef,9da003f03a7b,a0672a39a390,a545ad8c344b,a7dda68c88a9,aa8049f472c1,ae2fb9190be8,b41476089d07,bb2fff92a53e,be60734045cc,bfa5549339b4,c6e0ae9e0cda,c762dcd0d1f4,cd5df12a1649,d5e5c6786d28,e0fb95b04b14,e6197b785953,e8fd963a4366,ebd005747121,ec73c620db23,f13de16cac39,f401750488ab,f431adfe51f8,f67cf45ceec4,f7b9456c85e7,fd2e8dd3022b,fed5767923ba;beat wyss:0ad328293efd,2fe10259f36d,35a0329c0ca9,7a8306c0d2c2,9dd3cf925072;christian schafer:254ebbd6dcf7,314506a7d0c9,42f3337f25dd,4abb3a136dc1,4b5a22b101f3,4e8f25e12b30,981c24e30ec4,b62ce469912c,cab9a2d80818,cbbc4efa87ec;dario colaianni:07c1abbefb19,130732ba15b1,1ac3a102d41b,1d2bfa4e18c6,1de707e9dfcc,2126e3e1b30b,2396ea8608a9,25f39554a242,2636f22c130c,4f74a57767a4,50f77ad272fa,54d4b9113fe2,63383ebf65df,67a5b27681d5,77c90dd0080e,7ccaf3a7bf75,9d67278ac7d1,a611d80ba4e3,b1e3be974010,d599c8e43f27,f11784c60afa,f3be8b8000e3,f89604fe093b,fbb04df88d15;ernst buhler:031a269c8b6b,03373159ee85,043c601392b2,08a9b9273553,1814b628cf42,1df1e72b4bb7,2893d226e466,2d329de52690,2f67d5c61efc,36798e3aca5b,3bf4da760348,3d9a62c87ad5,461e45146379,49f39b329a15,52a803865502,5f81ab2d068a,63993b7bf61f,6ed83248f8d8,716645543022,74c01794862e,7ae4aeca306c,7d7f34fe43d8,83fddf5beb1d,850ee160b867,876f3d110b19,95869c5d7fb6,9696ef3f8ada,9be17feff418,9c5cd5a1aea6,b3bcdb721bb2,c280c5d31f74,cdf3e7547e5c,da8f2f538365,e39267ad04de,ed23d339d47d;franz muller:243a58135201,3dbfdfa90086,616fcb5b7c7c,64552a65ba86,7db0d8556550,91ab27327eaf,a0ab7175481f,a9c60ae673c4,ac5450cd607b,b85e7925849d,db828af4ae7a,fb7301fd363a;gastetisch:43fd47b9fcc8,585083d880ca,60b09518861d,71d45b0919c4,7671feb1f8d1,8adf5b14dcfb,8c20c433c26d,9cdb9268d8f5,cf03ffc5ce93,d1e472817268,dbeb7a2c1c2d,e977f3124590,fa0e73df0a29;hans peter gerber:170c7baac71c,19ae5b703e5b,234978f95a24,38a00184388d,3fb28c1d888c,40812ad92c23,57e02556978d,7989420268bc,835572020760,8c3fed618920,8c750267b47b,8f55c940cccb,92d553655e4a,9397088d5ac2,9a10b7c954c3,9fada725496f,a6011ae15409,b370305029f3,b6f23ec6c6f8,c19c686a488c,df382d233788,ef22af33af9a;hans ulrich haldimann:0950d1d5f28e,130a4bfd657a,146ef2dd4a33,2a5e96ed0ee3,2afcc8a474e1,3063a9495306,3e73ccd7ae2d,415ac22e47d5,42de7523492b,42e314e48794,55c61b8408ee,5fb033abc5bb,68741ee6a612,6b3d55f6cf14,7e0b6509897f,96f322fe2a0b,a8594562e9db,aa9f819d9d95,b83c6a00157e,c118585a1d13,c1bc10a6b252,d0b245b44e1f,d19bc74aedce,e6f8a3222419,f0b53465db14,fe08d5898bdc;hanspeter gerber:2235c9cb8248,4d04d884099b,74912a53907c,78f54a07921b,f251a580aa12;junioren:0432241b0a01,0812fe6fa05f,179bdf4f0140,1d1214c2a72e,30fea2913b1e,3a7565e8405a,42d6069042c5,56a71ce06f49,5c5006b75be4,6641c8f80e65,6bc45ca355dd,6eee0999e1a7,7bea8c837414,886deb7b1f83,a7e63cc6144e,b003aef8d77b,b6e97e89acfd,bd54494ab50a,be6f8dff4150,c5d76ca221b3,c938e013564c,db64adb37d85,e90520e60706,e9e46c3284f0,f29128ae936e,f611a6732183,fb053e60a2f2,fb8c234afa63;jurg messerli:2b8dafca1fa1,32a3c3328b88,82c4641d7dcd,ae1041fb7626,f8ba70743f95;kadettentisch:014fe1ff14cc,097adb8e1507,0a030f005188,0c53a6fd37a0,0d39fc3c0784,11c792dea7f2,141c48054a4e,15ba91796146,168ad838eb96,1b014e2d4a72,2173689a2312,2999b33e5e07,3a55bd705fdc,3bc5f5e1c3b2,3da574f2e055,45054838373c,49ba0ef82c6d,5fb514d57666,7a080bbde0ce,7ece842b0fb0,870fbd9b7497,91ee23108ec8,a77e3724bd4a,a7fcf769acd3,ac410b3c7c29,ac6e41932a74,b0d1a9411a23,c3d3969a6b35,e3a61ed99f38,e4a0246e8479,e5b2cd70252b,eafc2a6c83c6,f8420482ca7c,ff629378d46d;martin graf:006ac3410a25,03942da1a910,04c81c334446,0a98bfae9cfa,18894582d37b,294f4c1cf448,2f6479a4298d,3d0fa408458c,41af6c182c8e,517e39cfacad,5907609a39d6,7db856ef3f1f,9dad429f0483,a67f313e5517,a7cd2c4757bb,ab7f273a88e4,d04e85239f27,d1ebb8d7fe47,dc8a4119c3af,f0152b2cbf90,fe933f09a26b;martin nussbaum:05a1f9e3c705,da6aac2aa9da;n2:011af70b620c,03c60ec04a69,17b7ca10f111,25484d40ad16,2be1d4d4ca0e,4944ffb04686,5b7febd7cb34,81182dc5f02b,a360dfbaeaf8,b92027555525,c91243454f9f,d997398daf90,e42c5e1f5476,ed11b4728afd;oktoberfest:0a4d3737505f,18d1752af4dc,89d3a231a166,946164ab1a54,98ad62113fe2;peter lohri:10233ab8f727,21846baa41fe,2d21d285cb30,3b712f89daaa,5bf9b06b622c,6f08a299fbfe,78af65728001,8314bb628f00,90868c8b1bfa,9e45056f5257,a8896b0794b8,b04e54932315,b1b4fe72e70f,b3d9d5faeabc,cd9567392b45,e791686a0d80,f23847cae573;reto gerber:0a636f3a0c8a,0b4554dcb128,0ceb8269aedf,0d91a640d1af,106a15078b92,1bf5e766d021,23068897a78d,292d7983f8f6,35185214333b,3f7f501347bf,4badbc5b214b,513e704d1401,52114d4d6c63,54233839b67d,56378ac0362c,58fc9548665a,5d9fd57d3df5,650701f84d84,662abf3a5973,668f9d8a90f6,6864aa184d8a,6978858caf83,6c129d376597,6c5f1db3a2cd,6e01ebbf9657,6e580e9d73e4,7ac5314fd3a0,803fca655a7a,8838d42deda9,8adf714e6580,93d6ec430ea0,986e283a18ac,9a63b5427579,a4a856787b42,a7a15f231fd4,a9b1c3a69bc1,aa4baa646b1d,b400939f4a76,bac88d141698,be3ed36c0499,c01272d6d777,c0cf5cb6a9d8,c29d0c557266,c5ab9ddf020a,c98b614212e2,e4686fd46ce4,f437e17180ce,f4a6ca1d04d9;sergio peronino:27601ed9afb4,61390d317b06,74e7d206ac41,7b9873607b19,8b553c54ca8a,a82b02a714f8,b5da2ba85cb9;stefan butler:0413824eafee,0602000ecc3f,178d94252603,6b69172cb550,7008196d44dc,8d53a4d7a85a,e25cc597fde2;thomas hungerbuhler:02d6305c335f,03eff82bb857,045668e4a5a2,081dbbc08d65,0f2cff9e6c16,13ff04e3f0d9,158a2deff4e3,1b5da01028c5,1df31dc30ba9,26f6e01a7cf9,2942f057ce46,2c7b7d9ddcd8,2df275095252,31d0398a6d64,3540262b59c9,3ea43fdb1afa,434e7da32d8e,50370ffc7d70,50b0bda2c4f4,50d6fc5b308e,5699512013f9,5821dcd4a896,5cfa1ce40a42,7729823dcf27,808feaf5b572,84eaf7116312,877b511457f6,8a7bfe783f38,8aeee822ad96,8da893f4c700,991b4fb0e9a2,9b96682179d5,9d26d8c601fa,a0d52a40a574,a6f4d11193e1,af567450914e,b0eadb932150,b1f42ab74e38,b964dccf804e,ba410e90dba1,bacd88c62092,bc4a174db91c,c330cf8e5c57,ceed4968f5c4,d5f620e2ced2,d802c9888f3d,e14e15cc3144,f7b0c586e4cc,f9782b93da89,fa7eef2402db;thomas zumthurm:1c653d6f4185,2d2c1639b74b,450866eeff35,620770c21d42,8e107a42dfa3,b28e7976c090,c77e2a63b0c8,e37063ccc089,ec6870b5b1cf;urs rieder:019a97857df9,37bd84ddbf1c,6229ddc3ab71,6b5c6e1be5d9,a36c1e9c1cac".split(";").flatMap(e=>{const[k,hs]=e.split(":");return hs.split(",").map(h=>[h,k])}));
 /* Gruppen-Apéro anzeigen: mit Zeit → «17:00 Uhr · Ort (Karte)», ohne Zeit → nur Hinweistext */
 const aperoTxt=a=>a.zeit?`<b>${esc(a.zeit)} Uhr</b> · ${aperoOrt(a)}`:esc(a.ort);
 function applyGroupAperos(){let n=0;for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero){g.apero={zeit:ga.zeit,ort:ga.ort};n++}}return n}
@@ -723,11 +723,49 @@ function adminAperos(){
   const gs=[...S.groups],withA=gs.filter(g=>g.apero).sort((a,b)=>(a.apero.zeit||"99").localeCompare(b.apero.zeit||"99")||a.name.localeCompare(b.name)),noA=gs.filter(g=>!g.apero).sort((a,b)=>a.name.localeCompare(b.name));
   const zs=g=>members(g).filter(p=>S.apero.has(p.id)).length;
   let h=`<div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Apéro für alle</p><h3 style="margin:0">${EVENT.apero} Uhr · ${esc(EVENT.aperoOrt)}</h3><p style="margin:6px 0 0">${S.apero.size} Zusagen insgesamt</p></div>
-    <div class="sec-h"><h2>Gruppen-Apéros (${withA.length})</h2></div>`;
+    <div class="sec-h"><h2>Eingabe</h2></div>`+aperoForm()+`<div class="sec-h"><h2>Angemeldete Gruppen mit Apéro (${withA.length})</h2></div>`;
   h+=withA.map(g=>`<div class="card"><div class="row between"><h3 style="margin:0">${esc(g.name)}</h3><span class="small muted">${members(g).length} Pers. · ${zs(g)} Zusagen</span></div>
-    <p class="small" style="margin:6px 0 0">${aperoTxt(g.apero)}</p>${g.chef?`<p class="small muted" style="margin:4px 0 0">${chefLbl(g)}: ${esc(full(P(g.chef)))}</p>`:""}</div>`).join("")||`<p class="muted small">Noch keine Gruppen-Apéros erfasst.</p>`;
+    <p class="small" style="margin:6px 0 0">${aperoTxt(g.apero)}${g.aperoOwn?` <span class="chip">vom ${chefLbl(g)} gesetzt</span>`:""}</p>${g.chef?`<p class="small muted" style="margin:4px 0 0">${chefLbl(g)}: ${esc(full(P(g.chef)))}</p>`:""}</div>`).join("")||`<p class="muted small">Noch keine Gruppen-Apéros erfasst.</p>`;
   if(noA.length)h+=`<div class="sec-h"><h2>Ohne eigenen Apéro (${noA.length})</h2></div><div class="card soft"><div class="chips">${noA.map(g=>`<span class="chip">${esc(g.name)} · ${members(g).length}</span>`).join("")}</div></div>`;
   return h}
+
+/* ===== Eingabemaske Gruppen-Apéros (Verwaltung → Apéros) =====
+   Live: Tabelle apero_groups in Supabase. Zuordnung über die Tischgruppe aus Webling («Herrenabend-Tisch»). */
+const defMatch=(d,name)=>{const w=words(name);const ws=w[0]==="gastetisch"?["gastetisch"]:w;return d.keys.length&&d.keys.every(k=>ws.includes(k))};
+function localAperoDefs(){return GROUP_APEROS.map((x,i)=>({id:"l"+i,name:x.n,keys:x.g,zeit:x.zeit,ort:x.ort}))}
+function aperoDefs(){
+  if(!LIVE){if(!S.aperoDefs)S.aperoDefs=localAperoDefs();return S.aperoDefs}
+  if(S.aperoDefs===undefined){S.aperoDefs=null;rpc("admin_list_aperos",{p_code:S.code}).then(x=>{S.aperoDefs=x||[];render()}).catch(e=>{S.aperoDefs=[];toast(e.message);render()})}
+  return S.aperoDefs}
+function aperoForm(){
+  const defs=aperoDefs(),ed=S.aperoEdit&&defs?defs.find(d=>d.id===S.aperoEdit):null;
+  const [o0,...hn]=(ed?ed.ort:"").split(" · ");
+  const names=[...new Set([...S.groups.map(g=>g.name)])].sort();
+  let h=`<div class="card"><h3>${ed?"Apéro bearbeiten":"Neuer Gruppen-Apéro"}</h3>
+    <p class="muted small">Die Mitglieder der Tischgruppe sehen den Apéro in der App – in der Vorabversion und am Anlass. Andere Mitglieder sehen ihn nicht. Ein Apéro, den ein Gruppenchef selbst einträgt, hat Vorrang.</p>
+    <div style="display:grid;gap:6px">
+    <label class="small muted">Tischgruppe wie in Webling «Herrenabend-Tisch» (z.B. Bautisch, Ernst Bühler, Gästetisch)</label>
+    <input id="apm" class="input" list="apmlist" value="${esc(ed?ed.keys.join(" "):"")}" placeholder="Tischgruppe"><datalist id="apmlist">${names.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+    <label class="small muted">Bezeichnung in der App (optional, z.B. «Tisch Ernst Bühler»)</label>
+    <input id="apn2" class="input" value="${esc(ed?ed.name:"")}" placeholder="Bezeichnung">
+    <label class="small muted">Zeit (leer lassen, wenn es keine feste Zeit gibt)</label>
+    <input id="apz" class="input" value="${esc(ed?ed.zeit:"")}" placeholder="z.B. 17:00 oder ca. 17:30">
+    <label class="small muted">Ort (wird als Karte verlinkt) oder Hinweis</label>
+    <input id="apo" class="input" value="${esc(o0||"")}" placeholder="z.B. Hotel Seepark, Thun  –  oder: Kein organisierter Gruppen-Apéro">
+    <label class="small muted">Zusatz (optional, nicht verlinkt)</label>
+    <input id="aph" class="input" value="${esc(hn.join(" · "))}" placeholder="z.B. Apéro mit der HV der «la Table»"></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm primary" data-act="apsave">${ed?"Änderungen speichern":"Apéro speichern"}</button>${ed?`<button class="btn sm" data-act="apnew">Abbrechen</button>`:""}</div></div>`;
+  if(defs===null)return h+`<p class="muted small">Apéros werden geladen …</p>`;
+  h+=`<div class="sec-h"><h2>Erfasste Apéros (${defs.length})</h2></div>`+defs.slice().sort((a,b)=>(a.zeit||"99").localeCompare(b.zeit||"99")||a.name.localeCompare(b.name)).map(d=>{
+    const gs=S.groups.filter(g=>defMatch(d,g.name)),n=gs.reduce((s,g)=>s+members(g).length,0);
+    return`<div class="card${S.aperoEdit===d.id?" sel":""}"><div class="row between"><h3 style="margin:0">${esc(d.name)}</h3><span class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="apedit" data-id="${d.id}">Bearbeiten</button><button class="btn sm ghost" data-act="apdel" data-id="${d.id}" aria-label="löschen">✕</button></span></div>
+    <p class="small" style="margin:6px 0 0">${aperoTxt(d)}</p>
+    <p class="small muted" style="margin:4px 0 0">Tischgruppe: ${esc(d.keys.join(" "))}${S.groups.length?` · ${gs.length?`angemeldet: ${gs.map(g=>esc(g.name)).join(", ")} (${n} Pers.)`:"noch niemand angemeldet"}`:""}</p></div>`}).join("");
+  return h}
+function aperoFormVals(){const m=$("#apm").value.trim(),n=$("#apn2").value.trim(),z=$("#apz").value.trim(),o=$("#apo").value.trim(),hi=$("#aph").value.trim();
+  if(!m){toast("Bitte die Tischgruppe angeben");return null}if(!o){toast("Bitte Ort oder Hinweis angeben");return null}
+  return{m,n,z,ort:o+(hi?" · "+hi:"")}}
+function applyLocalAperoDefs(){for(const g of S.groups){const d=S.aperoDefs.find(d=>defMatch(d,g.name));g.apero=d?{zeit:d.zeit,ort:d.ort}:null}}
 
 /* ================= Demo-Daten (fiktiv) ================= */
 const FN=["Andreas","Beat","Christian","Daniel","Erich","Fritz","Hans","Jürg","Kurt","Lukas","Markus","Niklaus","Peter","Reto","Samuel","Thomas","Urs","Walter","Martin","Stefan","Roger","Patrick","Bruno","Simon","Marco"];
@@ -1084,11 +1122,14 @@ function vGaeste(){
 }
 
 function vAperoVorab(){
-  const k=S.code?APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12)):null,ga=k&&GROUP_APEROS.find(x=>x.g.join(" ")===k);
+  const key=S.code?APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"":"";
+  const local=()=>{const ws=key.split(" "),x=GROUP_APEROS.find(a=>a.g.every(w=>ws.includes(w)));return x?{n:x.n,zeit:x.zeit,ort:x.ort}:false};
+  if(S.code&&S.myApero===undefined){S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false}).catch(()=>{S.myApero=local()}).finally(()=>{if(/apero/.test(location.hash))render()})}
+  const ga=S.myApero;
   return back()+`<h1>Apéro</h1>
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Eröffnung Bierbar 16:00 Uhr · Saalöffnung ${EVENT.saal} Uhr</p></div>
-    ${ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p></div>`
+    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p></div>`
       :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}`;
 }
 function vApero(){
@@ -1103,7 +1144,7 @@ function vApero(){
     h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${g.apero?`Gruppen-Apéro: ${aperoTxt(g.apero)}`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Biertheke."}</p>
       ${cg&&cg.id===g.id?`<button class="btn sm" data-act="go" data-r="gruppe" style="margin-bottom:10px">Gruppen-Apéro festlegen</button>`:""}
       <div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div></div>`}
-  h+=`<div class="card soft small"><b>Ehrengäste:</b> separater Empfang ab 17:00 Uhr mit Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
+  if(isOk||S.role==="ok"||me.typ==="sponsor"||me.typ==="ehrengast"||g?.guest)h+=`<div class="card soft small"><b>Gästetisch & Sponsoren:</b> Apéro um 17:00 Uhr in der Thun-Expo Halle 0 im separaten Bereich, Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
   if(withA.length&&(isOk||S.role==="ok")){const m=new Map();for(const x of withA){const k=x.apero.zeit+"|"+x.apero.ort;if(!m.has(k))m.set(k,{a:x.apero,gs:[]});m.get(k).gs.push(x.name)}
     h+=`<div class="sec-h"><h2>Gruppen-Apéros</h2></div>${[...m.values()].sort((p,q)=>(p.a.zeit||"99").localeCompare(q.a.zeit||"99")).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${e.a.zeit?esc(e.a.zeit)+" Uhr":"Spontan"}</h3><div class="small">${e.a.zeit?aperoOrt(e.a):esc(e.a.ort)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}`}
   const rows=S.groups.map(x=>({g:x,n:members(x).length,a:members(x).filter(p=>S.apero.has(p.id)).length})).filter(r=>r.a).sort((a,b)=>b.a-a.a);
@@ -1457,6 +1498,12 @@ function doImport(txt){
 const A={
   go:d=>go(d.r),
   atab:d=>{S.adminTab=d.t;render();scrollTo(0,0)},
+  apedit:d=>{S.aperoEdit=d.id;render();document.getElementById("apm")?.scrollIntoView({block:"center"})},
+  apnew:()=>{S.aperoEdit=null;render()},
+  apsave:()=>{const v=aperoFormVals();if(!v)return;const keys=(w=>w[0]==="gastetisch"?["gastetisch"]:w)(words(v.m));
+    if(S.aperoEdit){Object.assign(S.aperoDefs.find(d=>d.id===S.aperoEdit),{name:v.n||v.m,keys,zeit:v.z,ort:v.ort})}else S.aperoDefs.push({id:uid(),name:v.n||v.m,keys,zeit:v.z,ort:v.ort});
+    S.aperoEdit=null;applyLocalAperoDefs();render();toast("Apéro gespeichert (Demo – nicht dauerhaft)")},
+  apdel:d=>{if(!confirm("Diesen Apéro löschen?"))return;S.aperoDefs=S.aperoDefs.filter(x=>x.id!==d.id);applyLocalAperoDefs();render()},
   opentable:d=>{S.selTable=d.id;go("saal")},
   wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
     S.wishes=S.wishes.filter(w=>!((w.a===a&&w.b===b)||(w.a===b&&w.b===a)));S.wishes.push({id:uid(),a,b,typ:t});render();toast("Wunsch gespeichert – mit «Plätze ordnen» anwenden")},
@@ -1558,7 +1605,7 @@ function call(fn,args,msg){return rpc(fn,{p_code:S.code,...args}).then(async x=>
 function applySession(s){
   const me=s.me,hm=t=>new Date(t).toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
   S.meObj={...me,gruppe:me.group_id,tisch:me.tisch?String(me.tisch):null,platz:me.platz,token:""};
-  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:(g.apero_zeit||g.apero_ort)?{zeit:g.apero_zeit||"",ort:g.apero_ort||""}:null}));
+  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:(g.apero_zeit||g.apero_ort)?{zeit:g.apero_zeit||"",ort:g.apero_ort||""}:null,aperoOwn:!!g.apero_own}));
   S.people=s.people.map(p=>({id:p.id,vorname:p.vorname,name:p.name,typ:p.typ,funktion:p.funktion||undefined,gruppe:p.group_id,tisch:p.tisch?String(p.tisch):null,platz:p.platz,menu:p.menu||"normal",token:"",hasCode:p.has_code,role:p.role}));
   S.apero=new Set(s.people.filter(p=>p.apero).map(p=>p.id));if(me.apero)S.apero.add(me.id);
   S.orders=s.orders.map(o=>({id:o.id,tisch:String(o.tisch),gruppe:o.group_id,items:o.items,status:o.status,zeit:hm(o.created_at),by:o.by_person}));
@@ -1598,12 +1645,14 @@ async function doImportLive(txt){
     await loadLive();
     allocateGroups(PLAN);
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
-    for(const ga of GROUP_APEROS)for(const g of S.groups){const w=words(g.name);if(ga.g.every(x=>w.includes(x))&&!g.apero)await rpc("set_group_apero",{p_code:S.code,p_group:g.id,p_zeit:ga.zeit,p_ort:ga.ort})}
     S.busy=null;await loadLive();S.importInfo={...info,live:res};render();
     toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`);
   }catch(e){S.busy=null;S.importInfo=null;await loadLive().catch(()=>{});render();modal(`<h2>Import fehlgeschlagen</h2><p>Die Teilnehmer wurden <b>nicht</b> gespeichert.</p><div class="card soft small">${esc(e.message)}</div><div class="row"><button class="btn primary" data-act="close">OK</button></div>`)}
 }
 const LIVEA={
+  apsave:()=>{const v=aperoFormVals();if(!v)return;rpc("admin_save_apero",{p_code:S.code,p_id:S.aperoEdit||null,p_name:v.n,p_match:v.m,p_zeit:v.z,p_ort:v.ort})
+    .then(async()=>{S.aperoEdit=null;S.aperoDefs=undefined;await loadLive();render();toast("Apéro gespeichert – die Gruppe sieht ihn sofort")}).catch(e=>toast(e.message))},
+  apdel:d=>{if(!confirm("Diesen Apéro löschen?"))return;rpc("admin_delete_apero",{p_code:S.code,p_id:d.id}).then(async()=>{S.aperoDefs=undefined;await loadLive();render();toast("Apéro gelöscht")}).catch(e=>toast(e.message))},
   wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
     call("set_wish",{p_a:a,p_b:b,p_typ:t},"Wunsch gespeichert – mit «Plätze ordnen» anwenden").catch(()=>{})},
   wishdel:d=>call("delete_wish",{p_id:d.id},"Wunsch gelöscht").catch(()=>{}),
