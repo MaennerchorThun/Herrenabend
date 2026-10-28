@@ -833,6 +833,8 @@ function importCSV(txt){
     if(year){const b=data.length;data=data.filter(x=>x.t.includes(year+" Ja"));skipped=b-data.length}}
   const NOG=new Set(["","keinezuteilung","keine","offen","nein"]);const gm=new Map();
   for(const x of data){let k=key(x.g);
+    // Gäste (z.B. Musiker, Ehrengäste): «Gäste» oder ohne Tischgruppe, aber Webling-Gruppe «Gästetisch» → Gästetisch
+    if(k==="gaste"||k==="herrenabendgaste"||((NOG.has(k))&&x.gs.some(s=>key(s)==="gastetisch"))){k="gastetisch";x.g="Gästetisch"}
     if(k.startsWith("gastetisch")){x.alt=k.slice(10)||null;k="gastetisch";x.g="Gästetisch"}
     if(NOG.has(k)){x.k=null;continue}x.k=k;
     if(!gm.has(k))gm.set(k,{names:{},guest:k==="gastetisch"});const e=gm.get(k);e.names[x.g]=(e.names[x.g]||0)+1}
