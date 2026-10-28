@@ -218,6 +218,9 @@ code{background:var(--surface2);padding:1px 5px;border-radius:5px;font-size:12.5
 .sw{display:inline-block;width:11px;height:11px;border-radius:3px;flex:none}
 .sw.g0{background:var(--g0f)}.sw.g1{background:var(--g1f)}.sw.g2{background:var(--g2f)}.sw.g3{background:var(--g3f)}.sw.g4{background:var(--g4f)}.sw.gx{background:var(--gxf)}
 .tbl .seat.dim{opacity:.35}
+.tbl .seat.warn{box-shadow:inset 0 0 0 3px #e0a000}.tbl .seat.warn span::before{content:"⚠ "}
+.atabs{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin:0 0 14px;padding-bottom:4px}.atabs .chip{white-space:nowrap}
+.tlist{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;font-size:.86rem}.tlist .warnt{color:#a86f00;font-weight:600}
 .ttile .gn{font-size:11.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em;line-height:1.35;margin-top:2px}
 .glegend{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .glegend .gl{display:flex;align-items:center;gap:8px;font-size:13px}
@@ -480,7 +483,7 @@ const TYP={aktiv:"Sänger",passiv:"Passivmitglied",sponsor:"Sponsorgast",ehrenga
 /* ================= Zustand ================= */
 const OKUSER={id:"ok",vorname:"OK-Team",name:"",typ:"passiv",ok:1,gruppe:null,tisch:null,platz:null};
 const S={role:"gast",meId:null,people:[],groups:[],orders:[],proposals:[],feedback:[],survey:[],surveyOpen:false,surveyDone:new Set(),
-  apero:new Set(),cart:{},orderTable:null,selTable:null,hl:null,pFilter:"alle",pGroup:"",importInfo:null,demo:true};
+  apero:new Set(),wishes:[],adminTab:"uebersicht",cart:{},orderTable:null,selTable:null,hl:null,pFilter:"alle",pGroup:"",importInfo:null,demo:true};
 
 const GUEST={id:"guest",vorname:"",name:"",typ:"passiv",gruppe:null,tisch:null,platz:null};
 const P=id=>id==="ok"?OKUSER:id==="guest"?GUEST:(S.people.find(p=>p.id===id)||(S.meObj&&S.meObj.id===id?S.meObj:undefined));
@@ -605,6 +608,7 @@ function allocateGroups(plan=null){
   for(const g of S.groups.filter(g=>!g.guest&&!done.has(g.id)).sort((a,b)=>members(b).length-members(a).length)){const ms=sortM(g);
     if(open.length&&resv.size&&!members(g).some(p=>p.tisch))fit(ms,open,g);if(ms.length)fit(ms,normal,g)}
   for(const[g,ms]of leftovers.sort((a,b)=>b[1].length-a[1].length))fit(ms,normal,g);
+  for(const g of S.groups)if(wishesFor(g).length)arrangeGroup(g);
   return plan?planMatch(plan).size:0;
 }
 function freeSeats(tid){return seatOrder(T(tid)).filter(s=>!at(tid,s))}
@@ -620,6 +624,109 @@ function fillSingles(list){
   }
   return n;
 }
+
+/* ================= Sitzwünsche (neben / nicht neben) =================
+   «neben» = direkt links oder rechts in derselben Tischreihe. Wünsche sehen nur der Gruppenchef und das OK. */
+function neighbors(tid,n){const s=seatsOf(T(tid));for(const row of[s.top,s.bot]){const i=row.indexOf(n);if(i>=0)return[row[i-1],row[i+1]].filter(x=>x!=null)}return[]}
+const wishesFor=g=>g?S.wishes.filter(w=>P(w.a)?.gruppe===g.id):[];
+function wishState(w){const a=P(w.a),b=P(w.b);if(!a||!b||!a.platz||!b.platz)return"offen";
+  const adj=a.tisch===b.tisch&&neighbors(a.tisch,a.platz).includes(b.platz);return(w.typ==="neben")===adj?"ok":"verletzt"}
+function violSet(){const s=new Set();for(const w of S.wishes)if(wishState(w)==="verletzt"){s.add(w.a);s.add(w.b)}return s}
+function wishList(ws,del){
+  const st={ok:`<span class="chip g">erfüllt</span>`,verletzt:`<span class="chip w">⚠ nicht erfüllt</span>`,offen:`<span class="chip">noch ohne Platz</span>`};
+  return`<div class="list">${ws.map(w=>{const a=P(w.a),b=P(w.b);return`<div class="li" style="cursor:default"><div class="av">${w.typ==="neben"?"🤝":"↔︎"}</div><div class="grow"><div class="nm">${esc(full(a))} <span class="muted">${w.typ==="neben"?"möchte neben":"nicht neben"}</span> ${esc(full(b))}</div><div class="sub">${a&&G(a.gruppe)?esc(G(a.gruppe).name):""}</div></div>${st[wishState(w)]}${del?`<button class="btn sm ghost" data-act="wishdel" data-id="${w.id}" aria-label="Wunsch löschen">✕</button>`:""}</div>`}).join("")}</div>`}
+function wishCard(g){
+  const ms=members(g).sort(byName),tabs=groupTables(g),others=S.people.filter(p=>p.gruppe!==g.id&&p.platz&&tabs.includes(p.tisch)).sort(byName),ws=wishesFor(g);
+  const opt=l=>l.map(p=>`<option value="${p.id}">${esc(full(p))}</option>`).join("");
+  return`<div class="card"><h3>Sitzwünsche</h3><p class="muted small">Wer möchte neben wem sitzen – und wer nicht? «Neben» heisst direkt links oder rechts. «Plätze ordnen» setzt deine Gruppe an euren Tischen so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.</p>
+    ${ws.length?wishList(ws,true):`<p class="small muted">Noch keine Wünsche erfasst.</p>`}
+    <div style="display:grid;gap:6px;margin-top:10px"><select id="wa" class="input"><option value="">Person wählen …</option>${opt(ms)}</select>
+    <select id="wt" class="input"><option value="neben">möchte neben</option><option value="nicht">darf nicht neben</option></select>
+    <select id="wb" class="input"><option value="">… wem sitzen? (Person wählen)</option><optgroup label="Deine Gruppe">${opt(ms)}</optgroup>${others.length?`<optgroup label="Andere Gruppen an euren Tischen">${opt(others)}</optgroup>`:""}</select></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="wishadd">Wunsch hinzufügen</button><button class="btn sm primary" data-act="arrange" data-g="${g.id}" ${tabs.length?"":"disabled"}>Plätze ordnen</button></div></div>`}
+/* Gruppe an ihren Tischen neu ordnen: möglichst alle Wünsche erfüllen, möglichst wenige Umplatzierungen */
+function arrangeGroup(g){
+  if(!g)return{n:0,viol:0,total:0};
+  const tabs=groupTables(g);if(!tabs.length)return{n:0,viol:0,total:0,noTable:1};
+  const slots=[];for(const tid of tabs){const s=seatsOf(T(tid));for(const n of[...s.top,...s.bot]){const p=at(tid,n);if(!p||p.gruppe===g.id)slots.push({t:tid,n})}}
+  const adj=slots.map(a=>slots.map(b=>a.t===b.t&&neighbors(a.t,a.n).includes(b.n)));
+  const ms=members(g),seated=ms.filter(p=>p.platz&&tabs.includes(p.tisch)),ppl=[...seated,...ms.filter(p=>!seated.includes(p))].slice(0,slots.length);
+  const idx=new Map(ppl.map((p,i)=>[p.id,i])),ws=S.wishes.filter(w=>idx.has(w.a)||idx.has(w.b));
+  const asg=new Array(ppl.length).fill(-1),used=new Set();
+  ppl.forEach((p,i)=>{if(p.platz){const j=slots.findIndex(s=>s.t===p.tisch&&s.n===p.platz);if(j>=0&&!used.has(j)){asg[i]=j;used.add(j)}}});
+  ppl.forEach((p,i)=>{if(asg[i]<0){const j=slots.findIndex((s,k)=>!used.has(k));asg[i]=j;used.add(j)}});
+  const orig=asg.slice();
+  const fixedAdj=(i,pid)=>{const q=P(pid);if(!q||!q.platz)return false;const s=slots[asg[i]];return s.t===q.tisch&&neighbors(s.t,s.n).includes(q.platz)};
+  const isAdj=w=>{const ia=idx.get(w.a),ib=idx.get(w.b);if(ia!=null&&ib!=null)return adj[asg[ia]][asg[ib]];return ia!=null?fixedAdj(ia,w.b):fixedAdj(ib,w.a)};
+  const viol=()=>ws.filter(w=>(w.typ==="neben")!==isAdj(w)).length;
+  const cost=()=>{let c=viol()*10;for(let i=0;i<asg.length;i++)if(asg[i]!==orig[i])c+=0.3;return c};
+  if(ws.length&&ppl.length>1){
+    // 1. Einzelne Verschiebungen/Tausche, solange es besser wird (wenig Umplatzierungen)
+    const greedy=()=>{let cur=cost(),imp=true;while(imp){imp=false;for(let i=0;i<ppl.length;i++)for(let j=0;j<slots.length;j++){if(asg[i]===j)continue;
+      const k=asg.indexOf(j),old=asg[i];if(k>=0)asg[k]=old;asg[i]=j;const c=cost();if(c<cur-1e-9){cur=c;imp=true}else{asg[i]=old;if(k>=0)asg[k]=j}}}};
+    greedy();
+    // 2. Falls noch Wünsche offen: breitere Suche (Simulated Annealing), danach wieder Feinschliff
+    if(viol()>0){let seed=42;const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648};
+      let cur=cost(),best=cur,bestA=asg.slice();const N=8000;
+      for(let it=0;it<N;it++){const temp=4*(1-it/N)+0.02;
+        const i=Math.floor(rnd()*ppl.length),j=Math.floor(rnd()*slots.length);if(asg[i]===j)continue;
+        const k=asg.indexOf(j),old=asg[i];if(k>=0){asg[k]=old}asg[i]=j;
+        const c=cost();if(c<=cur||rnd()<Math.exp((cur-c)/temp)){cur=c;if(c<best){best=c;bestA=asg.slice()}}
+        else{asg[i]=old;if(k>=0)asg[k]=j}}
+      asg.splice(0,asg.length,...bestA);greedy()}}
+  let n=0;ppl.forEach((p,i)=>{const s=slots[asg[i]];if(p.tisch!==s.t||p.platz!==s.n)n++;p.tisch=s.t;p.platz=s.n});
+  return{n,viol:viol(),total:ws.length};
+}
+const arrangeMsg=r=>r.noTable?"Die Gruppe hat noch keinen Tisch":`Plätze geordnet · ${r.n} verschoben${r.total?` · ${r.total-r.viol} von ${r.total} Wünschen erfüllt`:""}`;
+function chefSave(g,r){return rpc("chef_save_seats",{p_code:S.code,p_group:g.id,p_rows:members(g).filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))})
+  .then(async()=>{await loadLive();render();toast(arrangeMsg(r))}).catch(async e=>{toast(e.message);await loadLive().catch(()=>{});render()})}
+
+/* ================= Verwaltung: Übersichten ================= */
+const ADMIN_TABS=[["uebersicht","Übersicht"],["teilnehmer","Teilnehmer"],["tische","Tische"],["aperos","Apéros"],["wein","Wein"],["einst","Einstellungen & Import"]];
+function vAdmin(){
+  const k=kpi(),t=S.adminTab||"uebersicht";
+  let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
+    <div class="filter atabs">${ADMIN_TABS.map(([id,l])=>`<button class="chip ${t===id?"on":""}" data-act="atab" data-t="${id}">${l}</button>`).join("")}</div>`;
+  if(t==="teilnehmer")return h+adminPeople();
+  if(t==="tische")return h+adminTables();
+  if(t==="aperos")return h+adminAperos();
+  if(t==="wein")return h+weinBody();
+  if(t==="einst")return h+vAdminAlt();
+  const vs=S.wishes.filter(w=>wishState(w)==="verletzt").length,open=S.orders.filter(o=>o.status!=="serviert").length;
+  h+=`<div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}${kpiBox(open,"offene Weinbest.",open?"st-neu":"")}${kpiBox(S.wishes.length?`${S.wishes.length-vs}/${S.wishes.length}`:"–","Sitzwünsche erfüllt",vs?"st-neu":"")}</div>`;
+  if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
+  return h+feedbackBox();
+}
+function adminPeople(){
+  const ps=[...S.people].sort(byName);
+  return`<input id="aq" class="input" placeholder="Name, Gruppe oder Tisch suchen …" autocomplete="off" style="margin-bottom:6px">
+    <p class="small muted" id="aqn" style="margin:0 0 6px">${ps.length} Personen</p>
+    <div class="card scroll" style="padding:4px 8px"><table class="t" id="atbl"><tr><th>Name</th><th>Gruppe</th><th>Tisch</th><th>Platz</th><th>Typ</th><th>Menu</th><th>Apéro</th></tr>
+    ${ps.map(p=>{const g=G(p.gruppe),s=[p.name,p.vorname,g?g.name:"ohne gruppe",p.tisch?"tisch "+p.tisch:"ohne tisch",TYP[p.typ]].join(" ").toLowerCase();
+      return`<tr data-s="${esc(s)}"><td><a href="#" data-act="findp" data-p="${p.id}">${esc(p.name)} ${esc(p.vorname)}</a>${isChef(p)?` <span class="chip b">${chefLbl(chefOf(p))}</span>`:""}</td><td>${g?esc(g.name):`<span class="muted">–</span>`}</td><td>${p.tisch||"–"}</td><td>${p.platz||`<span class="chip w">offen</span>`}</td><td>${TYP[p.typ]}</td><td>${p.menu==="vegi"?"Vegi":""}</td><td>${S.apero.has(p.id)?"✓":""}</td></tr>`}).join("")}</table></div>`}
+function adminTables(){
+  const wv=violSet();let h=`<p class="muted small">Alle ${TABLES.length} Tische mit Belegung, sortiert nach Platz. ★ = Gruppenchef, ⚠ = Sitzwunsch nicht erfüllt.</p>`;
+  if(S.wishes.length){const bad=S.wishes.filter(w=>wishState(w)==="verletzt").length,wg=S.groups.filter(g=>wishesFor(g).length);
+    h+=`<div class="card"><h3>Sitzwünsche (${S.wishes.length})</h3><p class="small muted">${bad?`⚠ ${bad} nicht erfüllt`:"Alle platzierten Wünsche sind erfüllt."}</p>${wishList(S.wishes,true)}
+    <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
+  const noT=S.people.filter(p=>!p.tisch).sort(byName);
+  if(noT.length)h+=`<div class="card soft small"><b>Ohne Tisch (${noT.length}):</b> ${noT.map(p=>esc(full(p))).join(", ")}</div>`;
+  for(const t of TABLES){const ps=S.people.filter(p=>p.tisch===t.id&&p.platz).sort((a,b)=>a.platz-b.platz),gs=groupsAt(t.id),uns=S.people.filter(p=>p.tisch===t.id&&!p.platz);
+    h+=`<div class="card"><div class="row between"><h3 style="margin:0">${esc(t.name)}</h3><span class="small muted">${ps.length}/16 · Plätze ${t.start}–${t.start+15}</span></div>
+    <div class="small muted" style="margin:4px 0 8px">${gs.map(e=>`${esc(e.g?e.g.name:"ohne Gruppe")} (${e.n})`).join(" · ")||"frei"}</div>
+    ${ps.length?`<div class="tlist">${ps.map(p=>`<div class="${wv.has(p.id)?"warnt":""}"><span class="muted">${p.platz}</span> ${wv.has(p.id)?"⚠ ":""}${esc(full(p))}${G(p.gruppe)?.chef===p.id?" ★":""}</div>`).join("")}</div>`:""}
+    ${uns.length?`<p class="small" style="margin:6px 0 0">Zugeteilt, noch ohne Platz: ${uns.map(p=>esc(full(p))).join(", ")}</p>`:""}
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="opentable" data-id="${t.id}">Im Saalplan bearbeiten</button></div></div>`}
+  return h}
+function adminAperos(){
+  const gs=[...S.groups],withA=gs.filter(g=>g.apero).sort((a,b)=>(a.apero.zeit||"99").localeCompare(b.apero.zeit||"99")||a.name.localeCompare(b.name)),noA=gs.filter(g=>!g.apero).sort((a,b)=>a.name.localeCompare(b.name));
+  const zs=g=>members(g).filter(p=>S.apero.has(p.id)).length;
+  let h=`<div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Apéro für alle</p><h3 style="margin:0">${EVENT.apero} Uhr · ${esc(EVENT.aperoOrt)}</h3><p style="margin:6px 0 0">${S.apero.size} Zusagen insgesamt</p></div>
+    <div class="sec-h"><h2>Gruppen-Apéros (${withA.length})</h2></div>`;
+  h+=withA.map(g=>`<div class="card"><div class="row between"><h3 style="margin:0">${esc(g.name)}</h3><span class="small muted">${members(g).length} Pers. · ${zs(g)} Zusagen</span></div>
+    <p class="small" style="margin:6px 0 0">${aperoTxt(g.apero)}</p>${g.chef?`<p class="small muted" style="margin:4px 0 0">${chefLbl(g)}: ${esc(full(P(g.chef)))}</p>`:""}</div>`).join("")||`<p class="muted small">Noch keine Gruppen-Apéros erfasst.</p>`;
+  if(noA.length)h+=`<div class="sec-h"><h2>Ohne eigenen Apéro (${noA.length})</h2></div><div class="card soft"><div class="chips">${noA.map(g=>`<span class="chip">${esc(g.name)} · ${members(g).length}</span>`).join("")}</div></div>`;
+  return h}
 
 /* ================= Demo-Daten (fiktiv) ================= */
 const FN=["Andreas","Beat","Christian","Daniel","Erich","Fritz","Hans","Jürg","Kurt","Lukas","Markus","Niklaus","Peter","Reto","Samuel","Thomas","Urs","Walter","Martin","Stefan","Roger","Patrick","Bruno","Simon","Marco"];
@@ -891,9 +998,9 @@ function vSaal(){
   return h;
 }
 function tableGrid(t,dim=null){
-  const me=ME(),s=seatsOf(t),cm=colorMap(t.id);
+  const me=ME(),s=seatsOf(t),cm=colorMap(t.id),wv=violSet();
   const seat=n=>{const p=at(t.id,n);const cls=["seat"];
-    if(!p)cls.push("empty");else{cls.push(gcls(cm,p));if(G(p.gruppe)?.chef===p.id)cls.push("c");if(p.id===me.id)cls.push("me");if(p.id===S.hl)cls.push("hl");if(dim&&p.gruppe!==dim)cls.push("dim")}
+    if(!p)cls.push("empty");else{cls.push(gcls(cm,p));if(G(p.gruppe)?.chef===p.id)cls.push("c");if(p.id===me.id)cls.push("me");if(p.id===S.hl)cls.push("hl");if(dim&&p.gruppe!==dim)cls.push("dim");if(wv.has(p.id))cls.push("warn")}
     return`<div class="${cls.join(" ")}" data-act="seat" data-t="${t.id}" data-s="${n}" title="Platz ${n}${p?": "+esc(full(p)):""}"><span>${p?esc(full(p)):""}</span></div>`};
   const gs=groupsAt(t.id);
   return`<div class="tbl">${s.top.map(n=>`<div class="num">${n}</div>`).join("")}${s.top.map(seat).join("")}${s.bot.map(seat).join("")}${s.bot.map(n=>`<div class="num">${n}</div>`).join("")}</div>
@@ -941,6 +1048,7 @@ function vGruppe(){
   if(!tabs.length)h+=`<div class="note">Deine Gruppe hat noch keinen Tisch – das OK teilt die Tische zu.</div>`;
   for(const tid of tabs){const others=groupsAt(tid).filter(e=>e.g?.id!==g.id);
     h+=`<div class="sec-h"><h2>${esc(T(tid).name)}</h2><span class="muted small">${others.length?"zusammen mit "+others.map(e=>esc(e.g?e.g.name:"Einzelpersonen")).join(", "):"nur deine Gruppe"}</span></div>${tableGrid(T(tid),g.id)}`}
+  h+=wishCard(g);
   h+=`<div class="card" style="margin-top:14px"><h3>Personen (${ms.length})</h3><div class="list">${ms.map(p=>`<div class="li" style="cursor:default"><div class="av ${p.id===g.chef?"c":""}">${ini(p)}</div><div class="grow"><div class="nm">${esc(full(p))}</div><div class="sub">${TYP[p.typ]} · ${p.menu==="vegi"?"vegetarisch":"Normalmenu"}${S.apero.has(p.id)?" · Apéro ✓":""}</div></div><div class="rt">${p.platz?`${esc(T(p.tisch).short)}<br>Platz ${p.platz}`:`<span class="chip w">ohne Platz</span>`}</div></div>`).join("")}</div></div>`;
   return h;
 }
@@ -1072,10 +1180,10 @@ function orderCard(o,ctl=false){
     <div class="row between"><span class="small muted">von ${esc(full(P(o.by)))} · ${chf(oSum(o))}</span>
     ${ctl?`<div class="row">${o.status==="neu"?`<button class="btn sm" data-act="ost" data-id="${o.id}" data-s="arbeit">Übernehmen</button>`:""}${o.status!=="serviert"?`<button class="btn primary sm" data-act="ost" data-id="${o.id}" data-s="serviert">Serviert</button>`:""}</div>`:""}</div></div>`;
 }
-function vService(){
+function vService(){return back("start","Start")+`<h1>Service-Board</h1><p class="muted">Weinbestellungen aller Tische · live</p>`+weinBody()}
+function weinBody(){
   const cols=["neu","arbeit","serviert"];
-  let h=back("start","Start")+`<h1>Service-Board</h1><p class="muted">Weinbestellungen aller Tische · in der Supabase-Version live</p>
-    <div class="kpis">${cols.map(c=>kpiBox(S.orders.filter(o=>o.status===c).length,ST[c],"st-"+c)).join("")}${kpiBox(chf(S.orders.reduce((s,o)=>s+oSum(o),0)),"Umsatz Wein")}</div>`;
+  let h=`<div class="kpis">${cols.map(c=>kpiBox(S.orders.filter(o=>o.status===c).length,ST[c],"st-"+c)).join("")}${kpiBox(chf(S.orders.reduce((s,o)=>s+oSum(o),0)),"Umsatz Wein")}</div>`;
   for(const c of cols){const os=S.orders.filter(o=>o.status===c);if(os.length)h+=`<div class="sec-h"><h2>${ST[c]}</h2></div>`+os.map(o=>orderCard(o,true)).join("")}
   if(!S.orders.length)h+=`<p class="muted">Noch keine Bestellungen.</p>`;
   const gr=S.groups.map(g=>{const os=S.orders.filter(o=>o.gruppe===g.id);return{g,b:os.reduce((s,o)=>s+o.items.reduce((a,i)=>a+i.q,0),0),c:os.reduce((s,o)=>s+oSum(o),0)}}).filter(x=>x.b).sort((a,b)=>b.c-a.c);
@@ -1241,10 +1349,14 @@ function kpi(){const ps=S.people;return{total:ps.length,groups:S.groups.length,n
   apero:S.apero.size,vegi:ps.filter(p=>p.menu==="vegi").length,newOrders:S.orders.filter(o=>o.status==="neu").length,urgent:S.feedback.filter(f=>f.cat==="Problem jetzt").length}}
 const baseUrl=()=>location.origin.startsWith("http")?location.origin+location.pathname:"https://<user>.github.io/herrenabend/";
 const linkOf=p=>baseUrl()+"?t="+p.token;
-function vAdmin(){
+function feedbackBox(){let h="";
+  h+=`<div class="sec-h"><h2>Feedback-Eingang${FEEDBACK.formUrl?"":` (${S.feedback.length})`}</h2>${FEEDBACK.resultsUrl?`<a class="btn sm" href="${esc(FEEDBACK.resultsUrl)}" target="_blank" rel="noopener">Excel öffnen ↗</a>`:""}</div>
+    ${FEEDBACK.formUrl?`<p class="small muted">Meldungen kommen über Microsoft Forms in die Excel-Datei im Vorstandsordner; das OK erhält bei jeder Meldung eine Benachrichtigung. Unten nur die Testeinträge der Demo.</p>`:`<p class="small muted">Prototyp: Meldungen bleiben in diesem Browser. Für den Live-Betrieb Microsoft Forms anbinden (siehe Anleitung).</p>`}${S.feedback.slice().reverse().map(f=>`<div class="card small" style="${f.cat==="Problem jetzt"?"border-color:var(--brand)":""}"><div class="row between"><b>${esc(f.cat)}</b><span class="muted">${f.zeit} · ${f.by?esc(full(P(f.by))):"anonym"}</span></div><div style="margin-top:4px">${esc(f.txt)}</div></div>`).join("")}`;
+  return h;
+}
+function vAdminAlt(){
   const k=kpi(),ii=S.importInfo;
-  let h=back("start","Start")+`<h1>Verwaltung</h1><p class="muted">Nur für das OK sichtbar.</p>
-  <div class="kpis">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noGroup,"ohne Gruppe")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.noChef,"Gruppen ohne Chef")}${kpiBox(k.sponsor,"Sponsorgäste")}${kpiBox(k.apero,"Apéro-Zusagen")}${kpiBox(k.vegi,"Vegi-Menus")}</div>`;
+  let h="";
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
     h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht an die hier eingetragenen Empfänger – an einzelne Personen oder an eine ganze Telegram-Gruppe (z.B. «OK Herrenabend»).</p>
@@ -1329,8 +1441,6 @@ function vAdmin(){
     ${SURVEY.formUrl?`<p class="muted small" style="margin:8px 0 0">Die Antworten werden in Microsoft Forms gesammelt. «Für alle freischalten» zeigt den Teilnehmern nach dem Anlass den Umfrage-Knopf in der App.</p>`:`<p class="muted small">${S.survey.length} Antworten · ${S.survey.length?Math.round(S.survey.filter(s=>s.wieder).length/S.survey.length*100):0}% kommen wieder</p>
     ${QS.map(([kk,l])=>{const a=S.survey.length?S.survey.reduce((s,x)=>s+(x.r[kk]||0),0)/S.survey.length:0;return`<div class="row" style="padding:4px 0"><span style="width:150px" class="small">${l}</span><div class="bar"><i style="width:${a/5*100}%"></i></div><b class="small" style="width:30px;text-align:right">${a.toFixed(1)}</b></div>`}).join("")}
     ${S.survey.filter(s=>s.txt).map(s=>`<div class="card soft small" style="margin:8px 0 0">${esc(s.txt)}</div>`).join("")}`}</div>`;
-  h+=`<div class="sec-h"><h2>Feedback-Eingang${FEEDBACK.formUrl?"":` (${S.feedback.length})`}</h2>${FEEDBACK.resultsUrl?`<a class="btn sm" href="${esc(FEEDBACK.resultsUrl)}" target="_blank" rel="noopener">Excel öffnen ↗</a>`:""}</div>
-    ${FEEDBACK.formUrl?`<p class="small muted">Meldungen kommen über Microsoft Forms in die Excel-Datei im Vorstandsordner; das OK erhält bei jeder Meldung eine Benachrichtigung. Unten nur die Testeinträge der Demo.</p>`:`<p class="small muted">Prototyp: Meldungen bleiben in diesem Browser. Für den Live-Betrieb Microsoft Forms anbinden (siehe Anleitung).</p>`}${S.feedback.slice().reverse().map(f=>`<div class="card small" style="${f.cat==="Problem jetzt"?"border-color:var(--brand)":""}"><div class="row between"><b>${esc(f.cat)}</b><span class="muted">${f.zeit} · ${f.by?esc(full(P(f.by))):"anonym"}</span></div><div style="margin-top:4px">${esc(f.txt)}</div></div>`).join("")}`;
   return h;
 }
 
@@ -1344,6 +1454,12 @@ function doImport(txt){const r=importCSV(txt);if(!r||r.err)return toast(r?.err||
 /* ================= Aktionen ================= */
 const A={
   go:d=>go(d.r),
+  atab:d=>{S.adminTab=d.t;render();scrollTo(0,0)},
+  opentable:d=>{S.selTable=d.id;go("saal")},
+  wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
+    S.wishes=S.wishes.filter(w=>!((w.a===a&&w.b===b)||(w.a===b&&w.b===a)));S.wishes.push({id:uid(),a,b,typ:t});render();toast("Wunsch gespeichert – mit «Plätze ordnen» anwenden")},
+  wishdel:d=>{S.wishes=S.wishes.filter(w=>w.id!==d.id);render();toast("Wunsch gelöscht")},
+  arrange:d=>{const r=arrangeGroup(G(d.g));render();toast(arrangeMsg(r))},
   close:()=>closeModal(),
   whoami:()=>{if(!S.demo)return toast("Nur in der Demo");askUser()},
   iam:d=>{S.userId=d.p||null;closeModal();const p=S.userId&&P(S.userId);
@@ -1409,7 +1525,7 @@ document.addEventListener("input",e=>{if(e.target.id!=="oksearch"||!LIVE)return;
     try{const res=await rpc("admin_search_members",{p_code:S.code,p_q:q});
       box.innerHTML=res.map(p=>`<div class="li" style="cursor:default"><div class="av">${ini(p)}</div><div class="grow"><div class="nm">${esc(p.name)} ${esc(p.vorname)}</div><div class="sub">${p.has_code?"mit Zugangscode":"ohne Zugangscode"}${p.angemeldet?" · angemeldet":""}</div></div>${p.role==="ok"?`<span class="chip g">OK</span>`:`<button class="btn sm primary" data-act="setrole" data-p="${p.id}" data-r="ok">OK-Recht geben</button>`}</div>`).join("")||`<p class="muted small">Niemand gefunden.</p>`}
     catch(err){box.innerHTML=`<p class="muted small">${esc(err.message)}</p>`}},300)});
-document.addEventListener("input",e=>{if(e.target.id==="q")renderPeople()});
+document.addEventListener("input",e=>{if(e.target.id==="q")renderPeople();if(e.target.id==="aq"){const q=e.target.value.toLowerCase().trim();let n=0;document.querySelectorAll("#atbl tr[data-s]").forEach(r=>{const v=!q||r.dataset.s.includes(q);r.style.display=v?"":"none";if(v)n++});const c=$("#aqn");if(c)c.textContent=n+" Personen"}});
 document.addEventListener("change",e=>{
   const el=e.target;
   if(el.id==="role"){setRole(el.value);render();toast("Rolle: "+el.options[el.selectedIndex].text)}
@@ -1444,6 +1560,7 @@ function applySession(s){
   S.people=s.people.map(p=>({id:p.id,vorname:p.vorname,name:p.name,typ:p.typ,funktion:p.funktion||undefined,gruppe:p.group_id,tisch:p.tisch?String(p.tisch):null,platz:p.platz,menu:p.menu||"normal",token:"",hasCode:p.has_code,role:p.role}));
   S.apero=new Set(s.people.filter(p=>p.apero).map(p=>p.id));if(me.apero)S.apero.add(me.id);
   S.orders=s.orders.map(o=>({id:o.id,tisch:String(o.tisch),gruppe:o.group_id,items:o.items,status:o.status,zeit:hm(o.created_at),by:o.by_person}));
+  S.wishes=(s.wishes||[]).map(w=>({id:w.id,a:w.a,b:w.b,typ:w.typ}));
   S.proposals=s.proposals.map(x=>({id:x.id,gruppe:x.group_id,w:x.wine_id,by:x.by_person}));
   S.feedback=(me.role==="ok"?s.feedback:s.my_feedback.map(f=>({...f,by_person:me.id}))).map(f=>({id:f.id||uid(),cat:f.cat,txt:f.txt,by:f.by_person,zeit:hm(f.created_at)}));
   S.survey=s.survey.map(x=>({r:x.ratings,wieder:x.wieder,txt:x.txt||""}));
@@ -1485,6 +1602,10 @@ async function doImportLive(txt){
   }catch(e){S.busy=null;render();toast(e.message)}
 }
 const LIVEA={
+  wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
+    call("set_wish",{p_a:a,p_b:b,p_typ:t},"Wunsch gespeichert – mit «Plätze ordnen» anwenden").catch(()=>{})},
+  wishdel:d=>call("delete_wish",{p_id:d.id},"Wunsch gelöscht").catch(()=>{}),
+  arrange:d=>{const g=G(d.g);if(!g)return;const r=arrangeGroup(g);if(r.noTable)return toast(arrangeMsg(r));chefSave(g,r)},
   apero:()=>{const on=!S.apero.has(S.meId);call("set_apero",{p_on:on},on?"Apéro: angemeldet":"Apéro: abgemeldet").catch(()=>{})},
   menu:d=>call("set_menu",{p_menu:d.v},d.v==="vegi"?"Vegetarisch gewählt":"Normalmenu gewählt").catch(()=>{}),
   assign:d=>{closeModal();S.hl=d.p;call("assign_seat",{p_person:d.p,p_tisch:+d.t,p_platz:+d.s},"Platz zugeteilt").catch(()=>{})},
