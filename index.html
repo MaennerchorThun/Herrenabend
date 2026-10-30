@@ -1391,11 +1391,11 @@ function vKuenstler(){
   <div class="sec-h"><h2>Am Herrenabend</h2></div>
   ${SHOW_GUESTS?`<h3 style="margin:14px 0 8px">Gastreferat</h3>${artistCard(SPEAKER)}
   <h3 style="margin:14px 0 8px">Intermezzo</h3>${artistCard(INTERMEZZO)}`:""}
-  <p class="small muted" style="margin:-4px 0 4px">Luigi Chiaramonte singt als Solist am Herrenabend. Die beiden Tambouren wirken bei der Eröffnung (Nationalhymne) und im Gesangsblock des Männerchors mit («Freude schöner Götterfunken»).</p>
+  <p class="small muted" style="margin:-4px 0 4px">Luigi Chiaramonte singt als Solist nur am Herrenabend, nicht an den Konzerten im November. Die beiden Tambouren wirken bei der Eröffnung (Nationalhymne) und im Gesangsblock des Männerchors mit («Freude schöner Götterfunken»).</p>
   ${artistList(HA_ARTISTS)}
   <div class="sec-h" style="margin-top:28px"><h2>Konzert «${esc(CONCERT.titel)}»</h2></div>
   <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Männerchor Thun unter der Leitung von Monika Nagy</p>${CONCERT.daten.map(d=>`<h3 style="margin:0 0 4px">${esc(d)}</h3>`).join("")}
-  <p class="muted small" style="margin:8px 0 0">${esc(CONCERT.ort)}<br>${esc(CONCERT.info)}</p><button class="btn sm" style="margin-top:10px" data-act="go" data-r="lieder">Konzertprogramm – Lieder</button></div>
+  <p class="muted small" style="margin:8px 0 0">${esc(CONCERT.ort)}<br>${esc(CONCERT.info)}</p><p class="small" style="margin:8px 0 0;opacity:.95">Tenor Fabian Meinen singt nur an den Konzerten, nicht am Herrenabend.</p><button class="btn sm" style="margin-top:10px" data-act="go" data-r="lieder">Konzertprogramm – Lieder</button></div>
   ${artistList(ARTISTS)}
   <p class="small muted">Fotos und weitere Portraittexte werden nach Freigabe durch die Künstlerinnen und Künstler ergänzt.</p>`;
 }
