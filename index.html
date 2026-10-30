@@ -400,7 +400,7 @@ const MENU=[
   {z:"22:50",g:"Dessert",d:"Traditioneller Coupe Nesselrode, Kaffee"},
 ];
 const MENU_VEGI="Vegetarische Alternative – Details folgen vom Caterer";
-const LATE=[{n:"Mehlsuppe, Gemüsesuppe",i:"gesponsert"},{n:"Schweinswürstli, Weisswurst",i:"Einzelinkasso"},{n:"Bretzel",i:"Einzelinkasso"},{n:"Thunbier",i:"exklusiv ab 01:00"}];
+const LATE=[{n:"Mehlsuppe",i:"gesponsert"},{n:"Schweinswürstli",i:"Einzelinkasso"},{n:"Thunbier",i:"exklusiv ab 01:00"}];
 const WINES=[
   {id:"w1",k:"Weisswein",n:"Cure d’Attalens Grand Cru AOC",l:"CH",r:"Chasselas – Ausbau im Eichenfass",cl:75,p:47},
   {id:"w2",k:"Weisswein",n:"Pinot Bianco Alto Adige DOC",l:"I",r:"Pinot Bianco",cl:75,p:48},
@@ -1171,7 +1171,7 @@ function vMenu(){
     <p class="muted small" style="margin:8px 0 0">Allergien bitte über <a href="#/feedback">Feedback</a> melden.</p></div>`;
   const vg=me.menu==="vegi";
   h+=`<div class="card">${MENU.map(m=>`<div class="tl-item"><div class="tm">${m.z}</div><div><div class="eyebrow" style="margin:0">${esc(m.g)}</div><div class="ttl">${esc(m.d)}</div>${vg?`<div class="who">${esc(MENU_VEGI)}</div>`:""}</div></div>`).join("")}</div>`;
-  h+=`<div class="sec-h"><h2>Ab 01:00 in der Reithalle</h2></div><div class="card">${LATE.map(l=>`<div class="row between" style="padding:6px 0"><span>${esc(l.n)}</span><span class="chip">${esc(l.i)}</span></div>`).join("")}</div>`;
+  h+=`<div class="sec-h"><h2>Ab 01:00 in der Halle 0</h2></div><div class="card">${LATE.map(l=>`<div class="row between" style="padding:6px 0"><span>${esc(l.n)}</span><span class="chip">${esc(l.i)}</span></div>`).join("")}<p class="small muted" style="margin:8px 0 0">Restliches Angebot folgt.</p></div>`;
   if(S.role==="ok"){let tn=0,tv=0;
     h+=`<div class="sec-h"><h2>Catering-Übersicht</h2></div><div class="card scroll"><table class="t"><tr><th>Tisch</th><th>Normal</th><th>Vegi</th><th>Total</th></tr>`;
     for(const t of[...TABLES,{id:null,short:"ohne Tisch"}]){const ps=S.people.filter(p=>p.tisch===t.id);if(!ps.length)continue;const v=ps.filter(p=>p.menu==="vegi").length;tn+=ps.length-v;tv+=v;
@@ -1372,7 +1372,7 @@ function vSponsoren(){
   <div class="card"><div class="spons">${SPONSORS.map(x=>x.u?`<a class="sp link" href="${esc(x.u)}" target="_blank" rel="noopener">${logoBox(x)}<span class="grow">${esc(x.n)}</span><span class="sp-go" aria-hidden="true">↗</span></a>`:`<div class="sp">${logoBox(x)}<span class="grow">${esc(x.n)}</span></div>`).join("")}</div></div>
   <div class="sec-h"><h2>Unsere Eventpartner</h2></div>
   <div class="grid g2">${PARTNERS.map(x=>{const inner=`<div class="pt-logo"><img src="${x.logo}" alt="Logo ${esc(x.n)}"></div><b style="font-size:1.1rem">${esc(x.n)}${x.u?` <span class="sp-go">↗</span>`:""}</b><div class="small muted">${esc(x.i)}</div>`;return x.u?`<a class="card link" style="margin:0;display:block;text-decoration:none;color:inherit" href="${esc(x.u)}" target="_blank" rel="noopener">${inner}</a>`:`<div class="card" style="margin:0">${inner}</div>`}).join("")}</div>
-  <div class="card soft small" style="margin-top:12px">Mehlsuppe und Gemüsesuppe in der Reithalle werden von <b>Toutvent AG</b> offeriert. Die Logos der Sponsoren erscheinen zudem während des Desserts auf der Leinwand.</div>
+  <div class="card soft small" style="margin-top:12px">Die Mehlsuppe in der Halle 0 wird von <b>Toutvent AG</b> offeriert. Die Logos der Sponsoren erscheinen zudem während des Desserts auf der Leinwand.</div>
   <p class="small muted">Interesse an einem Engagement als Sponsor oder Gönner? <a href="${MEMBER_LINKS.goenner}" target="_blank" rel="noopener">Zum Gönner- und Sponsorenformular ↗</a></p>`;
 }
 /* ----- Gastmusiker & Solisten ----- */
