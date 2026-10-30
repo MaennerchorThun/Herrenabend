@@ -1195,7 +1195,7 @@ function vLieder(){
     if(s.b==="Intermezzo"&&s.t==="Intermezzo"){h+=`<p class="small muted" style="margin:4px 0 8px">Musikalisches Zwischenspiel</p>`;return}
     h+=row(s,num&&s.b!=="Eröffnung"?++n:"♪")});return h};
   return back()+`<h1>Lieder</h1><p class="muted">Was der Männerchor Thun singt – Leitung Monika Nagy.</p>
-    <div class="sec-h"><h2>Herrenabend · ${EVENT.datum}</h2></div><p class="small muted" style="margin:-4px 0 8px">Solisten: Leticia Kahraman, Sopran · Luigi Chiaramonte, Countertenor</p><div class="card">${list(SONGS,true)}</div>
+    <div class="sec-h"><h2>Herrenabend · ${EVENT.datum}</h2></div><p class="small muted" style="margin:-4px 0 8px">Solisten: Leticia Kahraman, Sopran · Luigi Chiaramonte, Countertenor<br>Mit Jean-Jacques Schmid, Klavier, und dem ODEON Quartett</p><div class="card">${list(SONGS,true)}</div>
     <div class="sec-h"><h2>Konzert «${esc(CONCERT.titel)}»</h2></div><p class="small muted" style="margin:-4px 0 8px">${CONCERT.daten.map(esc).join(" · ")} · ${esc(CONCERT.ort)}<br>Solisten: Leticia Kahraman, Sopran · Fabian Meinen, Tenor<br>Moderation: Stefan Bütler</p>
     <div class="card">${list(CONCERT_SONGS,true)}</div>`;
 }
@@ -1387,7 +1387,7 @@ function artistList(list){let h="",grp="";for(const a of list){if(a.g!==grp){grp
 function vKuenstler(){
   /* Reihenfolge: Dirigentin, Solisten (Leticia zuerst), Klavier, ODEON Quartett, Tambouren */
   const HA="nur am Herrenabend",KO="nur an den Konzerten",BEIDE="Herrenabend & Konzerte";
-  const all=[...ARTISTS.map(a=>({...a,wo:(a.g==="Leitung"||a.n==="Leticia Kahraman")?BEIDE:KO})),...HA_ARTISTS.map(a=>({...a,g:a.g==="Solist"?"Solisten":a.g,wo:a.g==="Tambouren"?BEIDE:HA}))];
+  const all=[...ARTISTS.map(a=>({...a,wo:a.n==="Fabian Meinen"?KO:BEIDE})),...HA_ARTISTS.map(a=>({...a,g:a.g==="Solist"?"Solisten":a.g,wo:a.g==="Tambouren"?BEIDE:HA}))];
   const ORD=["Leitung","Solisten","Klavier","ODEON Quartett","Tambouren"],SOL=["Leticia Kahraman","Fabian Meinen","Luigi Chiaramonte"];
   const rk=a=>ORD.indexOf(a.g)*10+(a.g==="Solisten"?Math.max(0,SOL.indexOf(a.n)):0);
   const list=all.map((a,i)=>({a,i})).sort((x,y)=>rk(x.a)-rk(y.a)||x.i-y.i).map(x=>({...x.a,r:x.a.r+" · "+x.a.wo}));
