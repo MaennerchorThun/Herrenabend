@@ -346,45 +346,54 @@ function seatsOf(t){const top=[],bot=[];for(let i=0;i<8;i++){top.push(t.start+i*
 function seatOrder(t){const s=seatsOf(t),o=[];for(let i=0;i<8;i++)o.push(s.top[i],s.bot[i]);return o}
 
 const PROG=[
-  {p:"Apéro",z:"16:00",t:"Baröffnung",i:"Eingang Halle 1",v:"Service-Leitung"},
+  {p:"Apéro",z:"16:00",t:"Baröffnung – Apéro",i:"Bierbar",v:"Service-Leitung"},
   {p:"Apéro",z:"16:30",t:"Apéro für alle",i:"Empfangshalle, Biertheke · einzelne Gruppen organisieren ihren Apéro selbst",v:"Service-Leitung"},
   {p:"Apéro",z:"16:30",t:"Sitzordnung Halle 1 abgeschlossen",i:"Tischplan für Einweisung der Gäste",v:"OK",int:1},
   {p:"Apéro",z:"17:00",t:"Chor: Besammlung Bühne & Einsingen",i:"17:00–17:45, Bühne Halle 1",v:"Dirigentin",int:1},
-  {p:"Apéro",z:"17:00",t:"Apéro Gästetisch & Sponsoren",i:"Expo Halle 0, separater Bereich · Begrüssung und Betreuung der Gäste",v:"Präsident"},
-  {p:"Apéro",z:"17:10",t:"Offizielle Begrüssung Ehrengäste",i:"Grussworte, Ablauf bekannt geben",v:"Präsident"},
+  {p:"Apéro",z:"17:00",t:"Apéro Gästetisch & Sponsoren",i:"Expo Halle 0, separater Bereich · Begrüssung und Betreuung der Gäste",v:"Präsident",int:1},
+  {p:"Apéro",z:"17:10",t:"Offizielle Begrüssung Ehrengäste",i:"Grussworte, Ablauf bekannt geben",v:"Präsident",int:1},
   {p:"Apéro",z:"17:15",t:"Lautsprecher & Beleuchtung bereit",i:"Infrastruktur für Begrüssung",v:"Technik",int:1},
-  {p:"Apéro",z:"17:45",t:"Saalöffnung – Einlass aller Gäste",i:"Platz siehe App oder Tischplan am Eingang",v:"Service-Leitung"},
-  {p:"Apéro",z:"18:00",t:"Weinbestellung",i:"Bestellung pro Tisch über den Gruppen- bzw. Tischchef oder den Service",v:"Moderation"},
-  {p:"1. Teil",z:"18:30",t:"Nationalhymne – Eröffnung",i:"Chor mit den Tambouren · Text auf der Leinwand – alle singen mit",v:"Präsident"},
-  {p:"1. Teil",z:"18:35",t:"Eröffnungslied & Begrüssung der Gäste",i:"Kein Getränkeservice während der Darbietung",v:"Präsident"},
-  {p:"1. Teil",z:"18:40",t:"1. Gesangsblock Männerchor",i:"Leitung Monika Nagy / Urs Schneiter · mit den Tambouren",v:"Dirigentin"},
-  {p:"1. Teil",z:"19:00",t:"Grussbotschaft Gemeinderat",i:"",v:"Präsident"},
-  {p:"1. Teil",z:"19:15",t:"2. Gesangsblock Gesamtchor",i:"Leitung Monika Nagy / Urs Schneiter · mit den Tambouren · anschliessend Verdankung Dirigentin & Vize-Dirigenten",v:"Dirigentin"},
+  {p:"Apéro",z:"17:45",t:"Saalöffnung",i:"Getränkebestellungen · Mineralwasser steht auf den Tischen · Weinbestellung pro Tisch über den Gruppenchef oder den Service",v:"Service-Leitung"},
+  {p:"1. Teil",z:"18:30",t:"Eröffnung des Abends",i:"Nationalhymne mit den Tambouren – alle singen mit · kein Getränkeservice während der Darbietungen",v:"Präsident"},
+  {p:"1. Teil",z:"18:40",t:"1. Gesangsblock Männerchor",i:"Leitung Monika Nagy",v:"Dirigentin",song:"Block 1"},
+  {p:"1. Teil",z:"19:00",t:"Grussbotschaft des Thuner Gemeinderats",i:"",v:"Präsident"},
+  {p:"1. Teil",z:"19:15",t:"2. Gesangsblock Männerchor",i:"Leitung Monika Nagy · mit Intermezzo der Tambouren",v:"Dirigentin",song:"Block 2"},
+  {p:"1. Teil",z:"19:30",t:"Abschluss 1. Teil",i:"",v:"Präsident"},
   {p:"2. Teil",z:"19:30",t:"Getränkeservice",i:"",v:"Service"},
   {p:"2. Teil",z:"19:45",t:"1. Vorspeise",i:"",v:"Service"},
   {p:"2. Teil",z:"20:05",t:"2. Vorspeise",i:"",v:"Service"},
-  {p:"2. Teil",z:"20:10",t:"Verdankung Sponsoren & Gönner",i:"",v:"Moderation"},
   {p:"2. Teil",z:"20:35",t:"Hauptgang",i:"",v:"Service"},
-  {gs:1,p:"2. Teil",z:"21:20",t:"Gastreferat",i:"Nationalrat Lars Guggisberg, Direktor des Gewerbeverbands Berner KMU",v:"Moderation"},
-  {gs:1,p:"2. Teil",z:"21:50",t:"Musikalisches Intermezzo",i:"Trio Justistal",v:"Moderation"},
-  {p:"2. Teil",z:"22:20",t:"Pause (30 Min.)",i:"",v:""},
-  {p:"2. Teil",z:"22:50",t:"Dessert & Kaffee",i:"Sponsorenlogos auf der Leinwand",v:"Service"},
-  {p:"2. Teil",z:"23:15",t:"Gesamtchor auf der Bühne – Totenehrung",i:"",v:"Präsident"},
-  {p:"2. Teil",z:"23:20",t:"Bechermupf",i:"Fahne, Kelch und Wein bereitgestellt",v:"Präsident"},
-  {p:"2. Teil",z:"23:30",t:"Pause (45 Min.)",i:"Durchsage weiterer Verlauf & Angebot Reithalle",v:"Moderation"},
-  {p:"3. Teil",z:"00:15",t:"Ankündigung Bierbar",i:"Durchsage via Lautsprecher",v:"Moderation"},
-  {p:"3. Teil",z:"00:30",t:"3. Teil: «Mau luege u lose»",i:"Lassen Sie sich überraschen! · Schluss mit «Zapfenstreich» und den Tambouren",v:"Dirigentin"},
-  {p:"3. Teil",z:"01:00",t:"Reithalle offen",i:"Suppen, Würstli, Bretzel, Thunbier",v:"Moderation"},
-  {p:"3. Teil",z:"01:45",t:"Letzte Runde Bar Halle 0",i:"",v:"Service"},
-  {p:"3. Teil",z:"02:00",t:"Schliessung Bar · Ausklang in der Reithalle",i:"Musik live",v:""},
+  {p:"2. Teil",z:"21:15",t:"Pause (30 Min.)",i:"",v:""},
+  {p:"2. Teil",z:"21:45",t:"Dessert & Kaffee",i:"",v:"Service"},
+  {p:"2. Teil",z:"22:10",t:"Gastreferat",i:"",gi:"Nationalrat Lars Guggisberg, Direktor des Gewerbeverbands Berner KMU",v:"Moderation"},
+  {p:"2. Teil",z:"22:45",t:"Intermezzo",i:"",gi:"Trio Justistal",v:"Moderation"},
+  {p:"2. Teil",z:"23:15",t:"Totenehrung",i:"",v:"Präsident"},
+  {p:"2. Teil",z:"23:20",t:"Bechermupf",i:"",v:"Präsident"},
+  {p:"2. Teil",z:"23:30",t:"Pause (30 Min.)",i:"",v:"Moderation"},
+  {p:"3. Teil",z:"00:00",t:"3. Teil: «MCT sucht die Stimme von Thun»",i:"",v:"Moderation"},
+  {p:"3. Teil",z:"00:45",t:"Bar Halle 0 geöffnet",i:"",v:"Service"},
+  {p:"3. Teil",z:"02:00",t:"Schliessung Bar Halle 0",i:"Ausklang in der alten Reithalle",v:""},
 ];
+/* Liedprogramm Herrenabend 12.12.2026 (Dirigentin) */
 const SONGS=[
-  {b:"Eröffnung",t:"Schweizerpsalm (Nationalhymne)",w:"Chor & Tambouren",sing:1,i:"Eröffnungslied · Text und Noten antippen",lyr:"psalm"},
-  {b:"1. Gesangsblock",t:null,w:"Männerchor"},{b:"1. Gesangsblock",t:null,w:"Männerchor"},{b:"1. Gesangsblock",t:null,w:"Männerchor"},
-  {b:"2. Gesangsblock",t:null,w:"Gesamtchor"},{b:"2. Gesangsblock",t:null,w:"Gesamtchor"},{b:"2. Gesangsblock",t:null,w:"Gesamtchor"},
-  {gs:1,b:"Intermezzo",t:"Trio Justistal",w:"Gastformation",i:"Programm folgt"},
-  {b:"3. Teil",t:"Gemeinsames Singen",w:"Chor & Publikum",sing:1},
-  {b:"Schluss",t:"«Zapfenstreich»",w:"Alle, mit den Tambouren",sing:1},
+  {b:"Eröffnung",t:"Schweizerpsalm (Nationalhymne)",w:"Chor & Tambouren",sing:1,i:"Text und Noten antippen",lyr:"psalm"},
+  {b:"Block 1",t:"Griechischer Wein",w:"Männerchor"},
+  {b:"Block 1",t:"Die schöne alte Zeit",w:"Männerchor"},
+  {b:"Block 1",t:"König von Thule",w:"Männerchor"},
+  {b:"Block 1",t:"Fledermaus",w:"Männerchor",i:"Johann Strauss"},
+  {b:"Block 2",t:"Mich trägt mein Traum",w:"Männerchor"},
+  {b:"Block 2",t:"Jul jul",w:"Männerchor"},
+  {b:"Block 2",t:"Aus der Traube in die Tonne",w:"Männerchor"},
+  {b:"Block 2",t:"Freude schöner Götterfunken",w:"Männerchor",i:"mit Intermezzo der Tambouren"},
+  {b:"Block 2",t:"Zecherweisheit",w:"Männerchor",i:"als Zugabe"},
+];
+/* Konzert «Die vier Jahreszeiten» 14./15.11.2026 – Moderation Stefan Bütler */
+const CONCERT_SONGS=[
+  {b:"Sommer",t:"Griechischer Wein"},{b:"Sommer",t:"Die schöne alte Zeit"},{b:"Sommer",t:"Caro mio ben"},
+  {b:"Herbst",t:"Aus der Traube in die Tonne"},{b:"Herbst",t:"Das Wandern ist des Müllers Lust"},{b:"Herbst",t:"Mich trägt mein Traum"},
+  {b:"Intermezzo",t:"Intermezzo"},
+  {b:"Winter",t:"Jul jul"},{b:"Winter",t:"König von Thule"},{b:"Winter",t:"Bärnbiet"},
+  {b:"Frühling",t:"Reveille"},{b:"Frühling",t:"Fledermaus",i:"Johann Strauss"},{b:"Frühling",t:"Freude schöner Götterfunken",i:"mit Intermezzo der Tambouren"},{b:"Frühling",t:"Zecherweisheit",i:"als Zugabe"},
 ];
 const MENU=[
   {z:"19:45",g:"Vorspeise",d:"Hummer Thermidor, begleitet von sämigem Weissweinrisotto"},
@@ -1010,12 +1019,12 @@ function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>
 
 function vProgramm(){
   const showInt=S.role==="ok";
-  let h=`<h1>Programm</h1><p class="muted">${EVENT.datum} · ${EVENT.ort}</p><div class="card soft small"><b>${EVENT.nr}. Herrenabend</b> · Bierbar ab 16:00 · Saalöffnung ${EVENT.saal} · <b style="color:var(--brand)">18:30 Begrüssung und Konzert</b><br>Dresscode: ${EVENT.dress} · Bitte den Saalplatz frühzeitig einnehmen – alle Plätze sind nummeriert.<br>Während des Konzerts wird nicht serviert.</div><div class="note">Detailablauf: Basis Drehbuch 2025, Feinplanung 2026 folgt.</div>`;
+  let h=`<h1>Programm</h1><p class="muted">${EVENT.datum} · ${EVENT.ort}</p><div class="card soft small"><b>${EVENT.nr}. Herrenabend</b> · Bierbar ab 16:00 · Saalöffnung ${EVENT.saal} · <b style="color:var(--brand)">18:30 Begrüssung und Konzert</b><br>Dresscode: ${EVENT.dress} · Bitte den Saalplatz frühzeitig einnehmen – alle Plätze sind nummeriert.<br>Während des Konzerts wird nicht serviert.</div>`;
   if(showInt)h+=`<p class="small muted">Organisationsansicht: interne Drehbuch-Punkte (markiert mit ·) und Verantwortlichkeiten sind sichtbar.</p>`;
   let part="";h+=`<div class="tl">`;
-  for(const x of PROG.filter(x=>SHOW_GUESTS||!x.gs)){if(x.int&&!showInt)continue;
+  for(const x0 of PROG){const x={...x0,i:SHOW_GUESTS&&x0.gi?x0.gi:x0.i};if(x.int&&!showInt)continue;
     if(x.p!==part){part=x.p;h+=`<div class="tl-part">${esc(part)}</div>`}
-    h+=`<div class="tl-item ${x.int?"int":""}"><div class="tm">${x.z}</div><div><div class="ttl">${esc(x.t)}</div>${x.i?`<div class="who">${esc(x.i)}</div>`:""}${showInt&&x.v?`<div class="who">Verantwortlich: <b>${esc(x.v)}</b></div>`:""}</div></div>`}
+    h+=`<div class="tl-item ${x.int?"int":""}"><div class="tm">${x.z}</div><div><div class="ttl">${esc(x.t)}</div>${x.i?`<div class="who">${esc(x.i)}</div>`:""}${x.song?`<div class="who">${SONGS.filter(s=>s.b===x.song).map(s=>esc(s.t)).join(" · ")} · <a href="#" data-act="go" data-r="lieder">Lieder</a></div>`:""}${showInt&&x.v?`<div class="who">Verantwortlich: <b>${esc(x.v)}</b></div>`:""}</div></div>`}
   return h+`</div>`;
 }
 
@@ -1182,12 +1191,15 @@ function vLied(){
   <div class="sheet-wrap"><img src="${L.sheet}" alt="Noten ${esc(L.titel)}" class="sheet-img"></div>`;
 }
 function vLieder(){
-  let h=back()+`<h1>Gesangsrepertoire</h1><p class="muted">Was der Chor singt – und wo alle mitsingen.</p><div class="note">Liedauswahl 2026 folgt von der Dirigentin.</div>`;
-  let b="";h+=`<div class="card">`;
-  SONGS.filter(x=>SHOW_GUESTS||!x.gs).forEach((s,i)=>{if(s.b!==b){b=s.b;h+=`<div class="tl-part" style="${i?"":"margin-top:0"}">${esc(b)}</div>`}
-    const inner=`<div><div class="ttl">${s.t?esc(s.t):`<span class="muted">Titel folgt</span>`}${s.lyr?` <span class="sp-go">♪ ›</span>`:""}</div><div class="who small muted">${esc(s.w)}${s.i?" · "+esc(s.i):""}</div></div>${s.sing?`<span class="chip b">Mitsingen</span>`:""}`;
-    h+=s.lyr?`<button class="li row between" style="padding:8px 0;border-bottom:1px dashed var(--line);display:flex" data-act="lied" data-k="${s.lyr}">${inner}</button>`:`<div class="row between" style="padding:8px 0;border-bottom:1px dashed var(--line)">${inner}</div>`});
-  return h+`</div>`;
+  const row=(s,i)=>{const inner=`<div><div class="ttl"><span class="muted" style="display:inline-block;min-width:22px">${i}${typeof i==="number"?".":""}</span> ${esc(s.t)}${s.lyr?` <span class="sp-go">♪ ›</span>`:""}</div>${s.w||s.i?`<div class="who small muted">${[s.w,s.i].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>${s.sing?`<span class="chip b">Mitsingen</span>`:""}`;
+    return s.lyr?`<button class="li row between" style="padding:8px 0;border-bottom:1px dashed var(--line);display:flex" data-act="lied" data-k="${s.lyr}">${inner}</button>`:`<div class="row between" style="padding:8px 0;border-bottom:1px dashed var(--line)">${inner}</div>`};
+  const list=(arr,num)=>{let b="",h="",n=0;arr.forEach((s,k)=>{if(s.b!==b){b=s.b;h+=`<div class="tl-part" style="${k?"":"margin-top:0"}">${esc(b)}</div>`}
+    if(s.b==="Intermezzo"&&s.t==="Intermezzo"){h+=`<p class="small muted" style="margin:4px 0 8px">Musikalisches Zwischenspiel</p>`;return}
+    h+=row(s,num&&s.b!=="Eröffnung"?++n:"♪")});return h};
+  return back()+`<h1>Lieder</h1><p class="muted">Was der Männerchor Thun singt – Leitung Monika Nagy.</p>
+    <div class="sec-h"><h2>Herrenabend · ${EVENT.datum}</h2></div><div class="card">${list(SONGS,true)}</div>
+    <div class="sec-h"><h2>Konzert «${esc(CONCERT.titel)}»</h2></div><p class="small muted" style="margin:-4px 0 8px">${CONCERT.daten.map(esc).join(" · ")} · ${esc(CONCERT.ort)}<br>Moderation: Stefan Bütler</p>
+    <div class="card">${list(CONCERT_SONGS,true)}</div>`;
 }
 
 /* ----- Wein ----- */
@@ -1379,11 +1391,11 @@ function vKuenstler(){
   <div class="sec-h"><h2>Am Herrenabend</h2></div>
   ${SHOW_GUESTS?`<h3 style="margin:14px 0 8px">Gastreferat</h3>${artistCard(SPEAKER)}
   <h3 style="margin:14px 0 8px">Intermezzo</h3>${artistCard(INTERMEZZO)}`:""}
-  <p class="small muted" style="margin:-4px 0 4px">Luigi Chiaramonte singt als Solist am Herrenabend. Die beiden Tambouren wirken bei der Eröffnung, im Konzert des Männerchors und beim «Zapfenstreich» mit.</p>
+  <p class="small muted" style="margin:-4px 0 4px">Luigi Chiaramonte singt als Solist am Herrenabend. Die beiden Tambouren wirken bei der Eröffnung (Nationalhymne) und im Gesangsblock des Männerchors mit («Freude schöner Götterfunken»).</p>
   ${artistList(HA_ARTISTS)}
   <div class="sec-h" style="margin-top:28px"><h2>Konzert «${esc(CONCERT.titel)}»</h2></div>
   <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Männerchor Thun unter der Leitung von Monika Nagy</p>${CONCERT.daten.map(d=>`<h3 style="margin:0 0 4px">${esc(d)}</h3>`).join("")}
-  <p class="muted small" style="margin:8px 0 0">${esc(CONCERT.ort)}<br>${esc(CONCERT.info)}</p></div>
+  <p class="muted small" style="margin:8px 0 0">${esc(CONCERT.ort)}<br>${esc(CONCERT.info)}</p><button class="btn sm" style="margin-top:10px" data-act="go" data-r="lieder">Konzertprogramm – Lieder</button></div>
   ${artistList(ARTISTS)}
   <p class="small muted">Fotos und weitere Portraittexte werden nach Freigabe durch die Künstlerinnen und Künstler ergänzt.</p>`;
 }
