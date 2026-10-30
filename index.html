@@ -353,7 +353,7 @@ const PROG=[
   {p:"Apéro",z:"17:10",t:"Offizielle Begrüssung Ehrengäste",i:"Grussworte, Ablauf bekannt geben",v:"Präsident",int:1},
   {p:"Apéro",z:"17:15",t:"Lautsprecher & Beleuchtung bereit",i:"Infrastruktur für Begrüssung",v:"Technik",int:1},
   {p:"Apéro",z:"17:45",t:"Saalöffnung",i:"Getränkebestellungen · Mineralwasser steht auf den Tischen · Weinbestellung pro Tisch über den Gruppenchef oder den Service",v:"Service-Leitung"},
-  {p:"1. Teil",z:"18:30",t:"Eröffnung des Abends",i:"Nationalhymne mit den Tambouren – alle singen mit · kein Getränkeservice während der Darbietungen",v:"Präsident"},
+  {p:"1. Teil",z:"18:30",t:"Eröffnung des Abends",i:"Nationalhymne mit den Tambouren – alle singen mit · kein Getränkeservice während der Darbietungen",v:"Präsident",lyr:"psalm"},
   {p:"1. Teil",z:"18:40",t:"1. Gesangsblock Männerchor",i:"Leitung Monika Nagy",v:"Dirigentin",song:"Block 1"},
   {p:"1. Teil",z:"19:00",t:"Grussbotschaft des Thuner Gemeinderats",i:"",v:"Präsident"},
   {p:"1. Teil",z:"19:15",t:"2. Gesangsblock Männerchor",i:"Leitung Monika Nagy · mit Intermezzo der Tambouren",v:"Dirigentin",song:"Block 2"},
@@ -1022,7 +1022,7 @@ function vProgramm(){
   let part="";h+=`<div class="tl">`;
   for(const x0 of PROG){const x={...x0,i:SHOW_GUESTS&&x0.gi?x0.gi:x0.i};if(x.int&&!showInt)continue;
     if(x.p!==part){part=x.p;h+=`<div class="tl-part">${esc(part)}</div>`}
-    h+=`<div class="tl-item ${x.int?"int":""}"><div class="tm">${x.z}</div><div><div class="ttl">${esc(x.t)}</div>${x.i?`<div class="who">${esc(x.i)}</div>`:""}${x.song?`<div class="who">${SONGS.filter(s=>s.b===x.song).map(s=>esc(s.t)).join(" · ")} · <a href="#" data-act="go" data-r="lieder">Lieder</a></div>`:""}${showInt&&x.v?`<div class="who">Verantwortlich: <b>${esc(x.v)}</b></div>`:""}</div></div>`}
+    h+=`<div class="tl-item ${x.int?"int":""}"><div class="tm">${x.z}</div><div><div class="ttl">${esc(x.t)}</div>${x.i?`<div class="who">${esc(x.i)}</div>`:""}${x.lyr?`<div class="who"><a href="#" data-act="lied" data-k="${x.lyr}" style="font-weight:600">♪ Mitsingen: Schweizerpsalm – Text und Noten ›</a></div>`:""}${x.song?`<div class="who">${SONGS.filter(s=>s.b===x.song).map(s=>esc(s.t)).join(" · ")} · <a href="#" data-act="go" data-r="lieder">Lieder</a></div>`:""}${showInt&&x.v?`<div class="who">Verantwortlich: <b>${esc(x.v)}</b></div>`:""}</div></div>`}
   return h+`</div>`;
 }
 
