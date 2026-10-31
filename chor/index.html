@@ -561,6 +561,32 @@ async function loadBlatt(id){const el=$("#blatt");if(!el)return;let b;
     ${b.offen.length?`<div class="card soft"><h3>Ohne Rückmeldung (${b.offen.length})</h3><p class="small" style="margin:0">${b.offen.map(x=>esc(x.name)).join(", ")}</p></div>`:""}
     <p class="small muted">Erstellt ${new Date().toLocaleString("de-CH")} · Chor-App Männerchor Thun · vertraulich</p>`}
 
+/* ---------- Ehrungen: Veteranen-Ernennungen (Regeln MCT, CVBO, BKGV, SCV) ---------- */
+const EHR_REGELN=[
+  {k:"mct",t:"Veteran MCT",regel:"mind. 20 Jahre und 620 Proben, spätestens nach 30 Jahren",hat:e=>/\bVeteran\s+\d{4}|Aktivveteran/.test(e),fällig:(x,y)=>x.jahre>=30||(x.jahre>=20&&x.proben>=620),bald:(x,y)=>x.jahre>=18},
+  {k:"ehren",t:"Ehrenveteran MCT",regel:"mind. 20 Jahre Veteran und in dieser Zeit 320 Proben (Proben bitte prüfen)",hat:e=>/(^|[,·]\s*)Ehrenveteran/.test(e),fällig:(x,y)=>x.vetJahr&&y-x.vetJahr>=20,bald:(x,y)=>x.vetJahr&&y-x.vetJahr>=18},
+  {k:"cvbo",t:"Veteran CVBO",regel:"mind. 30 Jahre Aktivmitglied in einem Chor der CVS",hat:e=>/Amtsveteran|CVBO/.test(e),fällig:(x,y)=>x.jahre>=30,bald:(x,y)=>x.jahre>=28},
+  {k:"scv",t:"Veteran SCV",regel:"mind. 35 Jahre Aktivmitglied in einem Chor der CVS",hat:e=>/Veteran Schweiz|SCV/.test(e),fällig:(x,y)=>x.jahre>=35,bald:(x,y)=>x.jahre>=33},
+  {k:"bkgv",t:"Ehrenveteran BKGV",regel:"mind. 40 Jahre Aktivmitglied in einem Chor der CVS",hat:e=>/Kant\.? Ehrenveteran|BKGV/.test(e),fällig:(x,y)=>x.jahre>=40,bald:(x,y)=>x.jahre>=38}];
+let ehrData=null;
+function vEhrungen(){if(!isV())return`<p class="muted">Nur für den Vorstand.</p>`;const y=S.ehrJahr||new Date().getFullYear();
+  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Ehrungen</h1>
+    <p class="muted small">Wer erfüllt im gewählten Jahr die Bedingungen für eine Veteranen-Ernennung? Grundlage: Eintritt (Mitglied seit), Probenzahl (Webling bzw. Access) und bereits erhaltene Ehrungen im Stammblatt. Jahre in anderen Chören der CVS sind nicht erfasst – bitte ergänzen bzw. prüfen.</p>
+    <div class="row" style="margin-bottom:10px"><label class="small muted">Jahr</label><select class="input" style="width:auto" data-chg="ehrjahr">${[y-1,y,y+1,y+2].map(j=>`<option ${j===y?"selected":""}>${j}</option>`).join("")}</select></div><div id="ehr"><p class="muted small">wird berechnet …</p></div>`;
+  setTimeout(loadEhr,0);return h}
+async function loadEhr(){const el=$("#ehr");if(!el)return;const y=S.ehrJahr||new Date().getFullYear();
+  try{ehrData=ehrData||await rpc("chor_ehrungen_daten",{p_code:S.code})}catch(e){el.innerHTML=`<p class="muted">${esc(e.message)}</p>`;return}
+  const num=v=>{const n=parseInt(String(v||"").replace(/\D/g,""));return isNaN(n)?0:n};
+  const xs=ehrData.map(p=>{const ex=p.extra||{},e=p.ehrungen||"",vj=(e.match(/\bVeteran\s+(\d{4})/)||[])[1];
+    return{...p,e,jahre:p.eintritt?y-new Date(p.eintritt).getFullYear():null,proben:Math.max(num(ex["Anzahl Proben kumuliert"]),num(ex["Proben gesamt"])),vetJahr:vj?+vj:null}});
+  const ohne=xs.filter(x=>x.jahre==null);
+  el.innerHTML=EHR_REGELN.map(R=>{const f=xs.filter(x=>x.jahre!=null&&!R.hat(x.e)&&R.fällig(x,y)),b=xs.filter(x=>x.jahre!=null&&!R.hat(x.e)&&!R.fällig(x,y)&&R.bald(x,y));
+    const row=(x,can)=>`<div class="li" style="cursor:default"><div class="grow"><div class="nm">${esc(x.name)} ${esc(x.vorname)}</div><div class="sub">${x.eintritt?"seit "+new Date(x.eintritt).getFullYear()+" · "+x.jahre+" Jahre":""}${x.proben?" · "+x.proben+" Proben":""}${x.vetJahr?" · Veteran "+x.vetJahr:""}${x.stimme?" · "+esc(x.stimme):""}</div></div>${can?`<button class="btn sm primary" data-act="ernennen" data-id="${x.id}" data-t="${esc(R.t)}">Ernennen ${y}</button>`:""}</div>`;
+    return`<div class="card"><h3 style="margin:0">${esc(R.t)}</h3><p class="small muted" style="margin:2px 0 8px">${esc(R.regel)}</p>
+      ${f.length?`<p class="small" style="margin:0"><b>Erfüllt ${y} (${f.length})</b></p><div class="list">${f.map(x=>row(x,true)).join("")}</div>`:`<p class="small muted" style="margin:0">Niemand fällig.</p>`}
+      ${b.length?`<details style="margin-top:6px"><summary class="small" style="cursor:pointer">Bald fällig (${b.length})</summary><div class="list">${b.map(x=>row(x,false)).join("")}</div></details>`:""}</div>`}).join("")
+    +(ohne.length?`<div class="card soft small"><b>Ohne Eintrittsdatum (${ohne.length}):</b> ${ohne.map(x=>esc(x.vorname+" "+x.name)).join(", ")} – bitte im Stammblatt ergänzen.</div>`:"")}
+
 /* ---------- Kalender-Abo ---------- */
 const ICS_FN=SUPA.url+"/functions/v1/chor-ics";
 function vKalender(){
@@ -580,7 +606,7 @@ async function loadIcs(neu){const el=$("#ics");if(!el)return;
       <li>Abgesagte Termine erscheinen mit «ABGESAGT». Bei jedem Termin steht deine Rückmeldung und ein Link zur Chor-App für Zu- und Absagen.</li>
       <li>Der Link ist persönlich – bitte nicht weitergeben. Falls doch: <a href="#" data-act="icsneu">neuen Link erzeugen</a> (der alte funktioniert dann nicht mehr).</li></ul></div>`}
 function vMehr(){const t=(r,ic,l,d)=>`<button class="tile" data-act="go" data-r="${r}"><span class="ic">${ic}</span><b>${l}</b><span>${d}</span></button>`;
-  return`<h1>Mehr</h1><div class="tiles">${t("stamm/"+S.me.id,"🪪","Mein Stammblatt","Daten & History")}${t("mitglieder","👥","Sänger","nach Stimmen")}${t("geburtstage","🎂","Geburtstage","mit Gratulation")}${t("statistik","📊","Präsenz","Statistik")}${t("kalender","📅","Kalender-Abo","Outlook, iPhone, Google")}${t("umfragen","🗳️","Umfragen",(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length?"offen: "+(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length:"abstimmen")}${t("abwesenheit","🤒","Krank & abwesend","melden")}<button class="tile" data-act="toha"><span class="ic">🎩</span><b>Herrenabend-App</b><span>195. Herrenabend</span></button>${t("vorstand","🏛️","Vorstand","Funktionen & History")}${isV()?t("verwaltung","⚙️","Verwaltung","Mitglieder & Import"):""}</div>
+  return`<h1>Mehr</h1><div class="tiles">${t("stamm/"+S.me.id,"🪪","Mein Stammblatt","Daten & History")}${t("mitglieder","👥","Sänger","nach Stimmen")}${t("geburtstage","🎂","Geburtstage","mit Gratulation")}${t("statistik","📊","Präsenz","Statistik")}${t("kalender","📅","Kalender-Abo","Outlook, iPhone, Google")}${t("umfragen","🗳️","Umfragen",(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length?"offen: "+(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length:"abstimmen")}${t("abwesenheit","🤒","Krank & abwesend","melden")}<button class="tile" data-act="toha"><span class="ic">🎩</span><b>Herrenabend-App</b><span>195. Herrenabend</span></button>${t("vorstand","🏛️","Vorstand & Chargen","Funktionen & History")}${isV()?t("ehrungen","🏅","Ehrungen","Veteranen-Ernennungen"):""}${isV()?t("verwaltung","⚙️","Verwaltung","Mitglieder & Import"):""}</div>
   <div class="card soft small" style="margin-top:14px">Angemeldet als <b>${esc(full(S.me))}</b>${isV()?" (Vorstand)":""}. <a href="#" data-act="logout">Abmelden</a></div>`}
 function vMitglieder(){const act=S.members.filter(m=>m.aktiv);
   let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Sänger</h1><p class="muted">${act.length} aktive Sänger</p>`;
@@ -607,7 +633,7 @@ async function loadStamm(id){const el=$("#stamm");if(!el)return;
       ${s.notizen?`<p class="small" style="margin:10px 0 0;white-space:pre-wrap">${esc(s.notizen)}</p>`:""}
       ${!s.person_id?`<p class="muted small">Noch keine Stammdaten erfasst.</p>`:""}
       <div class="row" style="margin-top:10px"><button class="btn sm" data-act="stedit" data-id="${p.id}">${isV()?"Bearbeiten":"Kontaktdaten ändern"}</button></div></div>
-    ${brd.length?`<div class="sec-h"><h2>Vorstandsfunktionen</h2></div><div class="card">${brd.map(b=>row(esc(b.funktion),`${b.von}–${b.bis||"heute"}`)).join("")}</div>`:""}
+    ${brd.length?`<div class="sec-h"><h2>Vereinsfunktionen</h2></div><div class="card">${brd.map(b=>row(esc(b.funktion)+(b.gremium==="charge"?` <span class="muted">(Charge)</span>`:""),`${b.von}–${b.bis||"heute"}`)).join("")}</div>`:""}
     <div class="sec-h"><h2>History</h2>${isV()?`<button class="btn sm" data-act="hnew" data-id="${p.id}">+ Eintrag</button>`:""}</div>
     <div class="card"><div class="tl">${hist.map(x=>`<div class="tl-item"><div class="tm">${x.jahr||(x.datum?D(x.datum).getFullYear():"")}</div><div><div class="ttl small">${esc(x.art)}</div><div class="who">${esc(x.text)}${x.datum?` · ${fDateY(x.datum)}`:""}${isV()?` · <a href="#" data-act="hdel" data-id="${x.id}">löschen</a>`:""}</div></div></div>`).join("")||`<p class="muted small">Noch keine Einträge.</p>`}</div></div>`}
 function stForm(id){const s=(stammCache&&stammCache.stamm)||{},v=isV();
@@ -618,21 +644,39 @@ function stForm(id){const s=(stammCache&&stammCache.stamm)||{},v=isV();
     ${v?`${f("ehrungen","Ehrungen (z.B. Veteran 2015, Ehrenmitglied 2020)")}<label class="small muted">Notizen / Geschichte</label><textarea id="st_notizen" class="input">${esc(s.notizen||"")}</textarea>
     <label class="row small"><input type="checkbox" id="st_aktiv" ${s.aktiv===false?"":"checked"}> aktiver Sänger</label><label class="row small"><input type="checkbox" id="st_rolle" ${s.rolle==="vorstand"?"checked":""}> Vorstand (darf Termine, Dateien und Stammblätter verwalten)</label>`:""}
     </div><p class="small muted">Jede Änderung wird in der History vermerkt.</p><div class="row"><button class="btn primary" data-act="stsave" data-id="${id}">Speichern</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`)}
-function vVorstand(){const y=new Date().getFullYear(),cur=S.board.filter(b=>!b.bis||b.bis>=y),old=S.board.filter(b=>b.bis&&b.bis<y);
+const GREMIEN={vorstand:"Vorstand",charge:"Chargen"};
+const CHARGEN=["Vizechorleiter","Herrenabendkassier","Fähnrich","Vize-Fähnrich","Archivar","Webmaster","Bibliothekar MUKO","Bibliothekar MUKO Stv.","Obmann Ernennungsausschuss","Ernennungsausschuss","Turmwart Chutziturm","Chutziturmkommission","Stimmenchef","Revisor"];
+function vVorstand(){const y=new Date().getFullYear(),g=S.gTab||"vorstand",bs=S.board.filter(b=>(b.gremium||"vorstand")===g),cur=bs.filter(b=>!b.bis||b.bis>=y),old=bs.filter(b=>b.bis&&b.bis<y);
   const line=b=>`<div class="li" style="cursor:default"><div class="grow"><div class="nm">${esc(b.funktion)}</div><div class="sub">${esc(b.name||"")} · ${b.von}–${b.bis||"heute"}</div></div>${isV()?`<button class="btn sm ghost" data-act="bedit" data-id="${b.id}">Bearbeiten</button>`:""}</div>`;
-  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Vorstand</h1>${isV()?`<button class="btn sm primary" data-act="bnew">+ Funktion</button>`:""}</div>
-    <div class="sec-h"><h2>Aktueller Vorstand</h2></div><div class="card"><div class="list">${cur.map(line).join("")||`<p class="muted small">Noch nicht erfasst.</p>`}</div></div>`;
+  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Vereinsfunktionen</h1>${isV()?`<div class="row"><button class="btn sm" data-act="bbulk">Liste einfügen</button><button class="btn sm primary" data-act="bnew">+ Funktion</button></div>`:""}</div>
+    <div class="filter" style="margin-top:10px">${Object.entries(GREMIEN).map(([k,l])=>`<button class="chip ${g===k?"on":""}" data-act="gtab" data-g="${k}">${l}</button>`).join("")}</div>
+    <div class="sec-h"><h2>${g==="charge"?"Aktuelle Chargenträger":"Aktueller Vorstand"}</h2></div><div class="card"><div class="list">${cur.sort((a,b)=>a.funktion.localeCompare(b.funktion)).map(line).join("")||`<p class="muted small">Noch nicht erfasst.</p>`}</div></div>`;
   if(old.length){const yrs=[...new Set(old.map(b=>Math.floor(b.von/10)*10))].sort((a,b)=>b-a);
     h+=`<div class="sec-h"><h2>History</h2></div>`+yrs.map(d=>`<details class="card"><summary style="cursor:pointer;font-weight:700">${d}er-Jahre</summary><div class="list">${old.filter(b=>Math.floor(b.von/10)*10===d).map(line).join("")}</div></details>`).join("")}
-  if(isV())h+=`<p class="small muted">Tipp: Frühere Vorstandsmitglieder, die nicht mehr in der Datenbank sind, mit Namen nacherfassen.</p>`;
+  if(isV())h+=`<p class="small muted">Tipp: Frühere Funktionsträger, die nicht mehr in der Datenbank sind, mit Namen nacherfassen. Mit «Liste einfügen» lässt sich eine ganze Liste (z.B. aus dem HV-Protokoll) auf einmal erfassen.</p>`;
   return h}
-function bForm(b){const d=b||{},y=new Date().getFullYear();
-  modal(`<h2>${b?"Funktion bearbeiten":"Vorstandsfunktion erfassen"}</h2><div style="display:grid;gap:8px">
-    <input id="bf" class="input" list="flist" placeholder="Funktion, z.B. Präsident" value="${esc(d.funktion||"")}"><datalist id="flist">${FUNKTIONEN.map(f=>`<option value="${f}">`).join("")}</datalist>
+function bForm(b){const d=b||{},y=new Date().getFullYear(),g=d.gremium||S.gTab||"vorstand";
+  modal(`<h2>${b?"Funktion bearbeiten":"Funktion erfassen"}</h2><div style="display:grid;gap:8px">
+    <select id="bg" class="input">${Object.entries(GREMIEN).map(([k,l])=>`<option value="${k}" ${g===k?"selected":""}>${l}</option>`).join("")}</select>
+    <input id="bf" class="input" list="flist" placeholder="Funktion, z.B. Präsident oder Fähnrich" value="${esc(d.funktion||"")}"><datalist id="flist">${[...FUNKTIONEN,...CHARGEN].map(f=>`<option value="${f}">`).join("")}</datalist>
     <select id="bp" class="input"><option value="">– Person aus der Liste –</option>${[...S.members].sort((a,b)=>a.name.localeCompare(b.name)).map(m=>`<option value="${m.id}" ${d.person_id===m.id?"selected":""}>${esc(m.name)} ${esc(m.vorname)}</option>`).join("")}</select>
-    <input id="bn" class="input" placeholder="oder Name (für frühere Mitglieder)" value="${esc(d.person_id?"":d.name||"")}">
+    <input id="bn" class="input" placeholder="oder Name (z.B. für frühere Mitglieder)" value="${esc(d.person_id?"":d.name||"")}">
     <div class="form2" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input id="bv" class="input" type="number" placeholder="von Jahr" value="${d.von||y}"><input id="bb" class="input" type="number" placeholder="bis Jahr (leer = heute)" value="${d.bis||""}"></div></div>
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="bsave" data-id="${b?b.id:""}">Speichern</button>${b?`<button class="btn ghost" data-act="bdel" data-id="${b.id}">Löschen</button>`:""}<button class="btn ghost" data-act="close">Abbrechen</button></div>`)}
+/* Liste einfügen: eine Zeile pro Funktion, «Name ; Funktion» (auch Tabulator oder 2+ Leerzeichen) */
+const nkey=t=>String(t||"").normalize("NFC").toLowerCase().replace(/\b(dr|prof|lic|med)\.?\s+/g,"").replace(/[^a-zäöüéèàç]+/g," ").trim();
+function matchMember(name){const k=nkey(name);if(!k)return null;return S.members.find(m=>nkey(m.vorname+" "+m.name)===k||nkey(m.name+" "+m.vorname)===k)||null}
+function parseBulk(txt){const out=[],seen=new Set();for(let line of String(txt).split(/\r?\n/)){line=line.replace(/^[\s➢>•\-–*]+/,"").trim();if(!line)continue;
+    let parts=line.split(/\s*[;\t|]\s*|\s{2,}|\s+[–—]\s+/).map(x=>x.trim()).filter(Boolean);if(parts.length<2){if(parts.length===1)out.push({name:"",funktion:parts[0],vakant:true});continue}
+    let name=parts[0],funktion=parts.slice(1).join(", ");if(!/\s/.test(funktion)&&matchMember(funktion)&&!matchMember(name)){[name,funktion]=[funktion,name]}
+    const m=matchMember(name),k=(m?m.id:nkey(name))+"|"+funktion.toLowerCase();if(seen.has(k))continue;seen.add(k);out.push({name,funktion,person:m})}
+  return out}
+function bBulk(){const y=new Date().getFullYear();modal(`<h2>Liste einfügen</h2><p class="small muted">Eine Zeile pro Funktion: <code>Name ; Funktion</code> – Tabulator oder mehrere Leerzeichen gehen auch (z.B. aus Word kopiert). «Dr.» wird ignoriert, doppelte Zeilen werden zusammengefasst, Zeilen ohne Namen gelten als vakant.</p>
+  <div style="display:grid;gap:8px"><select id="bkg" class="input">${Object.entries(GREMIEN).map(([k,l])=>`<option value="${k}" ${(S.gTab||"charge")===k?"selected":""}>${l}</option>`).join("")}</select>
+  <div class="form2" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input id="bkv" class="input" type="number" value="${y}" placeholder="ab Jahr"><input id="bkb" class="input" type="number" placeholder="bis Jahr (leer = offen)"></div>
+  <textarea id="bkt" class="input" rows="10" placeholder="Urs Schneiter ; Vizechorleiter&#10;Hanspeter Gerber ; Herrenabendkassier"></textarea></div>
+  <div id="bkprev" class="small" style="margin-top:8px"></div>
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="bkprev">Vorschau</button><button class="btn primary" data-act="bksave">Speichern</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`)}
 let statData=null;
 function vStatistik(){const y=new Date().getFullYear();
   let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Präsenz-Statistik</h1>
@@ -651,8 +695,8 @@ function vVerwaltung(){if(!isV())return`<p class="muted">Nur für den Vorstand.<
   return`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Verwaltung</h1>
   <div class="card"><h3>Sänger aktivieren</h3><p class="small muted">Mitglied suchen und als aktiven Sänger oder Vorstand freischalten. Das Mitglied meldet sich mit seinem persönlichen Code an (derselbe wie für die Herrenabend-App).</p>
     <input id="vsq" class="input" placeholder="Name suchen (mind. 2 Buchstaben) …" autocomplete="off"><div class="list" id="vsres" style="margin-top:6px"></div></div>
-  <div class="card"><h3>Import (Webling oder Access)</h3><p class="small muted">CSV-Datei hochladen. Erkannt werden u.a.: <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>/<code>Nachname</code>, <code>Gruppen</code> (aktiv bei «aktive Sänger»), <code>Stimme</code>, <code>Geburtsdatum</code>, <code>Eintrittsdatum</code>, <code>Austrittsdatum</code>, <code>Strasse</code>, <code>PLZ</code>, <code>Ort</code>, <code>Mobile</code>/<code>Telefon</code>, <code>E-Mail</code>, <code>Beruf</code>. Aus der Access-Datenbank zusätzlich <code>Vorstand</code>, <code>Charge</code>, Veteranen- und Ehrenfelder, <code>Proben gesamt</code>, <code>Fleisskarten</code>, <code>Silberbecher</code> und <code>Geschichte</code> – sie landen im Stammblatt bzw. in der History. Bestehende Angaben werden nur ergänzt, nicht gelöscht.</p>
-    <input type="file" id="impfile" accept=".csv,text/csv" class="input">${S.busy?`<div class="note" style="margin-top:8px">⏳ ${esc(S.busy)}</div>`:""}${S.impInfo?`<div class="okmsg" style="margin-top:8px">${esc(S.impInfo)}</div>`:""}</div>
+  <div class="card"><h3>Import (Webling oder Access)</h3><p class="small muted">CSV-Datei hochladen. Erkannt werden u.a.: <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>/<code>Nachname</code>, <code>Gruppen</code> (aktiv bei «aktive Sänger»), <code>Stimme</code>, <code>Geburtsdatum</code>, <code>Eintrittsdatum</code>, <code>Austrittsdatum</code>, <code>Strasse</code>, <code>PLZ</code>, <code>Ort</code>, <code>Mobile</code>/<code>Telefon</code>, <code>E-Mail</code>, <code>Beruf</code>. Aus der Access-Datenbank zusätzlich <code>Vorstand</code>, <code>Charge</code>, Veteranen- und Ehrenfelder, <code>Proben gesamt</code>, <code>Fleisskarten</code>, <code>Silberbecher</code> und <code>Geschichte</code> – sie landen im Stammblatt bzw. in der History. Bestehende Angaben werden nur ergänzt, nicht gelöscht. Excel-Dateien (.xlsx) gehen auch.</p>
+    <input type="file" id="impfile" accept=".csv,.xlsx,.xls,text/csv" class="input"><label class="row small" style="margin-top:6px"><input type="checkbox" id="impnur" checked> Bei Access-Daten: Ehemalige auslassen (nur bereits erfasste aktive Sänger ergänzen)</label>${S.busy?`<div class="note" style="margin-top:8px">⏳ ${esc(S.busy)}</div>`:""}${S.impInfo?`<div class="okmsg" style="margin-top:8px">${esc(S.impInfo)}</div>`:""}</div>
   <div class="card"><h3>Teilnahmen aus SpielerPlus</h3><p class="small muted">Statistik-Export aus SpielerPlus (CSV) hochladen. Die Zu- und Absagen werden den Terminen am gleichen Datum zugeordnet. Fehlt ein Termin, wird er angelegt; gibt es an dem Tag genau einen anderen Termin, wird dessen Titel übernommen. Mehrfaches Importieren ist kein Problem.</p>
     <input type="file" id="spfile" accept=".csv,text/csv" class="input">${S.spInfo?`<div class="okmsg" style="margin-top:8px">${S.spInfo}</div>`:""}</div>
   <div class="card soft small"><b>Datenschutz:</b> Adressen, Telefon und Geburtsjahr sehen nur die Person selbst und der Vorstand. Alle Aktiven sehen Name, Stimme und Geburtstag (Tag/Monat).</div>`}
@@ -669,7 +713,7 @@ function pDate(v){v=String(v||"").trim();if(!v)return"";let m;
   if(m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)){let y=+m[3];if(y<100)y+=y>30?1900:2000;return`${y}-${pad(m[1])}-${pad(m[2])}`}
   return""}
 const truthy=v=>/^(ja|yes|true|wahr|1|-1|x)$/i.test(String(v||"").trim());
-function buildImport(txt){const rows=csvRows(txt);if(rows.length<2)return{err:"Keine Daten gefunden"};
+function buildImport(txt){const rows=Array.isArray(txt)?txt.map(r=>r.map(v=>v==null?"":String(v))):csvRows(txt);if(rows.length<2)return{err:"Keine Daten gefunden"};
   const hd=rows[0].map(h=>h.trim().toLowerCase());const col=(...n)=>{for(const x of n){const i=hd.indexOf(x);if(i>=0)return i}return-1};
   const c={mid:col("mitglieder id","mitglieder-id","member_id"),v:col("vorname"),n:col("name","nachname"),gr:col("gruppen"),st:col("stimme","register"),geb:col("geburtsdatum","geburtstag"),ein:col("eintrittsdatum","eintritt","mitglied seit"),aus:col("austrittsdatum","austritt"),
     str:col("strasse","adresse","strasse / nr."),plz:col("plz"),ort:col("ort"),tel:col("mobile","natel","telefon","telefon privat"),tel2:col("telefon"),fun:col("funktion","amt/funktion"),ms:col("mitgliedschaft"),mail:col("e-mail","email"),ber:col("beruf"),vor:col("vorstand"),cha:col("charge"),ges:col("geschichte"),zus:col("zusatzinformationen"),ausg:col("austrittsgrund")};
@@ -679,7 +723,7 @@ function buildImport(txt){const rows=csvRows(txt);if(rows.length<2)return{err:"K
   for(const r of rows.slice(1)){const name=cell(r,c.n);if(!name)continue;const x={vorname:cell(r,c.v),name,member_id:cell(r,c.mid)};
     if(c.gr>=0){const g=cell(r,c.gr).toLowerCase();if(/aktive s[äa]nger/.test(g))x.aktiv=true}
     const aus=pDate(cell(r,c.aus));if(aus){x.austritt=aus;x.aktiv=false}
-    let st=cell(r,c.st);if(st){const k=st.toLowerCase().replace(/[\s.]+/g,""),n=k.includes("2")?"2":k.includes("1")?"1":"";st=k.includes("tenor")&&n?n+". Tenor":k.includes("bass")&&n?n+". Bass":st;x.stimme=st}
+    let st=cell(r,c.st);if(/^\d+$/.test(st))st="";if(st){const k=st.toLowerCase().replace(/[\s.]+/g,""),n=k.includes("2")?"2":k.includes("1")?"1":"";st=k.includes("tenor")&&n?n+". Tenor":k.includes("bass")&&n?n+". Bass":st;x.stimme=st}
     for(const[k,i]of[["geburtsdatum",c.geb],["eintritt",c.ein]]){const d=pDate(cell(r,i));if(d)x[k]=d}
     for(const[k,i]of[["strasse",c.str],["plz",c.plz],["ort",c.ort],["telefon",c.tel],["email",c.mail],["beruf",c.ber]]){const v=cell(r,i);if(v)x[k]=v}
     if(!x.telefon&&c.tel2>=0&&cell(r,c.tel2))x.telefon=cell(r,c.tel2);
@@ -720,7 +764,18 @@ async function doSpImport(txt){const b=buildSp(txt);if(b.err)return toast(b.err)
       const r=await rpc("chor_import_attendance",{p_code:S.code,p_rows:b.rows.slice(i,i+300)});tot.rueckmeldungen+=r.rueckmeldungen;tot.termine_neu+=r.termine_neu;tot.termine_angepasst+=r.termine_angepasst;tot.unbekannt.push(...r.unbekannt.filter(n=>!tot.unbekannt.includes(n)))}
     S.busy=null;S.spInfo=`✓ ${tot.rueckmeldungen} Rückmeldungen übernommen · ${tot.termine_neu} Termine neu angelegt · ${tot.termine_angepasst} Termine angepasst`+(tot.unbekannt.length?`<br>Nicht zugeordnet (Name nicht gefunden): ${tot.unbekannt.map(esc).join(", ")}`:"");
     await load();render();toast("Teilnahmen importiert")}catch(e){S.busy=null;render();toast(e.message)}}
+let xlsxP=null;const loadXlsx=()=>xlsxP||(xlsxP=new Promise((ok,no)=>{if(window.XLSX)return ok(window.XLSX);const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=()=>ok(window.XLSX);sc.onerror=()=>{xlsxP=null;no(new Error("Excel-Funktion konnte nicht geladen werden – bitte als CSV speichern"))};document.head.appendChild(sc)}));
+async function readXlsx(f){const X=await loadXlsx();const wb=X.read(await f.arrayBuffer(),{type:"array",cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];
+  const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  return X.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}).map(r=>r.map(v=>v instanceof Date?iso(new Date(v.getTime()+12*36e5)):v===true?"ja":v===false?"":String(v)))}
 async function doImport(txt){const b=buildImport(txt);if(b.err)return toast(b.err);if(!b.rows.length)return toast("Keine Personen gefunden");
+  const hd0=(Array.isArray(txt)?txt[0]:csvRows(txt)[0]).map(h=>String(h||"").trim().toLowerCase()),access=hd0.includes("nachname")&&(hd0.includes("proben gesamt")||hd0.includes("geschichte"));
+  const nur=access&&$("#impnur")?.checked!==false;
+  if(access){if(!confirm(`Access-Daten: ${b.rows.length} Personen.\n${nur?"Ehemalige werden ausgelassen – nur bereits erfasste aktive Sänger werden ergänzt.":"Alle Personen werden übernommen (auch Ehemalige)."}\nBestehende Angaben (z.B. aus Webling) bleiben; nur leere Felder, Ehrungen, Geschichte und History werden ergänzt.`))return;
+    let m=0,hh=0,sk=0;try{for(let i=0;i<b.rows.length;i+=150){S.busy=`Import ${Math.min(i+150,b.rows.length)} von ${b.rows.length} …`;render();
+      const r=await rpc("chor_import",{p_code:S.code,p_rows:b.rows.slice(i,i+150),p_ergaenzen:true,p_nur_aktive:nur});m+=r.zugeordnet;hh+=r.history;sk+=r.ausgelassen||0}
+      S.busy=null;S.impInfo=`✓ Access: ${m} aktive Sänger ergänzt, ${hh} History-Einträge${nur?`, ${sk} Ehemalige ausgelassen`:""}.`;await load();render();toast("Import abgeschlossen")}
+    catch(e){S.busy=null;render();toast(e.message)}return}
   const nv=b.rows.filter(x=>x.vorstand).length,na=b.rows.filter(x=>x.aktiv).length;if(!confirm(`${b.rows.length} Personen importieren?\n${na} als aktive Sänger${nv?`, ${nv} davon mit Vorstandsrechten (Spalte «Vorstand» = Ja)`:""}.\nBestehende Angaben werden ergänzt, nicht überschrieben.`))return;
   let m=0,n=0,hh=0;try{for(let i=0;i<b.rows.length;i+=150){S.busy=`Import ${Math.min(i+150,b.rows.length)} von ${b.rows.length} …`;render();
       const r=await rpc("chor_import",{p_code:S.code,p_rows:b.rows.slice(i,i+150)});m+=r.zugeordnet;n+=r.neu;hh+=r.history}
@@ -730,7 +785,7 @@ async function doImport(txt){const b=buildImport(txt);if(b.err)return toast(b.er
 /* ---------- Navigation ---------- */
 const ICONS={start:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',termine:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',chat:'<path d="M4 5h16v11H8l-4 4z"/>',material:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',mehr:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'};
 const TABS=[["start","Start"],["termine","Termine"],["chat","Chat"],["material","Noten"],["mehr","Mehr"]];
-function renderTabs(){const r=route()[0],cur={termin:"termine",mitglieder:"mehr",kalender:"mehr",umfragen:"mehr",abwesenheit:"mehr",blatt:"termine",geburtstage:"mehr",stamm:"mehr",vorstand:"mehr",statistik:"mehr",verwaltung:"mehr"}[r]||r;
+function renderTabs(){const r=route()[0],cur={termin:"termine",mitglieder:"mehr",kalender:"mehr",ehrungen:"mehr",umfragen:"mehr",abwesenheit:"mehr",blatt:"termine",geburtstage:"mehr",stamm:"mehr",vorstand:"mehr",statistik:"mehr",verwaltung:"mehr"}[r]||r;
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="${cur===k?"on":""}" data-act="go" data-r="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${l}${k==="chat"&&S.unread?`<span class="badge">${S.unread}</span>`:""}</button>`).join("")}
 const route=()=>(location.hash.replace(/^#\/?/,"")||"start").split("/");
 function go(r){location.hash="#/"+r}
@@ -741,7 +796,7 @@ function vChooser(){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="choo
 function render(){if(!S.me){vLogin();return}
   let picked=false;try{picked=sessionStorage.getItem("chor_pick")==="1"}catch(e){picked=true}
   if(!picked&&store.get("chor_nopick")!=="1"&&!location.hash.replace(/^#\/?/,"")){vChooser();return}
-  const[r,id]=route();const V={start:vStart,termine:vTermine,termin:()=>vTermin(id),chat:vChat,material:vMaterial,mehr:vMehr,mitglieder:vMitglieder,geburtstage:vGeburtstage,stamm:()=>vStamm(id||S.me.id),kalender:vKalender,umfragen:vUmfragen,abwesenheit:vAbwesenheit,blatt:()=>vBlatt(id),vorstand:vVorstand,statistik:vStatistik,verwaltung:vVerwaltung}[r]||vStart;
+  const[r,id]=route();const V={start:vStart,termine:vTermine,termin:()=>vTermin(id),chat:vChat,material:vMaterial,mehr:vMehr,mitglieder:vMitglieder,geburtstage:vGeburtstage,stamm:()=>vStamm(id||S.me.id),kalender:vKalender,ehrungen:vEhrungen,umfragen:vUmfragen,abwesenheit:vAbwesenheit,blatt:()=>vBlatt(id),vorstand:vVorstand,statistik:vStatistik,verwaltung:vVerwaltung}[r]||vStart;
   $("#app").innerHTML=V();$("#tabs").hidden=false;renderTabs()}
 function vLogin(msg){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="fotohead" style="max-width:420px;margin:20px auto 0"><img src="${CHORFOTO}" alt="Männerchor Thun am Konzert"></div><div class="card" style="max-width:420px;margin:12px auto 40px;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:70px"><h1 style="margin:12px 0 4px">Chor-App</h1><p class="muted">Für die aktiven Sänger des Männerchors Thun</p>
   ${msg?`<div class="note" style="text-align:left">${esc(msg)}</div>`:""}<input id="code" class="input" placeholder="Persönlicher Code" autocapitalize="characters" autocomplete="off" style="text-align:center;font-size:18px;letter-spacing:2px;margin:10px 0"><button class="btn primary" data-act="login" style="width:100%">Anmelden</button>
@@ -759,6 +814,9 @@ let pollT=null;function startPoll(){clearInterval(pollT);pollT=setInterval(async
 const A={
   go:d=>{closeModal();go(d.r)},close:()=>closeModal(),
   print:()=>window.print(),
+  ernennen:async d=>{const y=S.ehrJahr||new Date().getFullYear(),x=ehrData.find(p=>p.id===d.id),txt=`${d.t} ${y}`;if(!confirm(`${x.vorname} ${x.name} zum «${d.t}» ${y} ernennen?\nDer Eintrag kommt ins Stammblatt und in die History.`))return;
+    try{await rpc("chor_history_save",{p_code:S.code,p_id:null,p_person:x.id,p_jahr:y,p_datum:null,p_art:"Ehrung",p_text:txt});
+      await rpc("chor_member_save",{p_code:S.code,p_person:x.id,p_data:{ehrungen:x.ehrungen?x.ehrungen+" · "+txt:txt}});ehrData=null;render();toast(`${x.vorname} ${x.name}: ${txt} eingetragen`)}catch(e){toast(e.message)}},
   dlone:d=>{const x=S.files.find(f=>f.id===d.id);dlOne(x).catch(e=>toast(e.message))},
   dlmine:()=>dlZip(S.files.filter(isMine).sort((a,b)=>(a.lied||"").localeCompare(b.lied||"")),`MCT Unterlagen ${S.me.stimme}.zip`),
   dllied:d=>dlZip(S.files.filter(x=>(x.lied||"Allgemein")===d.l&&isMine(x)),`${safeName(d.l)} – ${S.me.stimme}.zip`),
@@ -806,8 +864,12 @@ const A={
   hnew:d=>modal(`<h2>History-Eintrag</h2><div style="display:grid;gap:8px"><select id="ha" class="input">${["Funktion","Ehrung","Auftritt","Eintritt","Austritt","Notiz"].map(x=>`<option>${x}</option>`).join("")}</select><input id="hj" class="input" type="number" placeholder="Jahr" value="${new Date().getFullYear()}"><input id="hd" class="input" type="date"><textarea id="ht" class="input" placeholder="Text, z.B. Veteran SCV"></textarea></div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="hsave" data-id="${d.id}">Speichern</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`),
   hsave:d=>{const t=$("#ht").value.trim();if(!t)return toast("Bitte einen Text angeben");closeModal();rpc("chor_history_save",{p_code:S.code,p_id:null,p_person:d.id,p_jahr:+$("#hj").value||null,p_datum:$("#hd").value||null,p_art:$("#ha").value,p_text:t}).then(()=>{render();toast("Eintrag gespeichert")}).catch(e=>toast(e.message))},
   hdel:d=>{if(confirm("Eintrag löschen?"))rpc("chor_history_delete",{p_code:S.code,p_id:d.id}).then(()=>render()).catch(e=>toast(e.message))},
-  bnew:()=>bForm(null),bedit:d=>bForm(S.board.find(b=>b.id===d.id)),
-  bsave:d=>{const p=$("#bp").value||null;closeModal();call("chor_board_save",{p_id:d.id||null,p_funktion:$("#bf").value,p_person:p,p_name:p?"":$("#bn").value,p_von:+$("#bv").value||null,p_bis:+$("#bb").value||null},"Gespeichert").catch(()=>{})},
+  bnew:()=>bForm(null),bedit:d=>bForm(S.board.find(b=>b.id===d.id)),gtab:d=>{S.gTab=d.g;render()},bbulk:()=>bBulk(),
+  bkprev:()=>{const rows=parseBulk($("#bkt").value);$("#bkprev").innerHTML=rows.length?`<b>${rows.filter(r=>!r.vakant).length} Einträge:</b><ul class="blist">${rows.map(r=>`<li>${r.vakant?`<span class="muted">vakant</span>`:esc(r.name)} – ${esc(r.funktion)} ${r.person?`<span class="chip g">✓ ${esc(full(r.person))}</span>`:r.vakant?"":`<span class="chip">als Name</span>`}</li>`).join("")}</ul>`:`<span class="muted">Keine Zeilen erkannt.</span>`},
+  bksave:async()=>{const rows=parseBulk($("#bkt").value).filter(r=>!r.vakant),g=$("#bkg").value,v=+$("#bkv").value||new Date().getFullYear(),bi=+$("#bkb").value||null;if(!rows.length)return toast("Keine Einträge erkannt");
+    closeModal();let n=0;try{for(const r of rows){await rpc("chor_board_save",{p_code:S.code,p_id:null,p_funktion:r.funktion,p_person:r.person?r.person.id:null,p_name:r.person?"":r.name,p_von:v,p_bis:bi,p_gremium:g});n++}
+      S.gTab=g;await load();render();toast(`${n} Funktionen gespeichert`)}catch(e){toast(e.message);await load();render()}},
+  bsave:d=>{const p=$("#bp").value||null;closeModal();call("chor_board_save",{p_id:d.id||null,p_funktion:$("#bf").value,p_person:p,p_name:p?"":$("#bn").value,p_von:+$("#bv").value||null,p_bis:+$("#bb").value||null,p_gremium:$("#bg").value},"Gespeichert").catch(()=>{})},
   bdel:d=>{if(!confirm("Eintrag löschen?"))return;closeModal();call("chor_board_delete",{p_id:d.id},"Gelöscht").catch(()=>{})},
   setm:d=>call("chor_set_member",{p_person:d.id,p_aktiv:d.a==="1",p_rolle:d.r},"Gespeichert").then(()=>{const i=$("#vsq");if(i)i.dispatchEvent(new Event("input",{bubbles:true}))}).catch(()=>{}),
   statcsv:()=>{const rs=statData?.rows||[];const csv="Name;Vorname;Stimme;Präsenz;Termine;Zusagen;Absagen;Vielleicht;Ohne Antwort\n"+rs.map(r=>[r.name,r.vorname,r.stimme||"",r.praesent,r.total,r.ja,r.nein,r.vielleicht,r.offen].join(";")).join("\n");
@@ -825,8 +887,9 @@ document.addEventListener("input",e=>{
     catch(err){box.innerHTML=`<p class="muted small">${esc(err.message)}</p>`}},300)}});
 document.addEventListener("change",e=>{const el=e.target;
   if(el.id==="spfile"&&el.files[0]){const r=new FileReader();r.onload=()=>doSpImport(String(r.result));r.readAsText(el.files[0],"utf-8")}
-  if(el.id==="impfile"&&el.files[0]){const r=new FileReader();r.onload=()=>doImport(String(r.result));r.readAsText(el.files[0],"utf-8")}
+  if(el.id==="impfile"&&el.files[0]){const f=el.files[0];if(/\.xlsx?$/i.test(f.name)){readXlsx(f).then(doImport).catch(e=>toast(e.message))}else{const r=new FileReader();r.onload=()=>doImport(String(r.result));r.readAsText(f,"utf-8")}}
   if(el.dataset.chg==="sjahr"){S.statJahr=+el.value;render()}
+  if(el.dataset.chg==="ehrjahr"){S.ehrJahr=+el.value;render()}
   if(el.dataset.chg==="styp"){S.statTyp=el.value;render()}
   if(el.dataset.chg==="setfor"){rpc("chor_set_attendance",{p_code:S.code,p_event:el.dataset.ev,p_status:el.value||null,p_grund:null,p_person:el.dataset.id}).then(async()=>{await load();toast("Gespeichert")}).catch(err=>toast(err.message))}
 });
