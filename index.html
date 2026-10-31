@@ -1366,6 +1366,8 @@ function vMitglieder(){
     <p class="small">Adresse, Telefon oder E-Mail geändert? Im Mitgliederportal (Webling) kannst du deine Stammdaten selbst anpassen.</p>
     <p class="small muted"><b>Login:</b> mit deiner E-Mail-Adresse und deinem Passwort. Hast du noch kein Passwort oder meldest du dich zum ersten Mal an, wähle <b>«Passwort vergessen»</b> – du erhältst dann per E-Mail einen Link zum Setzen des Passworts.</p>
     <div class="row">${ext(L.portal,"Zum Mitgliederportal")}</div></div>
+  <div class="card"><p class="eyebrow">Aktive Sänger</p><h3>Chor-App</h3><p class="small">Proben und Auftritte mit An- und Abmeldung, Noten und Aufnahmen, Chat und Geburtstage – nur für die aktiven Sänger.</p>
+    <div class="row"><a class="btn primary sm" href="chor/${S.code?"?c="+encodeURIComponent(S.code):""}">Chor-App öffnen</a></div></div>
   <div class="card"><p class="eyebrow">Weitergeben</p><h3>Flyer «Deine Stimme zählt!»</h3>
     <div class="row" style="align-items:flex-start;gap:12px;flex-wrap:nowrap"><img src="${FLYER_MCT.imgs[0]}" alt="Flyer Männerchor Thun" style="width:96px;border-radius:6px;border:1px solid var(--line);cursor:pointer" data-act="flyer" data-k="mct">
     <p class="small" style="margin:0">Unser Flyer für neue Sänger – mit QR-Code zum Reinschnuppern. Teile ihn per WhatsApp oder Mail mit Kollegen, die gerne singen.</p></div>
