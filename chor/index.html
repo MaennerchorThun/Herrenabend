@@ -742,7 +742,7 @@ let pollT=null;function startPoll(){clearInterval(pollT);pollT=setInterval(async
 const A={
   go:d=>{closeModal();go(d.r)},close:()=>closeModal(),
   print:()=>window.print(),
-  toha:()=>{location.href="../"+(S.code?"?c="+encodeURIComponent(S.code):"")},
+  toha:()=>{const base=location.origin+location.pathname.replace(/\/chor(\/.*)?$/i,"/");location.href=base+(S.code?"?c="+encodeURIComponent(S.code):"")},
   pick:d=>{try{sessionStorage.setItem("chor_pick","1")}catch(e){}if($("#nomore")?.checked)store.set("chor_nopick","1");if(d.a==="ha")return A.toha();render()},
   psel:d=>{const p=S.polls.find(x=>x.id===d.id),i=+d.i;let sel=[...(S.pollSel[p.id]||p.mine||[])];if(p.mehrfach)sel=sel.includes(i)?sel.filter(x=>x!==i):[...sel,i];else sel=[i];S.pollSel[p.id]=sel;render()},
   pvote:d=>{const p=S.polls.find(x=>x.id===d.id),sel=S.pollSel[p.id]||p.mine||[];if(!sel.length)return toast("Bitte eine Antwort wählen");
