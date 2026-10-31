@@ -334,7 +334,7 @@ function bdays(){const t=new Date();t.setHours(0,0,0,0);
     const past=new Date(t.getFullYear(),mm-1,dd);const ago=Math.round((t-past)/864e5);return{m,d,days:Math.round((d-t)/864e5),ago}}).sort((a,b)=>a.days-b.days)}
 const canCongrats=b=>b.m.id!==S.me.id&&(b.days===0||(b.ago>=0&&b.ago<=7));
 function bdayRow(b){const given=S.congratsGiven.includes(b.m.id);
-  return`<div class="li" style="cursor:default"><div class="av ${b.days===0?"c":""}">${b.days===0?"🎂":ini(b.m)}</div><div class="grow"><div class="nm">${esc(full(b.m))}</div><div class="sub">${b.d.toLocaleDateString("de-CH",{day:"numeric",month:"long"})} · ${b.days===0?"<b>heute</b>":b.ago>0&&b.ago<=7?`vor ${b.ago} Tag${b.ago>1?"en":""}`:`in ${b.days} Tagen`}${b.m.stimme?" · "+esc(b.m.stimme):""}</div></div>
+  return`<div class="li" style="cursor:default"><div class="av ${b.days===0?"c":""}">${b.days===0?"🎂":ini(b.m)}</div><div class="grow"><div class="nm">${esc(full(b.m))}</div><div class="sub">${b.d.toLocaleDateString("de-CH",{day:"numeric",month:"long"})}${b.m.jg?(()=>{const past=b.ago>0&&b.ago<=7,y=(past?new Date().getFullYear():b.d.getFullYear())-b.m.jg;return b.days===0||past?` · <b>${y} Jahre</b>`:` · wird ${y}`})():""} · ${b.days===0?"<b>heute</b>":b.ago>0&&b.ago<=7?`vor ${b.ago} Tag${b.ago>1?"en":""}`:`in ${b.days} Tagen`}${b.m.stimme?" · "+esc(b.m.stimme):""}</div></div>
     ${canCongrats(b)?(given?`<span class="chip g">gratuliert ✓</span>`:`<button class="btn sm primary" data-act="congrats" data-id="${b.m.id}">Gratulieren</button>`):""}</div>`}
 
 /* ---------- Termine ---------- */
@@ -439,6 +439,21 @@ function vChat(){S.unread=0;renderTabs();
   h+=`</div><div class="chatin"><textarea id="msg" class="input" rows="2" placeholder="Nachricht an alle Aktiven …"></textarea><div class="row between" style="margin-top:6px">${isV()?`<label class="row small"><input type="checkbox" id="asinfo"> als Ankündigung</label>`:"<span></span>"}<button class="btn primary sm" data-act="send">Senden</button></div></div>`;
   setTimeout(()=>{const c=$("#chatlist");if(c)c.lastElementChild?.scrollIntoView({block:"end"})},30);
   return h}
+/* ---------- Download (Unterlagen meiner Stimme) ---------- */
+const isMine=x=>{const my=S.me.stimme||"";return!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my))};
+const extOf=x=>{const m=(x.path||"").match(/\.([a-z0-9]{2,4})$/i);return m?m[1].toLowerCase():x.art==="noten"?"pdf":"m4a"};
+const safeName=t=>String(t||"Datei").replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim().slice(0,90);
+async function urlsFor(list){const need=list.filter(x=>!S.urls[x.path]).map(x=>x.path);for(let i=0;i<need.length;i+=100){const r=await filesFn({action:"urls",paths:need.slice(i,i+100)});Object.assign(S.urls,r.urls)}}
+function saveBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
+let jszipP=null;const loadZip=()=>jszipP||(jszipP=new Promise((ok,no)=>{if(window.JSZip)return ok(window.JSZip);const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";sc.onload=()=>ok(window.JSZip);sc.onerror=()=>{jszipP=null;no(new Error("ZIP-Funktion konnte nicht geladen werden"))};document.head.appendChild(sc)}));
+async function dlOne(x){toast("Download wird vorbereitet …");await urlsFor([x]);const r=await fetch(S.urls[x.path]);if(!r.ok)throw new Error("Download fehlgeschlagen ("+r.status+")");
+  saveBlob(await r.blob(),`${safeName(x.titel)}.${extOf(x)}`)}
+async function dlZip(list,name){if(!list.length)return toast("Keine Dateien");if(S.dlBusy)return toast("Download läuft bereits");S.dlBusy=true;
+  try{const JSZip=await loadZip();await urlsFor(list);const zip=new JSZip();let k=0,used={};
+    for(const x of list){k++;toast(`Lade ${k}/${list.length}: ${x.titel}`);const r=await fetch(S.urls[x.path]);if(!r.ok)throw new Error(`${x.titel}: Fehler ${r.status}`);
+      let fn=`${safeName(x.lied||"Allgemein")}/${safeName(x.titel)}.${extOf(x)}`;if(used[fn])fn=fn.replace(/(\.[^.]+)$/,` (${++used[fn]})$1`);else used[fn]=1;zip.file(fn,await r.blob())}
+    toast("ZIP wird erstellt …");saveBlob(await zip.generateAsync({type:"blob"}),name);toast(`${list.length} Dateien heruntergeladen`)}
+  catch(e){toast(e.message)}finally{S.dlBusy=false}}
 function vMaterial(){
   const f=S.mFilter,q=S.mQ.toLowerCase();
   const my=S.me.stimme||"",mine=x=>!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my));
@@ -447,12 +462,14 @@ function vMaterial(){
     .sort((a,b)=>AO.indexOf(a.art)-AO.indexOf(b.art)||SO.indexOf(a.stimme||"")-SO.indexOf(b.stimme||"")||a.titel.localeCompare(b.titel));
   let h=`<div class="row between"><h1 style="margin:0">Noten & Aufnahmen</h1>${isV()?`<button class="btn sm primary" data-act="upnew">+ Hochladen</button>`:""}</div>
     <p class="muted small">Nur für die aktiven Sänger – bitte nicht weitergeben.</p>
+    ${S.me.stimme&&S.files.length?(()=>{const ms=S.files.filter(isMine),mb=ms.reduce((a,x)=>a+(x.groesse||0),0);return`<div class="card soft"><div class="row between"><div><b>⬇ Meine Unterlagen · ${esc(S.me.stimme)}</b><div class="small muted">${ms.filter(x=>x.art==="noten").length} Noten, ${ms.filter(x=>x.art==="audio").length} Aufnahmen (eigene Stimme und Gesamtaufnahmen) · ${fSize(mb)}</div></div>
+      <button class="btn sm primary" data-act="dlmine">Alle als ZIP</button></div><p class="small muted" style="margin:6px 0 0">Die ZIP-Datei enthält einen Ordner pro Lied. Auf dem Handy am besten im WLAN herunterladen.</p></div>`})():""}
     <input id="mq" class="input" placeholder="Lied oder Datei suchen …" value="${esc(S.mQ)}" style="margin-bottom:8px">
     <div class="filter">${[["alle","Alle"],...(S.me.stimme?[["mine","Meine Stimme"]]:[]),...Object.entries(ART).map(([k,v])=>[k,v.ic+" "+v.l])].map(([k,l])=>`<button class="chip ${f===k?"on":""}" data-act="mfilter" data-k="${k}">${l}</button>`).join("")}</div>`;
   const groups=new Map();for(const x of fs){const k=x.lied||"Allgemein";if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)}
-  for(const[l,xs]of[...groups].sort((a,b)=>a[0].localeCompare(b[0])))h+=`<div class="card"><h3>${esc(l)}</h3><div class="list">${xs.map(x=>`<div class="li" style="cursor:default"><div class="av">${(ART[x.art]||ART.sonstiges).ic}</div><div class="grow"><div class="nm">${esc(x.titel)}</div><div class="sub">${(ART[x.art]||ART.sonstiges).l}${x.stimme?" · "+esc(x.stimme):""}${x.groesse?" · "+fSize(x.groesse):""}</div>
+  for(const[l,xs]of[...groups].sort((a,b)=>a[0].localeCompare(b[0])))h+=`<div class="card"><div class="row between"><h3 style="margin:0">${esc(l)}</h3>${S.me.stimme&&S.files.some(x=>(x.lied||"Allgemein")===l&&isMine(x))?`<button class="btn sm ghost" data-act="dllied" data-l="${esc(l)}" title="Noten und Aufnahmen meiner Stimme für dieses Lied">⬇ meine Stimme</button>`:""}</div><div class="list">${xs.map(x=>`<div class="li" style="cursor:default"><div class="av">${(ART[x.art]||ART.sonstiges).ic}</div><div class="grow"><div class="nm">${esc(x.titel)}</div><div class="sub">${(ART[x.art]||ART.sonstiges).l}${x.stimme?" · "+esc(x.stimme):""}${x.groesse?" · "+fSize(x.groesse):""}</div>
     ${x.art==="audio"&&S.play===x.id&&S.urls[x.path]?`<audio controls autoplay src="${S.urls[x.path]}" style="width:100%;margin-top:6px"></audio>`:""}${x.art==="video"&&S.play===x.id&&S.urls[x.path]?`<video controls autoplay src="${S.urls[x.path]}" style="width:100%;margin-top:6px;border-radius:8px"></video>`:""}</div>
-    <div class="row" style="flex-wrap:nowrap">${x.art==="audio"||x.art==="video"?`<button class="btn sm" data-act="play" data-id="${x.id}">▶</button>`:""}<button class="btn sm" data-act="open" data-id="${x.id}">Öffnen</button>${isV()?`<button class="btn sm ghost" data-act="fdel" data-id="${x.id}" aria-label="löschen">✕</button>`:""}</div></div>`).join("")}</div></div>`;
+    <div class="row" style="flex-wrap:nowrap">${x.art==="audio"||x.art==="video"?`<button class="btn sm" data-act="play" data-id="${x.id}">▶</button>`:""}<button class="btn sm" data-act="open" data-id="${x.id}">Öffnen</button><button class="btn sm" data-act="dlone" data-id="${x.id}" aria-label="herunterladen" title="herunterladen">⬇</button>${isV()?`<button class="btn sm ghost" data-act="fdel" data-id="${x.id}" aria-label="löschen">✕</button>`:""}</div></div>`).join("")}</div></div>`;
   if(!fs.length)h+=`<p class="muted">${S.files.length?"Nichts gefunden.":"Noch keine Dateien hochgeladen."}</p>`;
   return h}
 function upForm(){const lieder=[...new Set(S.files.map(f=>f.lied).filter(Boolean))].sort();
@@ -742,6 +759,9 @@ let pollT=null;function startPoll(){clearInterval(pollT);pollT=setInterval(async
 const A={
   go:d=>{closeModal();go(d.r)},close:()=>closeModal(),
   print:()=>window.print(),
+  dlone:d=>{const x=S.files.find(f=>f.id===d.id);dlOne(x).catch(e=>toast(e.message))},
+  dlmine:()=>dlZip(S.files.filter(isMine).sort((a,b)=>(a.lied||"").localeCompare(b.lied||"")),`MCT Unterlagen ${S.me.stimme}.zip`),
+  dllied:d=>dlZip(S.files.filter(x=>(x.lied||"Allgemein")===d.l&&isMine(x)),`${safeName(d.l)} – ${S.me.stimme}.zip`),
   toha:()=>{const base=location.origin+location.pathname.replace(/\/chor(\/.*)?$/i,"/");location.href=base+(S.code?"?c="+encodeURIComponent(S.code):"")},
   pick:d=>{try{sessionStorage.setItem("chor_pick","1")}catch(e){}if($("#nomore")?.checked)store.set("chor_nopick","1");if(d.a==="ha")return A.toha();render()},
   psel:d=>{const p=S.polls.find(x=>x.id===d.id),i=+d.i;let sel=[...(S.pollSel[p.id]||p.mine||[])];if(p.mehrfach)sel=sel.includes(i)?sel.filter(x=>x!==i):[...sel,i];else sel=[i];S.pollSel[p.id]=sel;render()},
