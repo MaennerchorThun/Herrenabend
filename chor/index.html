@@ -270,6 +270,8 @@ a.sp{color:inherit;text-decoration:none}a.sp:hover .grow,a.card.link:hover b{col
 .ah{display:grid;grid-template-columns:84px 24px 1fr;align-items:start;padding:8px 0}.ahy{text-align:right;font-weight:700;font-size:15px;line-height:1.2}.ahy span{display:block;font-weight:400;font-size:12px;color:var(--muted)}
 .ahdot{width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);margin:4px auto 0;position:relative;z-index:1}.ah.cur .ahdot{background:var(--brand)}
 .ahn b{display:block;font-size:15px}.ahn span{font-size:12.5px;color:var(--muted)}.ah.cur .ahn b{color:var(--brand)}
+.pbar2{position:relative;height:12px;background:transparent;border-radius:6px;min-width:60px}.pbar2 i,.pbar2 u{position:absolute;left:0;top:0;bottom:0;border-radius:6px}.pbar2 u{background:var(--surface2);border:1px solid var(--line);z-index:0}.pbar2 i{background:var(--brand);z-index:1}
+.ptab td{vertical-align:middle;padding:5px 6px}
 #printroot{display:none}
 @media print{@page{size:A4;margin:12mm 12mm 14mm}
   body>*:not(#printroot){display:none!important}body{background:#fff;color:#000;font-size:10.5pt}
@@ -647,17 +649,16 @@ async function loadStamm(id){const el=$("#stamm");if(!el)return;
   const age=s.geburtsdatum?Math.floor((Date.now()-D(s.geburtsdatum))/31557600000):null,yrs=s.eintritt?Math.floor(((s.austritt?D(s.austritt):Date.now())-D(s.eintritt))/31557600000):null;
   const ex=s.extra||{};
   el.innerHTML=`<div class="row between"><p class="eyebrow" style="margin:0">Stammblatt</p>${PBTN}</div><h1>${esc(full(p))}</h1><div class="chips" style="margin-bottom:10px">${s.stimme?`<span class="chip b">${esc(s.stimme)}</span>`:""}${s.rolle==="vorstand"?`<span class="chip y">Vorstand</span>`:""}${s.ehemalig?`<span class="chip w">ehemaliger Sänger</span>`:s.aktiv===false?`<span class="chip w">nicht mehr aktiv</span>`:""}</div>
+    <div class="sec-h"><h2>Personalien</h2>${!s.person_id?"":`<button class="btn sm noprint" data-act="stedit" data-id="${p.id}">${isV()?"Bearbeiten":"Kontaktdaten ändern"}</button>`}</div>
     <div class="card">${row("Geburtsdatum",s.geburtsdatum?fDateY(s.geburtsdatum)+(age?` (${age})`:""):"")}${row("Eintritt",s.eintritt?fDateY(s.eintritt)+(yrs!=null?` · ${yrs} Jahre`:""):"")}${row("Austritt",s.austritt?fDateY(s.austritt):"")}
-      ${row("Adresse",[s.strasse,[s.plz,s.ort].filter(Boolean).join(" ")].filter(Boolean).map(esc).join("<br>"))}${row("Telefon",s.telefon?`<a href="tel:${esc(s.telefon)}">${esc(s.telefon)}</a>`:"")}${row("E-Mail",s.email?`<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`:"")}${row("Beruf",esc(s.beruf))}${row("Ehrungen",esc(s.ehrungen))}
-      ${Object.entries(ex).filter(([k,v])=>v!==""&&v!=null&&!/^anzahl proben \d{4}$/i.test(k)).map(([k,v])=>row(esc(k),esc(v))).join("")}
-      ${s.notizen?`<p class="small" style="margin:10px 0 0;white-space:pre-wrap">${esc(s.notizen)}</p>`:""}
-      ${!s.person_id?`<p class="muted small">Noch keine Stammdaten erfasst.</p>`:""}
-      <div class="row" style="margin-top:10px"><button class="btn sm" data-act="stedit" data-id="${p.id}">${isV()?"Bearbeiten":"Kontaktdaten ändern"}</button></div></div>
+      ${row("Adresse",[s.strasse,[s.plz,s.ort].filter(Boolean).join(" ")].filter(Boolean).map(esc).join("<br>"))}${row("Telefon",s.telefon?`<a href="tel:${esc(s.telefon)}">${esc(s.telefon)}</a>`:"")}${row("E-Mail",s.email?`<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`:"")}${row("Beruf",esc(s.beruf))}
+      ${!s.person_id?`<p class="muted small">Noch keine Stammdaten erfasst.</p><button class="btn sm noprint" data-act="stedit" data-id="${p.id}">Erfassen</button>`:""}</div>
+    ${karriere(s,row)}
     ${stammSections(p,s,hist,brd)}`}
 /* Stammblatt: History in Abschnitten – Proben pro Jahr (mit Grafik), Vorstand, Chargen, Ehrungen, weitere Einträge */
 function probenJahre(ex,app){const m=new Map();
   for(const[k,v]of Object.entries(ex||{})){const y=(k.match(/^anzahl proben (\d{4})$/i)||[])[1];const n=parseInt(v);if(y&&!isNaN(n))m.set(+y,{jahr:+y,da:n,total:null,quelle:"Webling"})}
-  for(const a of app||[])if(a.total>0&&(!m.has(a.jahr)||a.da>0))m.set(a.jahr,{jahr:a.jahr,da:a.da,total:a.total,quelle:"Chor-App"});
+  for(const a of app||[])if(a.total>0&&(!m.has(a.jahr)||a.da>0)){const w=m.get(a.jahr);m.set(a.jahr,{jahr:a.jahr,da:a.da,total:a.total,quelle:"Chor-App",alt:w?w.da:null})}
   return[...m.values()].sort((a,b)=>b.jahr-a.jahr)}
 function probenChart(rows){if(!rows.length)return"";const rs=[...rows].sort((a,b)=>a.jahr-b.jahr),max=Math.max(...rs.map(r=>Math.max(r.da,r.total||0)),1),W=Math.max(rs.length*56,220),H=110,T=18,bw=28;
   return`<svg viewBox="0 0 ${W} ${H+T+24}" style="width:100%;max-width:${Math.max(W,320)}px;height:auto;display:block;margin:6px auto 4px" role="img" aria-label="Proben pro Jahr">
@@ -666,6 +667,23 @@ function probenChart(rows){if(!rows.length)return"";const rs=[...rows].sort((a,b
       <text x="${x+bw/2}" y="${T+H-Math.max(h,ht)-5}" text-anchor="middle" font-size="11" fill="var(--text)" font-weight="700">${r.da}${r.total?`<tspan font-weight="400" fill="var(--muted)">/${r.total}</tspan>`:""}</text>
       <text x="${x+bw/2}" y="${T+H+16}" text-anchor="middle" font-size="11" fill="var(--muted)">${r.jahr}</text>`}).join("")}</svg>
     <p class="small muted" style="margin:0 0 6px;text-align:center"><span style="color:var(--brand)">■</span> besuchte Proben${rows.some(r=>r.total)?` · <span style="color:var(--line)">■</span> Proben gesamt`:""}</p>`}
+const KARR=/^(proben gesamt|anzahl proben kumuliert|anzahl aktive jahre|anzahl veteranenjahre|fleisskarten|silberbecher|amt thun|kanton bern|scv|proben lfd jahr)$/i,YEARLY=/^(fleisskarte|silberbecher) (\d{4})$/i;
+function karriere(s,row){const ex=s.extra||{},pj=probenJahre(ex,stammCache.proben),num=v=>parseInt(String(v||"").replace(/\D/g,""))||0;
+  const tot=Math.max(num(ex["Anzahl Proben kumuliert"]),num(ex["Proben gesamt"]));
+  const yearsOf=w=>Object.entries(ex).filter(([k,v])=>{const m=k.match(YEARLY);return m&&m[1].toLowerCase()===w&&/^(ja|true|1|x)$/i.test(String(v))}).map(([k])=>+k.match(YEARLY)[2]).sort();
+  const fk=yearsOf("fleisskarte"),sb=yearsOf("silberbecher");
+  const fkTxt=[ex["Fleisskarten"]&&num(ex["Fleisskarten"])?num(ex["Fleisskarten"])+" (gemäss Access)":"",fk.length?"erhalten "+fk.join(", "):""].filter(Boolean).join(" · ");
+  const sbTxt=[ex["Silberbecher"]&&num(ex["Silberbecher"])?num(ex["Silberbecher"])+" (gemäss Access)":"",sb.length?"erhalten "+sb.join(", "):""].filter(Boolean).join(" · ");
+  const ay=ex["Anzahl aktive Jahre"]||(s.eintritt?String(new Date().getFullYear()-D(s.eintritt).getFullYear()):"");
+  const max=Math.max(...pj.map(r=>Math.max(r.da,r.total||0)),1);
+  const prow=r=>`<tr><td style="width:52px"><b>${r.jahr}</b></td><td><div class="pbar2"><i style="width:${Math.round(r.da/max*100)}%"></i>${r.total?`<u style="width:${Math.round(r.total/max*100)}%"></u>`:""}</div></td><td style="white-space:nowrap;text-align:right"><b>${r.da}</b>${r.total?` <span class="muted small">von ${r.total}</span>`:""}${r.alt!=null&&r.alt!==r.da?`<div class="small muted">Webling: ${r.alt}</div>`:""}</td></tr>`;
+  const other=Object.entries(ex).filter(([k,v])=>v!==""&&v!=null&&!KARR.test(k)&&!YEARLY.test(k)&&!/^anzahl proben \d{4}$/i.test(k));
+  return`<div class="sec-h"><h2>Sängerkarriere</h2></div><div class="card">${row("Stimme",esc(s.stimme))}${row("Aktive Jahre",esc(ay))}${row("Veteranenjahre",esc(ex["Anzahl Veteranenjahre"]))}${row("Ehrungen",esc(s.ehrungen))}${row("Fleisskarten",esc(fkTxt))}${row("Silberbecher",esc(sbTxt))}
+      ${["Amt Thun","Kanton Bern","SCV"].map(k=>ex[k]?row(k,esc(ex[k])):"").join("")}
+      <h3 style="margin:14px 0 4px">Proben pro Jahr</h3>${pj.length?`<table class="t ptab">${pj.map(prow).join("")}</table><p class="small muted" style="margin:4px 0 0"><span style="color:var(--brand)">■</span> besucht${pj.some(r=>r.total)?` · <span style="color:var(--line)">■</span> durchgeführt`:""}</p>`:`<p class="small muted" style="margin:0">Noch keine Probenzahlen pro Jahr.</p>`}
+      ${tot?`<p style="margin:10px 0 0"><b>Proben total: ${tot}</b> <span class="muted small">(gemäss Webling/Access)</span></p>`:""}
+      ${s.notizen?`<h3 style="margin:14px 0 4px">Geschichte</h3><p class="small" style="margin:0;white-space:pre-wrap">${esc(s.notizen)}</p>`:""}</div>
+    ${other.length?`<div class="sec-h"><h2>Internes</h2></div><div class="card">${other.map(([k,v])=>row(esc(k),esc(v))).join("")}</div>`:""}`}
 function stammSections(p,s,hist,brd){const ex=s.extra||{},pj=probenJahre(ex,stammCache.proben);
   const tot=Math.max(parseInt(ex["Anzahl Proben kumuliert"])||0,parseInt(ex["Proben gesamt"])||0);
   const yr=x=>x.jahr||(x.datum?D(x.datum).getFullYear():"");
@@ -674,8 +692,7 @@ function stammSections(p,s,hist,brd){const ex=s.extra||{},pj=probenJahre(ex,stam
   const fun=g=>brd.filter(b=>(b.gremium||"vorstand")===g).sort((a,b)=>b.von-a.von);
   const ehr=hist.filter(x=>x.art==="Ehrung").sort((a,b)=>(yr(b)||0)-(yr(a)||0));
   const rest=hist.filter(x=>x.art!=="Ehrung"&&x.art!=="Mutation"),mut=hist.filter(x=>x.art==="Mutation");
-  let h=`<div class="sec-h"><h2>Proben pro Jahr</h2></div><div class="card">${pj.length?probenChart(pj)+tbl(["Jahr","Proben","Quelle"],pj.map(r=>`<tr><td>${r.jahr}</td><td><b>${r.da}</b>${r.total?` <span class="muted">von ${r.total}</span>`:""}</td><td class="small muted">${r.quelle}</td></tr>`)):`<p class="muted small" style="margin:0">Noch keine Probenzahlen pro Jahr.</p>`}
-    ${tot?`<p class="small" style="margin:8px 0 0"><b>Proben total: ${tot}</b> <span class="muted">(gemäss Webling/Access)</span></p>`:""}</div>`;
+  let h="";
   h+=`<div class="sec-h"><h2>Vorstandsfunktionen</h2></div><div class="card">${fun("vorstand").length?tbl(["Jahre","Funktion"],fun("vorstand").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
   h+=`<div class="sec-h"><h2>Chargen</h2></div><div class="card">${fun("charge").length?tbl(["Jahre","Charge"],fun("charge").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
   h+=`<div class="sec-h"><h2>Ehrungen</h2>${isV()?`<button class="btn sm noprint" data-act="hnew" data-id="${p.id}">+ Eintrag</button>`:""}</div><div class="card">${ehr.length?tbl(["Jahr","Ehrung"],ehr.map(x=>`<tr><td>${yr(x)||"–"}</td><td>${esc(x.text)}${del(x)}</td></tr>`)):`<p class="muted small" style="margin:0">${s.ehrungen?esc(s.ehrungen):"–"}</p>`}</div>`;
