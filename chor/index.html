@@ -303,13 +303,13 @@ const LOGO="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANAAAABpCAYAAABLYa3JAA
 /* ================= MCT Chor-App =================
    Für die aktiven Sänger des Männerchors Thun. Daten in Supabase (gleiche Datenbank wie die Herrenabend-App),
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code. Dateien im privaten Speicher «chor». */
-const APP_VERSION="1.1"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="1.3"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const FILES_FN=SUPA.url+"/functions/v1/chor-files";
 const TYP={probe:{l:"Probe",ic:"🎵"},auftritt:{l:"Auftritt",ic:"🎤"},anlass:{l:"Anlass",ic:"🍷"},ausflug:{l:"Ausflug",ic:"🚌"}};
 const ART={noten:{l:"Noten",ic:"📄"},audio:{l:"Audio",ic:"🎧"},video:{l:"Video",ic:"🎬"},text:{l:"Text",ic:"📝"},sonstiges:{l:"Sonstiges",ic:"📎"}};
 const STIMMEN=["1. Tenor","2. Tenor","1. Bass","2. Bass"];
-const FUNKTIONEN=["Präsident","Vizepräsident","Kassier","Sekretär","Aktuar","Dirigentin","Vizedirigent","Materialverwalter","Beisitzer","Herrenabend-OK","Revisor"];
+const FUNKTIONEN=["Präsident","Vizepräsident","Kassier","Sekretär","Aktuar","Dirigentin","Vizedirigent","Materialverwalter","Beisitzer","Herrenabend-OK","2. Vizepräsident","2. Sekretär","Mitglieder","Marketing und Events","Obmann Veteranen"];
 const S={code:null,me:null,members:[],events:[],posts:[],files:[],board:[],congratsMe:[],congratsGiven:[],urls:{},unread:0,tFilter:"alle",tPast:false,mFilter:"alle",mQ:"",statJahr:new Date().getFullYear(),statTyp:"",busy:null};
 
 const $=s=>document.querySelector(s);
@@ -342,7 +342,7 @@ async function filesFn(body){const r=await fetch(FILES_FN,{method:"POST",headers
 
 async function load(){
   const s=await rpc("chor_session",{p_code:S.code});
-  S.me=s.me;S.members=s.members;S.events=s.events;S.posts=s.posts;S.files=s.files;S.board=s.board;S.congratsMe=s.congrats_me;S.congratsGiven=s.congrats_given;S.polls=s.polls||[];S.absences=s.absences||[];S.pollSel=S.pollSel||{};
+  S.me=s.me;S.members=s.members;S.events=s.events;S.posts=s.posts;S.files=s.files;S.board=(s.board||[]).map(b=>({...b,funktion:normF(b.funktion)}));S.congratsMe=s.congrats_me;S.congratsGiven=s.congrats_given;S.polls=s.polls||[];S.absences=s.absences||[];S.pollSel=S.pollSel||{};
   S.lastPost=S.posts.length?S.posts[S.posts.length-1].created_at:new Date(0).toISOString();
 }
 
@@ -697,10 +697,16 @@ function stammSections(p,s,hist,brd){const ex=s.extra||{},pj=probenJahre(ex,stam
   const del=x=>isV()?` <a href="#" class="noprint small" data-act="hdel" data-id="${x.id}">löschen</a>`:"";
   const fun=g=>brd.filter(b=>(b.gremium||"vorstand")===g).sort((a,b)=>b.von-a.von);
   const ehr=hist.filter(x=>x.art==="Ehrung").sort((a,b)=>(yr(b)||0)-(yr(a)||0));
-  const rest=hist.filter(x=>x.art!=="Ehrung"&&x.art!=="Mutation"),mut=hist.filter(x=>x.art==="Mutation");
+  const isCh=x=>x.art==="Funktion"&&(/^charge\s*:/i.test(x.text||"")||/revisor/i.test(x.text||"")),isVo=x=>x.art==="Funktion"&&!isCh(x);
+  const brdHas=(f,v,b)=>brd.some(x=>normF(x.funktion).toLowerCase()===f.toLowerCase()&&x.von<=(b||9999)&&(x.bis||9999)>=v);
+  const der=accFunktionen(s.notizen,hist.filter(x=>x.art==="Funktion").map(x=>String(x.text||"").replace(/^(charge|vorstand)\s*:\s*/i,"")).join(";")).filter(d=>!brdHas(d.funktion,d.von,d.bis));
+  const derRows=g=>der.filter(d=>d.gremium===g).map(d=>({von:d.von,html:`<tr><td style="white-space:nowrap">${d.von}${d.bis===d.von?"":"–"+(d.bis||"heute")}</td><td>${esc(d.funktion)} <span class="muted small">(Access)</span></td></tr>`}));
+  const covered=x=>{const ps=String(x.text||"").replace(/^(charge|vorstand)\s*:\s*/i,"").split(/[;,+]|\//).flatMap(accCanon);return ps.length&&ps.every(f=>der.some(d=>d.funktion===f)||brd.some(b=>normF(b.funktion).toLowerCase()===f.toLowerCase()))};
+  const acc=k=>hist.filter(x=>k(x)&&!covered(x)).sort((a,b)=>(yr(b)||0)-(yr(a)||0)).map(x=>`<tr><td style="white-space:nowrap">${yr(x)||"–"}</td><td>${esc(String(x.text||"").replace(/^(charge|vorstand)\s*:\s*/i,"").replace(/(^|[,;/]\s*)(vorsitzender\s+)?revisor(\s*\d)?/gi,(m,a,v)=>a+(v?"Rechnungsrevisor (Vorsitz)":"Rechnungsrevisor")))} <span class="muted small">(Access)</span>${del(x)}</td></tr>`);
+  const rest=hist.filter(x=>x.art!=="Ehrung"&&x.art!=="Mutation"&&x.art!=="Funktion"),mut=hist.filter(x=>x.art==="Mutation");
   let h="";
-  h+=`<div class="sec-h"><h2>Vorstandsfunktionen</h2></div><div class="card">${fun("vorstand").length?tbl(["Jahre","Funktion"],fun("vorstand").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
-  h+=`<div class="sec-h"><h2>Chargen</h2></div><div class="card">${fun("charge").length?tbl(["Jahre","Charge"],fun("charge").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
+  h+=`<div class="sec-h"><h2>Vorstandsfunktionen</h2></div><div class="card">${fun("vorstand").length||derRows("vorstand").length||acc(isVo).length?tbl(["Jahre","Funktion"],[...[...fun("vorstand").map(b=>({von:b.von,html:`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`})),...derRows("vorstand")].sort((a,b)=>b.von-a.von).map(x=>x.html),...acc(isVo)]):`<p class="muted small" style="margin:0">–</p>`}</div>`;
+  h+=`<div class="sec-h"><h2>Chargen</h2></div><div class="card">${fun("charge").length||derRows("charge").length||acc(isCh).length?tbl(["Jahre","Charge"],[...[...fun("charge").map(b=>({von:b.von,html:`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`})),...derRows("charge")].sort((a,b)=>b.von-a.von).map(x=>x.html),...acc(isCh)]):`<p class="muted small" style="margin:0">–</p>`}</div>`;
   h+=`<div class="sec-h"><h2>Ehrungen</h2>${isV()?`<button class="btn sm noprint" data-act="hnew" data-id="${p.id}">+ Eintrag</button>`:""}</div><div class="card">${ehr.length?tbl(["Jahr","Ehrung"],ehr.map(x=>`<tr><td>${yr(x)||"–"}</td><td>${esc(x.text)}${del(x)}</td></tr>`)):`<p class="muted small" style="margin:0">${s.ehrungen?esc(s.ehrungen):"–"}</p>`}</div>`;
   h+=`<div class="sec-h"><h2>Weitere Einträge</h2></div><div class="card">${rest.length?tbl(["Jahr","Art","Eintrag"],rest.sort((a,b)=>(yr(b)||0)-(yr(a)||0)).map(x=>`<tr><td>${yr(x)||"–"}</td><td class="small">${esc(x.art)}</td><td>${esc(x.text)}${x.datum?` <span class="muted small">${fDateY(x.datum)}</span>`:""}${del(x)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}
     ${mut.length?`<details class="noprint" style="margin-top:8px"><summary class="small" style="cursor:pointer">Änderungsprotokoll (${mut.length})</summary>${tbl(["Datum","Änderung"],mut.map(x=>`<tr><td class="small">${x.datum?fDateY(x.datum):yr(x)}</td><td class="small">${esc(x.text)}</td></tr>`))}</details>`:""}</div>`;
@@ -714,7 +720,56 @@ function stForm(id){const s=(stammCache&&stammCache.stamm)||{},v=isV();
     <label class="row small"><input type="checkbox" id="st_aktiv" ${s.aktiv===false?"":"checked"}> aktiver Sänger</label><label class="row small"><input type="checkbox" id="st_ehemalig" ${s.ehemalig?"checked":""}> ehemaliger Sänger (erscheint unter «Ehemalige»)</label><label class="row small"><input type="checkbox" id="st_rolle" ${s.rolle==="vorstand"?"checked":""}> Vorstand (darf Termine, Dateien und Stammblätter verwalten)</label>`:""}
     </div><p class="small muted">Jede Änderung wird in der History vermerkt.</p><div class="row"><button class="btn primary" data-act="stsave" data-id="${id}">Speichern</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`)}
 const GREMIEN={vorstand:"Vorstand",charge:"Chargen"};
-const CHARGEN=["Vizechorleiter","Herrenabendkassier","Fähnrich","Vize-Fähnrich","Archivar","Webmaster","Bibliothekar MUKO","Bibliothekar MUKO Stv.","Obmann Ernennungsausschuss","Ernennungsausschuss","Turmwart Chutziturm","Chutziturmkommission","Stimmenchef","Revisor"];
+const CHARGEN=["Vizechorleiter","Herrenabendkassier","Fähnrich","Vize-Fähnrich","Archivar","Webmaster","Bibliothekar MUKO","Bibliothekar MUKO Stv.","Obmann Ernennungsausschuss","Ernennungsausschuss","Turmwart Chutziturm","Chutziturmkommission","Stimmenchef","Stimmenchef 1. Tenor","Stimmenchef 2. Tenor","Stimmenchef 1. Bass","Stimmenchef 2. Bass","Rechnungsrevisor","Rechnungsrevisor (Vorsitz)","Ersatzrevisor","Revisor Reisekasse","Chorleitung","Musikkommission","Präsident Musikkommission","Konzertkassier","Kassier Chutziturm","Präsident Chutziturm","Präsident Baukommission Chutzistube","Sekretär Veteranen","Kassier Veteranen","Leiter Veteranenchor","Personelles Veteranen","Pressechef","Werbechef","Notenchef"];
+/* Funktionsnamen vereinheitlichen (Revisor = Rechnungsrevisor = Charge) */
+function normF(f){f=String(f||"").trim();if(/^(vorsitz(ender)?\s+(rechnungs)?revisor|(rechnungs)?revisor(in)?\s*\(?vorsitz\)?)$/i.test(f))return "Rechnungsrevisor (Vorsitz)";if(/^ersatz[\s-]*(rechnungs)?revisor(in)?$/i.test(f))return "Ersatzrevisor";if(/^(rechnungs)?revisor(in|en)?(\s*\d)?$/i.test(f))return "Rechnungsrevisor";return f}
+const gremOf=(f,def)=>CHARGEN.some(c=>c.toLowerCase()===normF(f).toLowerCase())?"charge":FUNKTIONEN.some(c=>c.toLowerCase()===normF(f).toLowerCase())?"vorstand":def;
+/* Funktionen aus der Access-«Geschichte» ableiten (Jahreszeilen «2018; 41; Präsident» und Bereiche «1994 - 1996 1. Sekretär») */
+const ACC_VORSTAND=["Präsident","Vizepräsident","2. Vizepräsident","Kassier","Sekretär","2. Sekretär","Mitglieder","Marketing und Events","Obmann Veteranen","Beisitzer"];
+function accCanon(p){let t=String(p||"").toLowerCase().replace(/^[\s\-–.]+/,"").replace(/\s+/g," ").trim();if(!t)return[];
+  const o=[],add=x=>{if(!o.includes(x))o.push(x)};
+  if(/marketing/.test(t))return["Marketing und Events"];
+  if(/vize\s*chorleit|vizechorleit/.test(t))add("Vizechorleiter");else if(/chorleit|dirigent/.test(t))add("Chorleitung");
+  if(/muko|musikko|musikkom/.test(t))add(/pr[äaö]s|chef/.test(t)?"Präsident Musikkommission":"Musikkommission");
+  if(/chutzi|turm/.test(t)){if(/baukom/.test(t))add("Präsident Baukommission Chutzistube");else if(/kassier/.test(t))add("Kassier Chutziturm");else if(/pr[äa]s/.test(t))add("Präsident Chutziturm");else if(/kommis/.test(t))add("Chutziturmkommission");else add("Turmwart Chutziturm")}
+  if(/veteran/.test(t)){if(/sekr|sekrit/.test(t))add("Sekretär Veteranen");else if(/kassier/.test(t))add("Kassier Veteranen");else if(/chor|leiter/.test(t))add("Leiter Veteranenchor");else if(/personell/.test(t))add("Personelles Veteranen");else add("Obmann Veteranen")}
+  if(/ernennung/.test(t))add(/obmann/.test(t)?"Obmann Ernennungsausschuss":"Ernennungsausschuss");
+  if(/revisor|rechnungsrev|^rechn/.test(t))add(/reisekasse/.test(t)?"Revisor Reisekasse":/vorsitz/.test(t)?"Rechnungsrevisor (Vorsitz)":"Rechnungsrevisor");
+  if(/stimmenche/.test(t)){const m=t.match(/([12])\s*\.?\s*(ten|bas)/);add(m?`Stimmenchef ${m[1]}. ${m[2]==="ten"?"Tenor":"Bass"}`:"Stimmenchef")}
+  if(/f[äa]hnrich/.test(t))add(/stv|stell|vize/.test(t)?"Vize-Fähnrich":"Fähnrich");
+  if(/bibliothek/.test(t))add(/stv|stell/.test(t)?"Bibliothekar MUKO Stv.":"Bibliothekar MUKO");
+  if(/archivar/.test(t))add("Archivar");if(/webmaster/.test(t))add("Webmaster");if(/notenchef/.test(t))add("Notenchef");
+  if(/pressechef/.test(t))add("Pressechef");if(/werbechef/.test(t))add("Werbechef");
+  if(o.length)return o;
+  if(/2\.?\s*vi|chef d(es|\.) gess?ell/.test(t))return["2. Vizepräsident"];
+  if(/vi(t)?zepr|^1?\.?\s*vize|^vize/.test(t))return["Vizepräsident"];
+  if(/pr[äaö]s/.test(t))return["Präsident"];
+  if(/2\.\s*sekr/.test(t))return["2. Sekretär"];
+  if(/sekr|protokoll/.test(t))return["Sekretär"];
+  if(/herrenabend.*kassier|reisekassier/.test(t))return["Herrenabendkassier"];
+  if(/konzertkassier/.test(t))return["Konzertkassier"];
+  if(/kassier|finanzen/.test(t))return["Kassier"];
+  if(/mutation|adressverw|mitglieder/.test(t))return["Mitglieder"];
+  if(/beisitzer/.test(t))return["Beisitzer"];
+  return[]}
+const accGrem=f=>ACC_VORSTAND.includes(f)?"vorstand":"charge";
+function accFunktionen(gesch,aktuell){const byYear=new Map(),raw=new Map(),put=(y,arr)=>{const s=byYear.get(y)||new Set();arr.forEach(x=>s.add(x));byYear.set(y,s)};
+  const lines=String(gesch||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  for(const l of lines){let m=l.match(/^(\d{4})\s*[-–]\s*(\d{4})\s+(.+)$/);
+    if(m){const a=+m[1],b=+m[2];if(b>=a&&b-a<40)for(const p of m[3].split(/[;,+]/))for(const f of accCanon(p))for(let y=a;y<=b;y++)put(y,[f]);continue}
+    m=l.match(/^(\d{4})\s*[;,:]?\s*(?:\d{1,3})?\s*[;,:]?\s*(.*)$/);if(!m||!m[2].trim())continue;raw.set(+m[1],m[2])}
+  const ys=[...raw.keys()].sort((a,b)=>a-b);
+  for(const y of ys){const parts=raw.get(y).split(/[;,+]|\s\/\s?|\/\s/).map(x=>x.trim()).filter(Boolean);
+    for(let p of parts){let fs=accCanon(p);
+      if(!fs.length||(fs.length===1&&fs[0]==="Stimmenchef")){const q=p.toLowerCase().replace(/^[\s\-–.]+/,"").trim();if(q.length>=1)for(const yy of[y-1,y+1]){const r=raw.get(yy);if(!r)continue;
+        const cand=r.split(/[;,+]|\s\/\s?|\/\s/).map(x=>x.trim().replace(/^[\s\-–.]+/,"")).find(x=>x.toLowerCase().startsWith(q));if(cand){fs=accCanon(cand);if(fs.length)break}}}
+      put(y,fs)}}
+  const last=Math.max(...ys,...byYear.keys(),0),akt=new Set(String(aktuell||"").split(/[;,+]|\//).flatMap(accCanon));
+  const out=[],fns=new Set([...byYear.values()].flatMap(s=>[...s]));
+  for(const f of fns){const yrs=[...byYear.entries()].filter(([y,s])=>s.has(f)).map(([y])=>y).sort((a,b)=>a-b);let a=yrs[0],b=yrs[0];
+    const push=()=>out.push({funktion:f,gremium:accGrem(f),von:a,bis:(b===last&&akt.has(f))?null:b});
+    for(const y of yrs.slice(1)){if(y-b<=2){b=y}else{push();a=b=y}}push()}
+  return out.sort((x,y)=>x.von-y.von)}
 function vFunktionen(){const ORD=[...FUNKTIONEN,...CHARGEN].map(x=>x.toLowerCase()),rank=f=>{const i=ORD.indexOf(f.toLowerCase());return i<0?999:i};
   let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="vorstand">← Vorstand & Chargen</button><button class="btn sm primary" data-act="print">🖨 PDF / Drucken</button></div>
     <p class="eyebrow">Männerchor Thun</p><h1>Vorstand und Chargen nach Funktion</h1><p class="muted small">Pro Funktion alle Amtsträger, neueste zuerst. Stand ${new Date().toLocaleDateString("de-CH")}.</p>`;
@@ -750,7 +805,7 @@ function vVorstand(){const y=new Date().getFullYear(),g=S.gTab||"vorstand",bs=S.
 function bForm(b){const d=b||{},y=new Date().getFullYear(),g=d.gremium||S.gTab||"vorstand";
   modal(`<h2>${b?"Funktion bearbeiten":"Funktion erfassen"}</h2><div style="display:grid;gap:8px">
     <select id="bg" class="input">${Object.entries(GREMIEN).map(([k,l])=>`<option value="${k}" ${g===k?"selected":""}>${l}</option>`).join("")}</select>
-    <input id="bf" class="input" list="flist" placeholder="Funktion, z.B. Präsident oder Fähnrich" value="${esc(d.funktion||"")}"><datalist id="flist">${[...FUNKTIONEN,...CHARGEN].map(f=>`<option value="${f}">`).join("")}</datalist>
+    <input id="bf" class="input" list="flist" placeholder="Funktion, z.B. Präsident oder Fähnrich" value="${esc(d.funktion||"")}" onchange="const g=gremOf(this.value,null);if(g)document.getElementById('bg').value=g"><datalist id="flist">${[...FUNKTIONEN,...CHARGEN].map(f=>`<option value="${f}">`).join("")}</datalist>
     <select id="bp" class="input"><option value="">– Person aus der Liste –</option>${[...S.members].sort((a,b)=>a.name.localeCompare(b.name)).map(m=>`<option value="${m.id}" ${d.person_id===m.id?"selected":""}>${esc(m.name)} ${esc(m.vorname)}</option>`).join("")}</select>
     <input id="bn" class="input" placeholder="oder Name (z.B. für frühere Mitglieder)" value="${esc(d.person_id?"":d.name||"")}">
     <div class="form2" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input id="bv" class="input" type="number" placeholder="von Jahr" value="${d.von||y}"><input id="bb" class="input" type="number" placeholder="bis Jahr (leer = heute)" value="${d.bis||""}"></div></div>
@@ -791,7 +846,7 @@ function vVerwaltung(){if(!isV())return`<p class="muted">Nur für den Vorstand.<
   <div class="card"><h3>Sänger aktivieren</h3><p class="small muted">Mitglied suchen und als aktiven Sänger oder Vorstand freischalten. Das Mitglied meldet sich mit seinem persönlichen Code an (derselbe wie für die Herrenabend-App).</p>
     <input id="vsq" class="input" placeholder="Name suchen (mind. 2 Buchstaben) …" autocomplete="off"><div class="list" id="vsres" style="margin-top:6px"></div></div>
   <div class="card"><h3>Import (Webling oder Access)</h3><p class="small muted">CSV-Datei hochladen. Erkannt werden u.a.: <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>/<code>Nachname</code>, <code>Gruppen</code> (aktiv bei «aktive Sänger»), <code>Stimme</code>, <code>Geburtsdatum</code>, <code>Eintrittsdatum</code>, <code>Austrittsdatum</code>, <code>Strasse</code>, <code>PLZ</code>, <code>Ort</code>, <code>Mobile</code>/<code>Telefon</code>, <code>E-Mail</code>, <code>Beruf</code>. Aus der Access-Datenbank zusätzlich <code>Vorstand</code>, <code>Charge</code>, Veteranen- und Ehrenfelder, <code>Proben gesamt</code>, <code>Fleisskarten</code>, <code>Silberbecher</code> und <code>Geschichte</code> – sie landen im Stammblatt bzw. in der History. Bestehende Angaben werden nur ergänzt, nicht gelöscht. Excel-Dateien (.xlsx) gehen auch.</p>
-    <input type="file" id="impfile" accept=".csv,.xlsx,.xls,text/csv" class="input"><label class="row small" style="margin-top:6px"><input type="checkbox" id="impnur" checked> Bei Access-Daten: Ehemalige auslassen (nur bereits erfasste aktive Sänger ergänzen)</label>${S.busy?`<div class="note" style="margin-top:8px">⏳ ${esc(S.busy)}</div>`:""}${S.impInfo?`<div class="okmsg" style="margin-top:8px">${esc(S.impInfo)}</div>`:""}</div>
+    <input type="file" id="impfile" accept=".csv,.xlsx,.xls,text/csv" class="input"><label class="row small" style="margin-top:6px"><input type="checkbox" id="impnur" checked> Bei Access-Daten: Ehemalige auslassen (nur bereits erfasste aktive Sänger ergänzen)</label><label class="row small" style="margin-top:4px"><input type="checkbox" id="impfun" checked> Bei Access-Daten: Funktionen aus «Geschichte» nach Vorstand &amp; Chargen übernehmen (alle, auch Ehemalige)</label>${S.busy?`<div class="note" style="margin-top:8px">⏳ ${esc(S.busy)}</div>`:""}${S.impInfo?`<div class="okmsg" style="margin-top:8px">${esc(S.impInfo)}</div>`:""}</div>
   <div class="card"><h3>Teilnahmen aus SpielerPlus</h3><p class="small muted">Statistik-Export aus SpielerPlus (CSV) hochladen. Die Zu- und Absagen werden den Terminen am gleichen Datum zugeordnet. Fehlt ein Termin, wird er angelegt; gibt es an dem Tag genau einen anderen Termin, wird dessen Titel übernommen. Mehrfaches Importieren ist kein Problem.</p>
     <input type="file" id="spfile" accept=".csv,text/csv" class="input">${S.spInfo?`<div class="okmsg" style="margin-top:8px">${S.spInfo}</div>`:""}</div>
   <div class="card soft small"><b>Datenschutz:</b> Adressen, Telefon und Geburtsjahr sehen nur die Person selbst und der Vorstand. Alle Aktiven sehen Name, Stimme und Geburtstag (Tag/Monat).</div>`}
@@ -804,8 +859,10 @@ function csvRows(t){t=t.replace(/^﻿/,"");const first=t.split(/\r?\n/)[0]||"",s
   if(cur||row.length){row.push(cur);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
 function pDate(v){v=String(v||"").trim();if(!v)return"";let m;
   if(m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return`${m[1]}-${pad(m[2])}-${pad(m[3])}`;
-  if(m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/)){let y=+m[3];if(y<100)y+=y>30?1900:2000;return`${y}-${pad(m[2])}-${pad(m[1])}`}
+  if(m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/)){let y=+m[3];if(y<100){y+=2000;if(y>new Date().getFullYear())y-=100}return`${y}-${pad(m[2])}-${pad(m[1])}`}
   if(m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)){let y=+m[3];if(y<100)y+=y>30?1900:2000;return`${y}-${pad(m[1])}-${pad(m[2])}`}
+  if(m=v.match(/^(\d{1,2})[-. ]([A-Za-zÄÖÜäöü]{3,})\.?[-. ](\d{2,4})$/)){const mo={jan:1,feb:2,mär:3,mrz:3,mar:3,apr:4,mai:5,may:5,jun:6,jul:7,aug:8,sep:9,okt:10,oct:10,nov:11,dez:12,dec:12}[m[2].toLowerCase().slice(0,3)];
+    if(mo){let y=+m[3];if(y<100){y+=2000;if(y>new Date().getFullYear())y-=100}return`${y}-${pad(mo)}-${pad(m[1])}`}}
   return""}
 const truthy=v=>/^(ja|yes|true|wahr|1|-1|x)$/i.test(String(v||"").trim());
 function buildImport(txt){const rows=Array.isArray(txt)?txt.map(r=>r.map(v=>v==null?"":String(v))):csvRows(txt);if(rows.length<2)return{err:"Keine Daten gefunden"};
@@ -863,13 +920,21 @@ let xlsxP=null;const loadXlsx=()=>xlsxP||(xlsxP=new Promise((ok,no)=>{if(window.
 async function readXlsx(f){const X=await loadXlsx();const wb=X.read(await f.arrayBuffer(),{type:"array",cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];
   const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   return X.utils.sheet_to_json(ws,{header:1,raw:true,defval:""}).map(r=>r.map(v=>v instanceof Date?iso(new Date(v.getTime()+12*36e5)):v===true?"ja":v===false?"":String(v)))}
+function accBoardRows(txt){const R=Array.isArray(txt)?txt.map(r=>r.map(v=>v==null?"":String(v))):csvRows(txt);const hd=R[0].map(h=>String(h).trim().toLowerCase()),ix=n=>hd.indexOf(n);
+  const iv=ix("vorname"),inn=ix("nachname")>=0?ix("nachname"):ix("name"),ig=ix("geschichte"),io=ix("vorstand"),ic=ix("charge");if(ig<0||inn<0)return[];const out=[];
+  for(const r of R.slice(1)){const n=String(r[inn]||"").trim();if(!n)continue;for(const d of accFunktionen(r[ig],[r[io],r[ic]].filter(Boolean).join(";")))out.push({vorname:String(r[iv]||"").trim(),name:n,...d})}
+  return out}
 async function doImport(txt){const b=buildImport(txt);if(b.err)return toast(b.err);if(!b.rows.length)return toast("Keine Personen gefunden");
   const hd0=(Array.isArray(txt)?txt[0]:csvRows(txt)[0]).map(h=>String(h||"").trim().toLowerCase()),access=hd0.includes("nachname")&&(hd0.includes("proben gesamt")||hd0.includes("geschichte"));
   const nur=access&&$("#impnur")?.checked!==false;
   if(access){if(!confirm(`Access-Daten: ${b.rows.length} Personen.\n${nur?"Ehemalige werden ausgelassen – nur bereits erfasste aktive Sänger werden ergänzt.":"Alle Personen werden übernommen (auch Ehemalige)."}\nBestehende Angaben (z.B. aus Webling) bleiben; nur leere Felder, Ehrungen, Geschichte und History werden ergänzt.`))return;
     let m=0,hh=0,sk=0;try{for(let i=0;i<b.rows.length;i+=150){S.busy=`Import ${Math.min(i+150,b.rows.length)} von ${b.rows.length} …`;render();
       const r=await rpc("chor_import",{p_code:S.code,p_rows:b.rows.slice(i,i+150),p_ergaenzen:true,p_nur_aktive:nur});m+=r.zugeordnet;hh+=r.history;sk+=r.ausgelassen||0}
-      S.busy=null;S.impInfo=`✓ Access: ${m} aktive Sänger ergänzt, ${hh} History-Einträge${nur?`, ${sk} Ehemalige ausgelassen`:""}.`;await load();render();toast("Import abgeschlossen")}
+      S.busy=null;S.impInfo=`✓ Access: ${m} aktive Sänger ergänzt, ${hh} History-Einträge${nur?`, ${sk} Ehemalige ausgelassen`:""}.`;
+      if($("#impfun")?.checked!==false){const fr=accBoardRows(txt);if(fr.length){const dry=await rpc("chor_board_import",{p_code:S.code,p_rows:fr,p_dry:true});
+        if(dry.neu&&confirm(`Funktionen aus «Geschichte»: ${fr.length} gefunden.\n${dry.neu} neu, ${dry.vorhanden} bereits in Vorstand & Chargen.\n\n${dry.neu} Einträge übernehmen?`)){const r=await rpc("chor_board_import",{p_code:S.code,p_rows:fr,p_dry:false});S.impInfo+=` ${r.neu} Funktionen in Vorstand & Chargen übernommen.`}
+        else if(!dry.neu)S.impInfo+=` Funktionen: alle ${dry.vorhanden} schon erfasst.`}}
+      await load();render();toast("Import abgeschlossen")}
     catch(e){S.busy=null;render();toast(e.message)}return}
   const nv=b.rows.filter(x=>x.vorstand).length,na=b.rows.filter(x=>x.aktiv).length;if(!confirm(`${b.rows.length} Personen importieren?\n${na} als aktive Sänger${nv?`, ${nv} davon mit Vorstandsrechten (Spalte «Vorstand» = Ja)`:""}.\nBestehende Angaben werden ergänzt, nicht überschrieben.`))return;
   let m=0,n=0,hh=0;try{for(let i=0;i<b.rows.length;i+=150){S.busy=`Import ${Math.min(i+150,b.rows.length)} von ${b.rows.length} …`;render();
@@ -971,9 +1036,9 @@ const A={
   bnew:()=>bForm(null),bedit:d=>bForm(S.board.find(b=>b.id===d.id)),gtab:d=>{S.gTab=d.g;render()},bbulk:()=>bBulk(),
   bkprev:()=>{const rows=parseBulk($("#bkt").value);$("#bkprev").innerHTML=rows.length?`<b>${rows.filter(r=>!r.vakant).length} Einträge:</b><ul class="blist">${rows.map(r=>`<li>${r.vakant?`<span class="muted">vakant</span>`:esc(r.name)} – ${esc(r.funktion)}${r.von?` · ${r.von}–${r.bis||"heute"}`:""} ${r.person?`<span class="chip g">✓ ${esc(full(r.person))}</span>`:r.vakant?"":`<span class="chip">als Name</span>`}</li>`).join("")}</ul>`:`<span class="muted">Keine Zeilen erkannt.</span>`},
   bksave:async()=>{const rows=parseBulk($("#bkt").value).filter(r=>!r.vakant),g=$("#bkg").value,v=+$("#bkv").value||new Date().getFullYear(),bi=+$("#bkb").value||null;if(!rows.length)return toast("Keine Einträge erkannt");
-    closeModal();let n=0;try{for(const r of rows){await rpc("chor_board_save",{p_code:S.code,p_id:null,p_funktion:r.funktion,p_person:r.person?r.person.id:null,p_name:r.person?"":r.name,p_von:r.von||v,p_bis:r.von?r.bis:bi,p_gremium:g});n++}
+    closeModal();let n=0;try{for(const r of rows){await rpc("chor_board_save",{p_code:S.code,p_id:null,p_funktion:normF(r.funktion),p_person:r.person?r.person.id:null,p_name:r.person?"":r.name,p_von:r.von||v,p_bis:r.von?r.bis:bi,p_gremium:gremOf(r.funktion,g)});n++}
       S.gTab=g;await load();render();toast(`${n} Funktionen gespeichert`)}catch(e){toast(e.message);await load();render()}},
-  bsave:d=>{const p=$("#bp").value||null;closeModal();call("chor_board_save",{p_id:d.id||null,p_funktion:$("#bf").value,p_person:p,p_name:p?"":$("#bn").value,p_von:+$("#bv").value||null,p_bis:+$("#bb").value||null,p_gremium:$("#bg").value},"Gespeichert").catch(()=>{})},
+  bsave:d=>{const p=$("#bp").value||null;closeModal();call("chor_board_save",{p_id:d.id||null,p_funktion:normF($("#bf").value),p_person:p,p_name:p?"":$("#bn").value,p_von:+$("#bv").value||null,p_bis:+$("#bb").value||null,p_gremium:$("#bg").value},"Gespeichert").catch(()=>{})},
   bdel:d=>{if(!confirm("Eintrag löschen?"))return;closeModal();call("chor_board_delete",{p_id:d.id},"Gelöscht").catch(()=>{})},
   setm:d=>call("chor_set_member",{p_person:d.id,p_aktiv:d.a==="1",p_rolle:d.r},"Gespeichert").then(()=>{const i=$("#vsq");if(i)i.dispatchEvent(new Event("input",{bubbles:true}))}).catch(()=>{}),
   statcsv:()=>{const rs=statData?.rows||[];const csv="Name;Vorname;Stimme;Präsenz;Termine;Zusagen;Absagen;Vielleicht;Ohne Antwort\n"+rs.map(r=>[r.name,r.vorname,r.stimme||"",r.praesent,r.total,r.ja,r.nein,r.vielleicht,r.offen].join(";")).join("\n");
