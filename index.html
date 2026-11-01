@@ -1460,7 +1460,7 @@ const baseUrl=()=>location.origin.startsWith("http")?location.origin+location.pa
 const linkOf=p=>baseUrl()+"?t="+p.token;
 function feedbackBox(){let h="";
   h+=`<div class="sec-h"><h2>Feedback-Eingang${FEEDBACK.formUrl?"":` (${S.feedback.length})`}</h2>${FEEDBACK.resultsUrl?`<a class="btn sm" href="${esc(FEEDBACK.resultsUrl)}" target="_blank" rel="noopener">Excel öffnen ↗</a>`:""}</div>
-    ${FEEDBACK.formUrl?`<p class="small muted">Meldungen kommen über Microsoft Forms in die Excel-Datei im Vorstandsordner; das OK erhält bei jeder Meldung eine Benachrichtigung. Unten nur die Testeinträge der Demo.</p>`:`<p class="small muted">Prototyp: Meldungen bleiben in diesem Browser. Für den Live-Betrieb Microsoft Forms anbinden (siehe Anleitung).</p>`}${S.feedback.slice().reverse().map(f=>`<div class="card small" style="${f.cat==="Problem jetzt"?"border-color:var(--brand)":""}"><div class="row between"><b>${esc(f.cat)}</b><span class="muted">${f.zeit} · ${f.by?esc(full(P(f.by))):"anonym"}</span></div><div style="margin-top:4px">${esc(f.txt)}</div></div>`).join("")}`;
+    ${FEEDBACK.formUrl?`<p class="small muted">Meldungen kommen über Microsoft Forms in die Excel-Datei im Vorstandsordner; das OK erhält bei jeder Meldung eine Benachrichtigung. Unten nur die Testeinträge der Demo.</p>`:`<p class="small muted">Prototyp: Meldungen bleiben in diesem Browser. Für den Live-Betrieb Microsoft Forms anbinden (siehe Anleitung).</p>`}${S.feedback.slice().reverse().map(f=>`<div class="card small" style="${f.cat==="Problem jetzt"?"border-color:var(--brand)":""}"><div class="row between"><b>${esc(f.cat)}</b><span class="muted">${f.zeit} · ${f.by?esc(full(P(f.by))):"anonym"}${LIVE&&S.role==="ok"?` <a href="#" data-act="fbdel" data-id="${f.id}" aria-label="löschen" title="löschen">✕</a>`:""}</span></div><div style="margin-top:4px">${esc(f.txt)}</div></div>`).join("")}${LIVE&&S.role==="ok"&&S.feedback.length?`<button class="btn sm ghost" data-act="fbdelall">Alle ${S.feedback.length} Feedbacks löschen</button>`:""}`;
   return h;
 }
 function vAdminAlt(){
@@ -1674,7 +1674,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="2.2"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="2.3"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1818,6 +1818,8 @@ A.grpsave=()=>{const pv=$("#gcp").value.trim().toLowerCase(),gn=$("#gcg").value.
   if(LIVE){call("admin_set_group",{p_person:p.id,p_group:gn,p_clear_seat:clr},`${p.vorname} ${p.name} → ${gn}`).catch(()=>{});return}
   let g=S.groups.find(x=>x.name.toLowerCase()===gn.toLowerCase());if(!g){g={id:uid(),name:gn,guest:false,chef:null,apero:null};S.groups.push(g)}
   if(og&&og.chef===p.id)og.chef=null;p.gruppe=g.id;if(clr){p.tisch=null;p.platz=null}render();toast(`${p.vorname} ${p.name} → ${g.name}`)};
+A.fbdel=d=>{if(!confirm("Dieses Feedback endgültig löschen?"))return;call("admin_delete_feedback",{p_id:d.id},"Feedback gelöscht").catch(()=>{})};
+A.fbdelall=()=>{if(!confirm(`Alle ${S.feedback.length} Feedbacks endgültig löschen? Das lässt sich nicht rückgängig machen.`))return;call("admin_delete_feedback",{p_id:null},"Alle Feedbacks gelöscht").catch(()=>{})};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
