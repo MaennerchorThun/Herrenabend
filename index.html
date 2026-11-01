@@ -993,6 +993,7 @@ function vStartVorab(){
   const concertOn=new Date()<new Date("2026-11-16T00:00:00");
   const h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><span class="chip y" style="margin-bottom:8px">Vorabversion</span><p class="eyebrow">Männerchor Thun · Einladung zum ${EVENT.nr}. Herrenabend</p>
     <h1>${S.vname?`Grüessech ${esc(S.vname)}`:`${EVENT.nr}. Herrenabend`}</h1><p class="muted" style="margin:0">${esc(EVENT.datum)} · ${esc(EVENT.ort)}</p></section>
+  ${S.chefGrp?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Gruppenchef · ${esc(S.chefGrp.name)}</p><p class="small" style="margin:0 0 8px">Du kannst den Apéro deiner Tischgruppe selbst festlegen. Deine Mitglieder sehen ihn sofort in der App.</p><button class="btn sm primary" data-act="go" data-r="apero">Apéro festlegen</button></div>`:""}
   ${S.vorabOk?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">OK-Team</p><h3 style="margin:0 0 6px">Du hast OK-Rechte</h3>
     <p class="small" style="margin:0 0 10px">Öffne die Event-Version als Vorschau: Verwaltung, Saalplan, Service-Board und Benachrichtigungen – mit den echten Daten. Die Mitglieder sehen weiterhin die Vorabversion.</p>
     <button class="btn primary sm" data-act="okevent">OK-Bereich & Event-Vorschau öffnen</button></div>`:""}
@@ -1149,8 +1150,15 @@ function vAperoVorab(){
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Saalöffnung ${EVENT.saal} Uhr</p></div>
     ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p></div>`
-      :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}`;
+      :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}`;
 }
+/* Vorabversion: Gruppenchef legt den Apéro seiner Tischgruppe fest (set_group_apero, Berechtigung prüft Supabase) */
+function chefAperoForm(){const g=S.chefGrp;if(!g)return"";const st=g.standard;
+  return`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Für dich als Gruppenchef</p><h3 style="margin:0 0 6px">Apéro ${esc(g.name)} festlegen</h3>
+    <p class="small muted" style="margin:0 0 8px">Nur die Mitglieder deiner Tischgruppe sehen diesen Apéro.${st?` Ohne eigenen Eintrag gilt: ${esc([st.zeit,st.ort].filter(Boolean).join(" · "))}.`:""}</p>
+    <div style="display:grid;gap:6px"><label class="small muted">Zeit (leer lassen, wenn es keine feste Zeit gibt)</label><input id="cgz" class="input" value="${esc(g.zeit)}" placeholder="z.B. 17:00">
+    <label class="small muted">Ort oder Hinweis</label><input id="cgo" class="input" value="${esc(g.ort)}" placeholder="z.B. Hotel Seepark, Thun"></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm primary" data-act="cgsave">Speichern</button>${g.zeit||g.ort?`<button class="btn sm ghost" data-act="cgclear">Eigenen Eintrag löschen</button>`:""}</div></div>`}
 function vApero(){
   if(VORAB)return vAperoVorab();
   const me=ME(),isOk=me.id==="ok",g=G(me.gruppe),ap=S.apero.has(me.id),cg=chefGroup();
@@ -1634,7 +1642,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="1.3"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="1.4"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1767,9 +1775,12 @@ function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new U
       <div style="display:grid;gap:10px"><button class="btn primary" data-act="pickchor" style="padding:14px">🎵 Chor-App<br><span class="small" style="font-weight:400">Proben, Termine, Noten, Chat</span></button>
       <button class="btn" data-act="pickha" style="padding:14px">🎩 Herrenabend-App<br><span class="small" style="font-weight:400">195. Herrenabend, 12. Dezember 2026</span></button>
       <label class="row small muted" style="justify-content:center"><input type="checkbox" id="hanomore"> nicht mehr fragen (direkt zur Herrenabend-App)</label><p class="muted" style="text-align:center;font-size:12px;margin:10px 0 0">Herrenabend-App Version ${APP_VERSION}</p></div>`)}).catch(()=>{})}
+A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
+  rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
+A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
-function checkOk(){if(!S.code)return;rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me&&s.me.role==="ok"){S.vorabOk=true;render()}}).catch(()=>{})}
+function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render()}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me&&s.me.role==="ok"){S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
 A.okevent=()=>gotoMode("event");
