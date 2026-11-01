@@ -1153,7 +1153,7 @@ function vAperoVorab(){
   return back()+`<h1>Apéro</h1>
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Saalöffnung ${EVENT.saal} Uhr</p></div>
-    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p></div>`
+    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p>${S.vorabMe&&S.vorabMe.angemeldet?`<button class="btn sm ${S.vorabMe.apero?"on":"primary"}" style="margin-top:10px" data-act="vapero">${S.vorabMe.apero?"✓ Ich komme – abmelden":"Ich komme zum Apéro"}</button>`:""}</div>`
       :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}`;
 }
 /* Vorabversion: Gruppenchef legt den Apéro seiner Tischgruppe fest (set_group_apero, Berechtigung prüft Supabase) */
@@ -1161,8 +1161,8 @@ function vAperoVorab(){
 /* aktueller Apéro der Chef-Gruppe: eigener Eintrag, sonst der des OK */
 function chefCurApero(){const g=S.chefGrp;if(!g)return null;if(g.zeit||g.ort)return{zeit:g.zeit,ort:g.ort};const m=S.myApero||g.standard;return m&&(m.zeit||m.ort)?{zeit:m.zeit||"",ort:m.ort||""}:null}
 function chefMembersBox(){const m=S.chefMembers;if(!m)return"";const ms=m.members||[];
-  return`<details style="margin-top:10px"${ms.length?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b></summary>
-    ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
+  return`<details style="margin-top:10px"${ms.length?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
+    ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td>${p.apero?`<span class="chip g">✓ dabei</span>`:`<span class="small muted">–</span>`}</td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>`}
 function chefAperoForm(){const g=S.chefGrp;if(!g)return"";const own=!!(g.zeit||g.ort),cur=own?{zeit:g.zeit,ort:g.ort}:(S.myApero||g.standard||{zeit:"",ort:""});const st=null;
   return`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Für dich als Gruppenchef</p><h3 style="margin:0 0 6px">Apéro ${esc(g.name)} festlegen</h3>
@@ -1660,7 +1660,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="1.8"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="1.9"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1794,12 +1794,13 @@ function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new U
       <button class="btn" data-act="pickha" style="padding:14px">🎩 Herrenabend-App<br><span class="small" style="font-weight:400">195. Herrenabend, 12. Dezember 2026</span></button>
       <label class="row small muted" style="justify-content:center"><input type="checkbox" id="hanomore"> nicht mehr fragen (direkt zur Herrenabend-App)</label><p class="muted" style="text-align:center;font-size:12px;margin:10px 0 0">Herrenabend-App Version ${APP_VERSION}</p></div>`)}).catch(()=>{})}
 A.seatsvis=()=>{const on=!S.seatsVisible;if(!confirm(on?"Tischeinteilung für die Gruppenchefs freischalten?":"Tischeinteilung wieder sperren?"))return;rpc("admin_set_setting",{p_code:S.code,p_key:"seats_visible",p_value:on}).then(()=>{S.seatsVisible=on;toast(on?"Tischeinteilung freigeschaltet":"Tischeinteilung gesperrt");render()}).catch(e=>toast(e.message))};
+A.vapero=()=>{const on=!S.vorabMe.apero;rpc("set_apero",{p_code:S.code,p_on:on}).then(()=>{S.vorabMe.apero=on;toast(on?"Für den Apéro angemeldet":"Vom Apéro abgemeldet");if(S.chefGrp)rpc("my_group_members",{p_code:S.code}).then(m=>{if(m)S.chefMembers=m;render()}).catch(()=>{});render()}).catch(e=>toast(e.message))};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
-function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me&&s.me.role==="ok"){S.vorabOk=true;render()}}).catch(()=>{})}
+function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
 A.okevent=()=>gotoMode("event");
