@@ -1619,7 +1619,7 @@ const A={
   exportlinks:()=>download("herrenabend-links.csv","Vorname;Name;Rolle;Gruppe;Tisch;Platz;Link\n"+S.people.map(p=>[p.vorname,p.name,isChef(p)?chefLbl(chefOf(p)):"Teilnehmer",G(p.gruppe)?.name||"",p.tisch||"",p.platz||"",linkOf(p)].join(";")).join("\n")),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");
     if(!ACCESS.hashes.has(sha256(ACCESS.salt+c).slice(0,16)))return toast("Code unbekannt – bitte prüfen");
-    S.unlocked=true;S.code=c;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;
+    S.unlocked=true;S.code=c;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;rememberMe();
     try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}
     if(VORAB){checkOk();askApp()}
     render();if(!VORAB&&S.demo&&!S.userId)askUser()},
@@ -1675,7 +1675,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="2.4"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="2.5"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1799,7 +1799,7 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
 
 /* ================= OK-Zugang aus der Vorabversion / Event-Vorschau ================= */
 /* Aktive Sänger: beim Öffnen fragen, ob Chor-App oder Herrenabend-App */
-const chorUrl=()=>`${location.origin}/Chor/?${S.code?"c="+encodeURIComponent(S.code)+"&":""}pick=1`;
+const chorUrl=()=>`${location.origin}/Chor/?${S.code?"c="+encodeURIComponent(S.code)+"&":""}${S.vname?"n="+encodeURIComponent(S.vname)+"&":""}pick=1`;
 function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new URLSearchParams(location.search).get("pick")==="1";
   try{if(skip)sessionStorage.setItem("ha_pick","1");skip=skip||sessionStorage.getItem("ha_pick")==="1"||localStorage.getItem("ha_nopick")==="1"}catch(e){}
   if(skip)return;
@@ -1826,7 +1826,8 @@ A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
-function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
+function rememberMe(){try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
+function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){if(!S.vname&&s.me.vorname){S.vname=cleanName(s.me.vorname);rememberMe()}S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
 A.okevent=()=>gotoMode("event");
@@ -1865,10 +1866,13 @@ setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck(
 (function init(){
   seedDemo();
   if(VORAB){document.querySelector(".role").style.display="none"}
-  const qc=normCode(new URLSearchParams(location.search).get("c"));
+  /* Identität: aus dem Link (c, n), sonst vom letzten Besuch auf diesem Gerät */
+  let qc=normCode(new URLSearchParams(location.search).get("c"));
   S.vname=cleanName(new URLSearchParams(location.search).get("n"));
+  try{const sc=localStorage.getItem("ha_code"),sn=localStorage.getItem("ha_vname")||"";
+    if(!qc&&sc){qc=normCode(sc);if(!S.vname)S.vname=cleanName(sn)}else if(qc&&!S.vname&&normCode(sc||"")===qc)S.vname=cleanName(sn)}catch(e){}
   S.unlocked=!ACCESS.required||(qc&&ACCESS.hashes.has(sha256(ACCESS.salt+qc).slice(0,16)));
-  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc)S.code=qc;render();if(S.code){checkOk();askApp()}return}
+  if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc){S.code=qc;rememberMe()}render();if(S.code){checkOk();askApp()}return}
   if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
       loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
