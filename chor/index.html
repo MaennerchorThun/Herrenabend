@@ -837,7 +837,7 @@ const A={
   dlone:d=>{const x=S.files.find(f=>f.id===d.id);dlOne(x).catch(e=>toast(e.message))},
   dlmine:()=>dlZip(S.files.filter(isMine).sort((a,b)=>(a.lied||"").localeCompare(b.lied||"")),`MCT Unterlagen ${S.me.stimme}.zip`),
   dllied:d=>dlZip(S.files.filter(x=>(x.lied||"Allgemein")===d.l&&isMine(x)),`${safeName(d.l)} – ${S.me.stimme}.zip`),
-  toha:()=>{const base=location.origin+location.pathname.replace(/\/chor(\/.*)?$/i,"/");location.href=base+(S.code?"?c="+encodeURIComponent(S.code):"")},
+  toha:()=>{const base=location.origin+location.pathname.replace(/\/chor(\/.*)?$/i,"/");location.href=base+"?"+(S.code?"c="+encodeURIComponent(S.code)+"&":"")+"pick=1"},
   pick:d=>{try{sessionStorage.setItem("chor_pick","1")}catch(e){}if($("#nomore")?.checked)store.set("chor_nopick","1");if(d.a==="ha")return A.toha();render()},
   psel:d=>{const p=S.polls.find(x=>x.id===d.id),i=+d.i;let sel=[...(S.pollSel[p.id]||p.mine||[])];if(p.mehrfach)sel=sel.includes(i)?sel.filter(x=>x!==i):[...sel,i];else sel=[i];S.pollSel[p.id]=sel;render()},
   pvote:d=>{const p=S.polls.find(x=>x.id===d.id),sel=S.pollSel[p.id]||p.mine||[];if(!sel.length)return toast("Bitte eine Antwort wählen");
@@ -912,7 +912,7 @@ document.addEventListener("change",e=>{const el=e.target;
   if(el.dataset.chg==="setfor"){rpc("chor_set_attendance",{p_code:S.code,p_event:el.dataset.ev,p_status:el.value||null,p_grund:null,p_person:el.dataset.id}).then(async()=>{await load();toast("Gespeichert")}).catch(err=>toast(err.message))}
 });
 window.addEventListener("hashchange",()=>{if(S.me){S.play=null;render();scrollTo(0,0)}});
-(function init(){const q=new URLSearchParams(location.search).get("c");const c=q||store.get("chor_code");if(c)login(c);else vLogin()})();
+(function init(){try{if(new URLSearchParams(location.search).get("pick")==="1")sessionStorage.setItem("chor_pick","1")}catch(e){}const q=new URLSearchParams(location.search).get("c");const c=q||store.get("chor_code");if(c)login(c);else vLogin()})();
 
 </script>
 </body>
