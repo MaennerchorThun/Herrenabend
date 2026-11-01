@@ -933,7 +933,7 @@ function render(){
   if(VORAB&&EVENT_ONLY.includes(r))r="start";
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
-  const V={start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
+  const V={dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
   $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
@@ -1028,7 +1028,13 @@ function vStartVorab(){
   <div class="sec-h"><h2>Alles zum Abend</h2></div>${tiles()}${nextHABox()}`;
   return h;
 }
-function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>${tiles()}<p class="small muted" style="text-align:center;margin-top:18px">Herrenabend-App Version ${APP_VERSION}</p>`}
+function vDieseApp(){return back("mehr","Mehr")+`<p class="eyebrow">In eigener Sache</p><h1 style="margin:0 0 4px">Interessiert an dieser App?</h1><p style="font-size:1.25rem;margin:0 0 14px"><b style="color:var(--brand)">Können wir.</b></p>
+  <div class="card"><p style="margin:0">Der Männerchor Thun hat seine eigene App für den Herrenabend und für den Chorbetrieb. Euer Verein kann das auch – mit eurem Logo, euren Farben und euren Abläufen.</p></div>
+  <div class="card"><h3 style="margin:0 0 6px">🎩 Für euren Anlass</h3><ul class="small" style="margin:0;padding-left:18px"><li>Einladung mit persönlichem Link per Mail, ohne Passwort</li><li>Programm, Menu, Weinkarte, Sponsoren mit Logos</li><li>Tisch- und Platzzuteilung, Saalplan, Gruppen-Apéros</li><li>Weinbestellung direkt vom Tisch, Service-Board fürs Team</li><li>Feedback und Umfrage nach dem Anlass</li></ul></div>
+  <div class="card"><h3 style="margin:0 0 6px">🎵 Für den Vereinsalltag</h3><ul class="small" style="margin:0;padding-left:18px"><li>Termine mit An- und Abmeldung, Präsenz-Statistik, Kalender-Abo</li><li>Noten und Aufnahmen pro Stimme, Download als ZIP</li><li>Probenblatt, Geburtstage, Chat und Umfragen</li><li>Stammblatt, Vorstand & Chargen, Ehrungen, Vereinsgeschichte</li></ul></div>
+  <div class="card soft small"><b>Gut zu wissen:</b> läuft auf jedem Handy und Computer, ohne App-Store · Daten auf Servern in der Schweiz (Zürich) · Zugang nur mit persönlichem Code · keine Lizenzkosten für die Grundtechnik</div>
+  <div class="card" style="border-color:var(--brand);text-align:center"><p style="margin:0 0 10px">Fragen, Demo oder Offerte? Wir zeigen euch die App gerne.</p><a class="btn primary" href="mailto:praesident@mcthun.com?subject=Interesse%20an%20der%20Vereins-App%20des%20M%C3%A4nnerchors%20Thun">✉️ Kontakt aufnehmen</a><p class="small muted" style="margin:10px 0 0">Männerchor Thun 1829 · praesident@mcthun.com</p></div>`}
+function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>${tiles()}<button class="card" data-act="go" data-r="dieseapp" style="display:block;width:100%;text-align:left;cursor:pointer;margin-top:12px;border-color:var(--brand)"><b>📱 Interessiert an dieser App?</b> <span style="color:var(--brand)">Können wir.</span><div class="small muted">Für euren Verein – mehr erfahren ›</div></button><p class="small muted" style="text-align:center;margin-top:18px">Herrenabend-App Version ${APP_VERSION}</p>`}
 
 function vProgramm(){
   const showInt=S.role==="ok";
@@ -1660,7 +1666,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="1.9"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="2.0"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
