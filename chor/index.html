@@ -440,7 +440,7 @@ function vChat(){S.unread=0;renderTabs();
   setTimeout(()=>{const c=$("#chatlist");if(c)c.lastElementChild?.scrollIntoView({block:"end"})},30);
   return h}
 /* ---------- Download (Unterlagen meiner Stimme) ---------- */
-const isMine=x=>{const my=S.me.stimme||"";return!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my))};
+const isMine=x=>{const my=S.me.stimme||"";return my==="Chorleitung"||!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my))};
 const extOf=x=>{const m=(x.path||"").match(/\.([a-z0-9]{2,4})$/i);return m?m[1].toLowerCase():x.art==="noten"?"pdf":"m4a"};
 const safeName=t=>String(t||"Datei").replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim().slice(0,90);
 async function urlsFor(list){const need=list.filter(x=>!S.urls[x.path]).map(x=>x.path);for(let i=0;i<need.length;i+=100){const r=await filesFn({action:"urls",paths:need.slice(i,i+100)});Object.assign(S.urls,r.urls)}}
@@ -456,7 +456,7 @@ async function dlZip(list,name){if(!list.length)return toast("Keine Dateien");if
   catch(e){toast(e.message)}finally{S.dlBusy=false}}
 function vMaterial(){
   const f=S.mFilter,q=S.mQ.toLowerCase();
-  const my=S.me.stimme||"",mine=x=>!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my));
+  const my=S.me.stimme||"",mine=x=>my==="Chorleitung"||!x.stimme||x.stimme===my||(x.stimme==="Tenöre"&&/Tenor/.test(my))||(x.stimme==="Bässe"&&/Bass/.test(my));
   const SO=["","1. Tenor","2. Tenor","Tenöre","1. Bass","2. Bass","Bässe"],AO=["noten","text","audio","video","sonstiges"];
   const fs=S.files.filter(x=>(f==="alle"||(f==="mine"?mine(x):x.art===f))&&(!q||[x.titel,x.lied,x.stimme].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>AO.indexOf(a.art)-AO.indexOf(b.art)||SO.indexOf(a.stimme||"")-SO.indexOf(b.stimme||"")||a.titel.localeCompare(b.titel));
@@ -610,7 +610,7 @@ function vMehr(){const t=(r,ic,l,d)=>`<button class="tile" data-act="go" data-r=
   <div class="card soft small" style="margin-top:14px">Angemeldet als <b>${esc(full(S.me))}</b>${isV()?" (Vorstand)":""}. <a href="#" data-act="logout">Abmelden</a></div>`}
 function vMitglieder(){const act=S.members.filter(m=>m.aktiv);
   let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Sänger</h1><p class="muted">${act.length} aktive Sänger</p>`;
-  for(const st of[...STIMMEN,null]){const ms=act.filter(m=>st?m.stimme===st:!STIMMEN.includes(m.stimme));if(!ms.length)continue;
+  for(const st of["Chorleitung",...STIMMEN,null]){const ms=act.filter(m=>st?m.stimme===st:!STIMMEN.includes(m.stimme)&&m.stimme!=="Chorleitung");if(!ms.length)continue;
     h+=`<div class="card"><h3>${st||"Ohne Stimme"} (${ms.length})</h3><div class="list">${ms.map(m=>`<${isV()||m.id===S.me.id?`button class="li" data-act="go" data-r="stamm/${m.id}"`:'div class="li" style="cursor:default"'}><div class="av ${m.rolle==="vorstand"?"c":""}">${ini(m)}</div><div class="grow"><div class="nm">${esc(m.name)} ${esc(m.vorname)}</div><div class="sub">${m.rolle==="vorstand"?"Vorstand · ":""}${m.geb?"🎂 "+Number(m.geb.slice(3))+"."+Number(m.geb.slice(0,2))+".":""}</div></div></${isV()||m.id===S.me.id?"button":"div"}>`).join("")}</div></div>`}
   h+=`<button class="btn" data-act="go" data-r="ehemalige" style="width:100%;margin-top:4px">Ehemalige Sänger ›</button>`;
   return h}
