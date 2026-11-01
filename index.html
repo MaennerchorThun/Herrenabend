@@ -1023,7 +1023,7 @@ function vStartVorab(){
   <div class="sec-h"><h2>Alles zum Abend</h2></div>${tiles()}`;
   return h;
 }
-function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>${tiles()}`}
+function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>${tiles()}<p class="small muted" style="text-align:center;margin-top:18px">Herrenabend-App Version ${APP_VERSION}</p>`}
 
 function vProgramm(){
   const showInt=S.role==="ok";
@@ -1634,6 +1634,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
+const APP_VERSION="1.0"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1797,6 +1798,13 @@ A.govorab=()=>gotoMode(null);
 })();
 
 /* ================= Start ================= */
+/* ===== Versionsprüfung: meldet, wenn auf dem Server eine neuere Version liegt (z.B. nach Upload auf GitHub) ===== */
+function versionCheck(){const url=location.pathname+(location.pathname.endsWith("/")?"index.html":"")+"?v="+Date.now();
+  fetch(url,{cache:"no-store"}).then(r=>r.ok?r.text():"").then(t=>{const m=t.match(/const APP_VERSION="(\d[^"]*)"/);if(!m||m[1]===APP_VERSION||document.getElementById("vbar"))return;
+    const d=document.createElement("div");d.id="vbar";d.style.cssText="position:fixed;left:12px;right:12px;bottom:76px;z-index:70;background:#1f1b18;color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:14px";
+    d.innerHTML=`<span style="flex:1">Neue Version ${m[1]} verfügbar (du hast ${APP_VERSION}).</span><button style="background:#de1034;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer">Neu laden</button>`;
+    d.querySelector("button").onclick=()=>{try{caches&&caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)))}catch(e){}const u=new URL(location.href);u.searchParams.set("v",m[1]);location.replace(u.toString())};document.body.appendChild(d)}).catch(()=>{})}
+setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck()},10*60*1000);
 (function init(){
   seedDemo();
   if(VORAB){document.querySelector(".role").style.display="none"}
