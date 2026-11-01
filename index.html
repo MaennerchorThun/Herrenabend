@@ -721,11 +721,16 @@ function vAdmin(){
 }
 function adminPeople(){
   const ps=[...S.people].sort(byName);
-  return`<input id="aq" class="input" placeholder="Name, Gruppe oder Tisch suchen …" autocomplete="off" style="margin-bottom:6px">
+  return`<div class="card"><h3>Tischgemeinschaft wechseln</h3><p class="small muted">Teilnehmer wechseln von Jahr zu Jahr die Tischgemeinschaft. Hier kannst du die Gruppe einer Person ändern; ein neuer Name legt eine neue Gruppe an. Dauerhaft bitte auch in Webling («Herrenabend-Tisch») nachführen, sonst setzt der nächste Import die alte Gruppe wieder.</p>
+    <div style="display:grid;gap:6px"><input id="gcp" class="input" list="gcplist" placeholder="Person: Name Vorname" autocomplete="off"><datalist id="gcplist">${ps.map(p=>`<option value="${esc(p.name+" "+p.vorname)}">`).join("")}</datalist>
+    <input id="gcg" class="input" list="gcglist" placeholder="neue Tischgemeinschaft" autocomplete="off"><datalist id="gcglist">${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<option value="${esc(g.name)}">`).join("")}</datalist>
+    <label class="row small"><input type="checkbox" id="gcs" checked> bisherigen Tisch und Platz freigeben</label></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="grpsave">Wechsel speichern</button></div></div>
+    <input id="aq" class="input" placeholder="Name, Gruppe oder Tisch suchen …" autocomplete="off" style="margin-bottom:6px">
     <p class="small muted" id="aqn" style="margin:0 0 6px">${ps.length} Personen</p>
     <div class="card scroll" style="padding:4px 8px"><table class="t" id="atbl"><tr><th>Name</th><th>Gruppe</th><th>Tisch</th><th>Platz</th><th>Typ</th><th>Menu</th><th>Apéro</th></tr>
     ${ps.map(p=>{const g=G(p.gruppe),s=[p.name,p.vorname,g?g.name:"ohne gruppe",p.tisch?"tisch "+p.tisch:"ohne tisch",TYP[p.typ]].join(" ").toLowerCase();
-      return`<tr data-s="${esc(s)}"><td><a href="#" data-act="findp" data-p="${p.id}">${esc(p.name)} ${esc(p.vorname)}</a>${isChef(p)?` <span class="chip b">${chefLbl(chefOf(p))}</span>`:""}</td><td>${g?esc(g.name):`<span class="muted">–</span>`}</td><td>${p.tisch||"–"}</td><td>${p.platz||`<span class="chip w">offen</span>`}</td><td>${TYP[p.typ]}</td><td>${p.menu==="vegi"?"Vegi":""}</td><td>${S.apero.has(p.id)?"✓":""}</td></tr>`}).join("")}</table></div>`}
+      return`<tr data-s="${esc(s)}"><td><a href="#" data-act="findp" data-p="${p.id}">${esc(p.name)} ${esc(p.vorname)}</a>${isChef(p)?` <span class="chip b">${chefLbl(chefOf(p))}</span>`:""}</td><td>${g?esc(g.name):`<span class="muted">–</span>`} <a href="#" class="small" data-act="grpchg" data-p="${p.id}">ändern</a></td><td>${p.tisch||"–"}</td><td>${p.platz||`<span class="chip w">offen</span>`}</td><td>${TYP[p.typ]}</td><td>${p.menu==="vegi"?"Vegi":""}</td><td>${S.apero.has(p.id)?"✓":""}</td></tr>`}).join("")}</table></div>`}
 function adminTables(){
   const wv=violSet();let h=`<p class="muted small">Alle ${TABLES.length} Tische mit Belegung, sortiert nach Platz. ★ = Gruppenchef, ⚠ = Sitzwunsch nicht erfüllt.</p>`;
   if(S.wishes.length){const bad=S.wishes.filter(w=>wishState(w)==="verletzt").length,wg=S.groups.filter(g=>wishesFor(g).length);
@@ -997,7 +1002,7 @@ function vStartVorab(){
   const concertOn=new Date()<new Date("2026-11-16T00:00:00");
   const h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><span class="chip y" style="margin-bottom:8px">Vorabversion</span><p class="eyebrow">Männerchor Thun · Einladung zum ${EVENT.nr}. Herrenabend</p>
     <h1>${S.vname?`Grüessech ${esc(S.vname)}`:`${EVENT.nr}. Herrenabend`}</h1><p class="muted" style="margin:0">${esc(EVENT.datum)} · ${esc(EVENT.ort)}</p></section>
-  ${S.chefGrp?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Gruppenchef · ${esc(S.chefGrp.name)}</p>${(()=>{const a=chefCurApero();return a?`<p class="small" style="margin:0 0 4px">Apéro deiner Tischgruppe:</p><p style="margin:0 0 8px"><b>${aperoTxt(a)}</b></p><button class="btn sm" data-act="go" data-r="apero">Apéro ändern</button>`:`<p class="small" style="margin:0 0 8px">Du kannst den Apéro deiner Tischgruppe selbst festlegen. Deine Mitglieder sehen ihn sofort in der App.</p><button class="btn sm primary" data-act="go" data-r="apero">Apéro festlegen</button>`})()}${chefMembersBox()}</div>`:""}
+  ${S.chefGrp?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Gruppenchef · ${esc(S.chefGrp.name)}</p>${(()=>{const a=chefCurApero();return a?`<p class="small" style="margin:0 0 4px">Apéro deiner Tischgruppe:</p><p style="margin:0 0 8px"><b>${aperoTxt(a)}</b></p><button class="btn sm" data-act="go" data-r="apero">Apéro ändern</button>${aperoBtn("primary ")}`:`<p class="small" style="margin:0 0 8px">Du kannst den Apéro deiner Tischgruppe selbst festlegen. Deine Mitglieder sehen ihn sofort in der App.</p><button class="btn sm primary" data-act="go" data-r="apero">Apéro festlegen</button>`})()}${chefMembersBox()}</div>`:""}
   ${S.vorabOk?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">OK-Team</p><h3 style="margin:0 0 6px">Du hast OK-Rechte</h3>
     <p class="small" style="margin:0 0 10px">Öffne die Event-Version als Vorschau: Verwaltung, Saalplan, Service-Board und Benachrichtigungen – mit den echten Daten. Die Mitglieder sehen weiterhin die Vorabversion.</p>
     <button class="btn primary sm" data-act="okevent">OK-Bereich & Event-Vorschau öffnen</button></div>`:""}
@@ -1159,13 +1164,16 @@ function vAperoVorab(){
   return back()+`<h1>Apéro</h1>
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Saalöffnung ${EVENT.saal} Uhr</p></div>
-    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p>${S.vorabMe&&S.vorabMe.angemeldet?`<button class="btn sm ${S.vorabMe.apero?"on":"primary"}" style="margin-top:10px" data-act="vapero">${S.vorabMe.apero?"✓ Ich komme – abmelden":"Ich komme zum Apéro"}</button>`:""}</div>`
+    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p>${aperoBtn()}</div>`
       :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}`;
 }
 /* Vorabversion: Gruppenchef legt den Apéro seiner Tischgruppe fest (set_group_apero, Berechtigung prüft Supabase) */
 /* Vorabversion: Gruppenchef sieht die angemeldeten Teilnehmer seiner Tischgruppe; Tisch/Platz erst, wenn das OK die Tischeinteilung freischaltet (Einstellung seats_visible) */
 /* aktueller Apéro der Chef-Gruppe: eigener Eintrag, sonst der des OK */
 function chefCurApero(){const g=S.chefGrp;if(!g)return null;if(g.zeit||g.ort)return{zeit:g.zeit,ort:g.ort};const m=S.myApero||g.standard;return m&&(m.zeit||m.ort)?{zeit:m.zeit||"",ort:m.ort||""}:null}
+/* eigene Apéro-Anmeldung (Vorabversion): aus app_session, sonst aus der Liste des Gruppenchefs */
+function vMe(){if(S.vorabMe)return S.vorabMe;const c=S.chefMembers&&(S.chefMembers.members||[]).find(p=>p.chef);return c?{apero:!!c.apero,angemeldet:true}:null}
+function aperoBtn(cls){const m=vMe();if(!m||!m.angemeldet)return"";return`<button class="btn sm ${m.apero?"on":cls||"primary"}" style="margin:${cls?"0 0 0 6px":"10px 0 0"}" data-act="vapero">${m.apero?"✓ Ich komme zum Apéro – abmelden":"Ich komme zum Apéro"}</button>`}
 function chefMembersBox(){const m=S.chefMembers;if(!m)return"";const ms=m.members||[];
   return`<details style="margin-top:10px"${ms.length?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
     ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td>${p.apero?`<span class="chip g">✓ dabei</span>`:`<span class="small muted">–</span>`}</td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
@@ -1666,7 +1674,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="2.0"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="2.2"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1800,7 +1808,16 @@ function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new U
       <button class="btn" data-act="pickha" style="padding:14px">🎩 Herrenabend-App<br><span class="small" style="font-weight:400">195. Herrenabend, 12. Dezember 2026</span></button>
       <label class="row small muted" style="justify-content:center"><input type="checkbox" id="hanomore"> nicht mehr fragen (direkt zur Herrenabend-App)</label><p class="muted" style="text-align:center;font-size:12px;margin:10px 0 0">Herrenabend-App Version ${APP_VERSION}</p></div>`)}).catch(()=>{})}
 A.seatsvis=()=>{const on=!S.seatsVisible;if(!confirm(on?"Tischeinteilung für die Gruppenchefs freischalten?":"Tischeinteilung wieder sperren?"))return;rpc("admin_set_setting",{p_code:S.code,p_key:"seats_visible",p_value:on}).then(()=>{S.seatsVisible=on;toast(on?"Tischeinteilung freigeschaltet":"Tischeinteilung gesperrt");render()}).catch(e=>toast(e.message))};
-A.vapero=()=>{const on=!S.vorabMe.apero;rpc("set_apero",{p_code:S.code,p_on:on}).then(()=>{S.vorabMe.apero=on;toast(on?"Für den Apéro angemeldet":"Vom Apéro abgemeldet");if(S.chefGrp)rpc("my_group_members",{p_code:S.code}).then(m=>{if(m)S.chefMembers=m;render()}).catch(()=>{});render()}).catch(e=>toast(e.message))};
+A.vapero=()=>{const m=vMe();if(!m)return;const on=!m.apero;rpc("set_apero",{p_code:S.code,p_on:on}).then(()=>{S.vorabMe={...m,apero:on};toast(on?"Für den Apéro angemeldet":"Vom Apéro abgemeldet");if(S.chefGrp)rpc("my_group_members",{p_code:S.code}).then(m=>{if(m)S.chefMembers=m;render()}).catch(()=>{});render()}).catch(e=>toast(e.message))};
+A.grpchg=d=>{const p=P(d.p);if(!p)return;const i=$("#gcp");if(i){i.value=p.name+" "+p.vorname;const g=$("#gcg");g.value="";g.focus();i.scrollIntoView({behavior:"smooth",block:"center"})}};
+A.grpsave=()=>{const pv=$("#gcp").value.trim().toLowerCase(),gn=$("#gcg").value.trim(),clr=$("#gcs").checked;
+  const p=S.people.find(x=>(x.name+" "+x.vorname).toLowerCase()===pv)||S.people.find(x=>(x.vorname+" "+x.name).toLowerCase()===pv);
+  if(!p)return toast("Person nicht gefunden – bitte aus der Liste wählen");if(!gn)return toast("Bitte die neue Tischgemeinschaft angeben");
+  const og=G(p.gruppe);if(og&&og.name.toLowerCase()===gn.toLowerCase())return toast("Ist bereits in dieser Gruppe");
+  if(!confirm(`${p.vorname} ${p.name}: ${og?og.name:"ohne Gruppe"} → ${gn}?${clr?"\nTisch und Platz werden freigegeben.":""}`))return;
+  if(LIVE){call("admin_set_group",{p_person:p.id,p_group:gn,p_clear_seat:clr},`${p.vorname} ${p.name} → ${gn}`).catch(()=>{});return}
+  let g=S.groups.find(x=>x.name.toLowerCase()===gn.toLowerCase());if(!g){g={id:uid(),name:gn,guest:false,chef:null,apero:null};S.groups.push(g)}
+  if(og&&og.chef===p.id)og.chef=null;p.gruppe=g.id;if(clr){p.tisch=null;p.platz=null}render();toast(`${p.vorname} ${p.name} → ${g.name}`)};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
