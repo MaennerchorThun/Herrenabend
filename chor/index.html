@@ -266,6 +266,21 @@ a.sp{color:inherit;text-decoration:none}a.sp:hover .grow,a.card.link:hover b{col
 .chooser button:hover{border-color:var(--brand)}.chooser .ic{font-size:34px}.chooser b{display:block;font-size:18px}.chooser .small{display:block}
 @media print{.card.fn{padding:8px 12px;margin-bottom:8px}.top,.tabs,.noprint,.toast{display:none!important}main{padding:0}.card{box-shadow:none;break-inside:avoid}body{background:#fff}}
 .fotohead{border-radius:16px;overflow:hidden;margin:0 0 14px;aspect-ratio:16/7;background:var(--surface2)}.fotohead img{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block}
+.ahnen{position:relative;padding:4px 0}.ahnen:before{content:"";position:absolute;left:96px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.ah{display:grid;grid-template-columns:84px 24px 1fr;align-items:start;padding:8px 0}.ahy{text-align:right;font-weight:700;font-size:15px;line-height:1.2}.ahy span{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.ahdot{width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);margin:4px auto 0;position:relative;z-index:1}.ah.cur .ahdot{background:var(--brand)}
+.ahn b{display:block;font-size:15px}.ahn span{font-size:12.5px;color:var(--muted)}.ah.cur .ahn b{color:var(--brand)}
+#printroot{display:none}
+@media print{@page{size:A4;margin:12mm 12mm 14mm}
+  body>*:not(#printroot){display:none!important}body{background:#fff;color:#000;font-size:10.5pt}
+  #printroot{display:block}#printroot table.pr{width:100%;border-collapse:collapse}#printroot table.pr>thead>tr>td,#printroot table.pr>tbody>tr>td{padding:0}
+  .prhead{display:flex;align-items:center;gap:12px;border-bottom:1.5pt solid #de1034;padding:0 0 6px;margin:0 0 10px}.prhead img{height:34px}
+  .prhead .prt{flex:1}.prhead b{display:block;font-size:12pt}.prhead span{font-size:9pt;color:#555}.prhead .prd{font-size:8.5pt;color:#555;text-align:right}
+  #printroot .noprint,#printroot button,#printroot .btn,#printroot input,#printroot select,#printroot .filter,#printroot audio,#printroot video{display:none!important}
+  #printroot .card{box-shadow:none;border:0.6pt solid #ccc;break-inside:avoid;padding:8px 10px;margin:0 0 8px}#printroot .card.soft{background:#f6f3f0}
+  #printroot h1{font-size:16pt;margin:0 0 4px}#printroot h2{font-size:12.5pt}#printroot h3{font-size:11pt}#printroot .sec-h{margin:10px 0 4px}
+  #printroot .li{padding:4px 0}#printroot .av{width:24px;height:24px;font-size:9pt}#printroot .t td,#printroot .t th{padding:3px 6px}
+  #printroot .fotohead,#printroot .hero{display:none}}
 </style>
 </head>
 <body>
@@ -537,7 +552,7 @@ function vAbwesenheit(){const mine=(S.absences||[]).filter(a=>a.person_id===S.me
 
 /* ---------- Probenblatt ---------- */
 function vBlatt(id){
-  let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="termin/${id}">← Termin</button><button class="btn sm primary" data-act="print">🖨 Drucken / PDF</button></div><div id="blatt"><p class="muted">Probenblatt wird erstellt …</p></div>`;
+  let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="termin/${id}">← Termin</button><button class="btn sm primary" data-act="print">🖨 PDF / Drucken</button></div><div id="blatt"><p class="muted">Probenblatt wird erstellt …</p></div>`;
   setTimeout(()=>loadBlatt(id),0);return h}
 async function loadBlatt(id){const el=$("#blatt");if(!el)return;let b;
   try{b=await rpc("chor_probenblatt",{p_code:S.code,p_event:id})}catch(e){el.innerHTML=`<p class="muted">${esc(e.message)}</p>`;return}
@@ -570,7 +585,7 @@ const EHR_REGELN=[
   {k:"bkgv",t:"Ehrenveteran BKGV",regel:"mind. 40 Jahre Aktivmitglied in einem Chor der CVS",hat:e=>/Kant\.? Ehrenveteran|BKGV/.test(e),fällig:(x,y)=>x.jahre>=40,bald:(x,y)=>x.jahre>=38}];
 let ehrData=null;
 function vEhrungen(){if(!isV())return`<p class="muted">Nur für den Vorstand.</p>`;const y=S.ehrJahr||new Date().getFullYear();
-  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Ehrungen</h1>
+  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Ehrungen</h1>${PBTN}</div>
     <p class="muted small">Wer erfüllt im gewählten Jahr die Bedingungen für eine Veteranen-Ernennung? Grundlage: Eintritt (Mitglied seit), Probenzahl (Webling bzw. Access) und bereits erhaltene Ehrungen im Stammblatt. Jahre in anderen Chören der CVS sind nicht erfasst – bitte ergänzen bzw. prüfen.</p>
     <div class="row" style="margin-bottom:10px"><label class="small muted">Jahr</label><select class="input" style="width:auto" data-chg="ehrjahr">${[y-1,y,y+1,y+2].map(j=>`<option ${j===y?"selected":""}>${j}</option>`).join("")}</select></div><div id="ehr"><p class="muted small">wird berechnet …</p></div>`;
   setTimeout(loadEhr,0);return h}
@@ -609,18 +624,18 @@ function vMehr(){const t=(r,ic,l,d)=>`<button class="tile" data-act="go" data-r=
   return`<h1>Mehr</h1><div class="tiles">${t("stamm/"+S.me.id,"🪪","Mein Stammblatt","Daten & History")}${t("mitglieder","👥","Sänger","nach Stimmen")}${t("geburtstage","🎂","Geburtstage","mit Gratulation")}${t("statistik","📊","Präsenz","Statistik")}${t("kalender","📅","Kalender-Abo","Outlook, iPhone, Google")}${t("umfragen","🗳️","Umfragen",(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length?"offen: "+(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length:"abstimmen")}${t("abwesenheit","🤒","Krank & abwesend","melden")}<button class="tile" data-act="toha"><span class="ic">🎩</span><b>Herrenabend-App</b><span>195. Herrenabend</span></button>${t("vorstand","🏛️","Vorstand & Chargen","Funktionen & History")}${isV()?t("ehrungen","🏅","Ehrungen","Veteranen-Ernennungen"):""}${isV()?t("verwaltung","⚙️","Verwaltung","Mitglieder & Import"):""}</div>
   <div class="card soft small" style="margin-top:14px">Angemeldet als <b>${esc(full(S.me))}</b>${isV()?" (Vorstand)":""}. <a href="#" data-act="logout">Abmelden</a></div>`}
 function vMitglieder(){const act=S.members.filter(m=>m.aktiv);
-  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Sänger</h1><p class="muted">${act.length} aktive Sänger</p>`;
+  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Sänger</h1>${PBTN}</div><p class="muted">${act.length} aktive Sänger</p>`;
   for(const st of["Chorleitung",...STIMMEN,null]){const ms=act.filter(m=>st?m.stimme===st:!STIMMEN.includes(m.stimme)&&m.stimme!=="Chorleitung");if(!ms.length)continue;
     h+=`<div class="card"><h3>${st||"Ohne Stimme"} (${ms.length})</h3><div class="list">${ms.map(m=>`<${isV()||m.id===S.me.id?`button class="li" data-act="go" data-r="stamm/${m.id}"`:'div class="li" style="cursor:default"'}><div class="av ${m.rolle==="vorstand"?"c":""}">${ini(m)}</div><div class="grow"><div class="nm">${esc(m.name)} ${esc(m.vorname)}</div><div class="sub">${m.rolle==="vorstand"?"Vorstand · ":""}${m.geb?"🎂 "+Number(m.geb.slice(3))+"."+Number(m.geb.slice(0,2))+".":""}</div></div></${isV()||m.id===S.me.id?"button":"div"}>`).join("")}</div></div>`}
   h+=`<button class="btn" data-act="go" data-r="ehemalige" style="width:100%;margin-top:4px">Ehemalige Sänger ›</button>`;
   return h}
 let ehemData=null;
-function vEhemalige(){setTimeout(loadEhem,0);return`<button class="btn ghost sm" data-act="go" data-r="mitglieder" style="margin-bottom:10px">← Sänger</button><h1>Ehemalige Sänger</h1><p class="muted small">Frühere aktive Sänger des Männerchors Thun.</p><input id="ehq" class="input" placeholder="Name suchen …" style="margin-bottom:8px"><div id="ehem"><p class="muted small">wird geladen …</p></div>`}
+function vEhemalige(){setTimeout(loadEhem,0);return`<button class="btn ghost sm" data-act="go" data-r="mitglieder" style="margin-bottom:10px">← Sänger</button><div class="row between"><h1 style="margin:0">Ehemalige Sänger</h1>${PBTN}</div><p class="muted small">Frühere aktive Sänger des Männerchors Thun.</p><input id="ehq" class="input" placeholder="Name suchen …" style="margin-bottom:8px"><div id="ehem"><p class="muted small">wird geladen …</p></div>`}
 async function loadEhem(){const el=$("#ehem");if(!el)return;try{ehemData=ehemData||await rpc("chor_ehemalige",{p_code:S.code})}catch(e){el.innerHTML=`<p class="muted">${esc(e.message)}</p>`;return}renderEhem()}
 function renderEhem(){const el=$("#ehem");if(!el||!ehemData)return;const q=($("#ehq")?.value||"").toLowerCase().trim(),xs=ehemData.filter(x=>!q||(x.vorname+" "+x.name+" "+x.name).toLowerCase().includes(q));
   el.innerHTML=`<p class="small muted" style="margin:0 0 6px">${xs.length} Personen</p><div class="card"><div class="list">${xs.map(x=>`<${isV()?`button class="li" data-act="go" data-r="stamm/${x.id}"`:'div class="li" style="cursor:default"'}><div class="av">${ini(x)}</div><div class="grow"><div class="nm">${esc(x.name)} ${esc(x.vorname)}</div><div class="sub">${x.von?`aktiv ab ${x.von}`:""}${x.bis?` bis ${x.bis}`:""}${x.jahre?` · ${esc(x.jahre)} aktive Jahre`:""}${x.ehrungen?` · ${esc(x.ehrungen)}`:""}</div></div></${isV()?"button":"div"}>`).join("")||`<p class="muted small">Niemand gefunden.</p>`}</div></div>`}
 function vGeburtstage(){const bd=bdays();
-  return`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Geburtstage</h1><p class="muted">Nur Tag und Monat sind für alle sichtbar.</p><div class="card"><div class="list">${bd.map(bdayRow).join("")||`<p class="muted">Noch keine Geburtstage erfasst.</p>`}</div></div>`}
+  return`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Geburtstage</h1>${PBTN}</div><p class="muted">Nur Tag und Monat sind für alle sichtbar.</p><div class="card"><div class="list">${bd.map(bdayRow).join("")||`<p class="muted">Noch keine Geburtstage erfasst.</p>`}</div></div>`}
 let stammCache=null;
 function vStamm(id){
   let h=`<button class="btn ghost sm" data-act="go" data-r="${id===S.me.id?"mehr":"mitglieder"}" style="margin-bottom:10px">← Zurück</button><div id="stamm"><p class="muted">Stammblatt wird geladen …</p></div>`;
@@ -631,16 +646,42 @@ async function loadStamm(id){const el=$("#stamm");if(!el)return;
   const row=(l,v)=>v?`<div class="row between" style="padding:5px 0;border-bottom:1px dashed var(--line)"><span class="muted small">${l}</span><span style="text-align:right">${v}</span></div>`:"";
   const age=s.geburtsdatum?Math.floor((Date.now()-D(s.geburtsdatum))/31557600000):null,yrs=s.eintritt?Math.floor(((s.austritt?D(s.austritt):Date.now())-D(s.eintritt))/31557600000):null;
   const ex=s.extra||{};
-  el.innerHTML=`<p class="eyebrow">Stammblatt</p><h1>${esc(full(p))}</h1><div class="chips" style="margin-bottom:10px">${s.stimme?`<span class="chip b">${esc(s.stimme)}</span>`:""}${s.rolle==="vorstand"?`<span class="chip y">Vorstand</span>`:""}${s.ehemalig?`<span class="chip w">ehemaliger Sänger</span>`:s.aktiv===false?`<span class="chip w">nicht mehr aktiv</span>`:""}</div>
+  el.innerHTML=`<div class="row between"><p class="eyebrow" style="margin:0">Stammblatt</p>${PBTN}</div><h1>${esc(full(p))}</h1><div class="chips" style="margin-bottom:10px">${s.stimme?`<span class="chip b">${esc(s.stimme)}</span>`:""}${s.rolle==="vorstand"?`<span class="chip y">Vorstand</span>`:""}${s.ehemalig?`<span class="chip w">ehemaliger Sänger</span>`:s.aktiv===false?`<span class="chip w">nicht mehr aktiv</span>`:""}</div>
     <div class="card">${row("Geburtsdatum",s.geburtsdatum?fDateY(s.geburtsdatum)+(age?` (${age})`:""):"")}${row("Eintritt",s.eintritt?fDateY(s.eintritt)+(yrs!=null?` · ${yrs} Jahre`:""):"")}${row("Austritt",s.austritt?fDateY(s.austritt):"")}
       ${row("Adresse",[s.strasse,[s.plz,s.ort].filter(Boolean).join(" ")].filter(Boolean).map(esc).join("<br>"))}${row("Telefon",s.telefon?`<a href="tel:${esc(s.telefon)}">${esc(s.telefon)}</a>`:"")}${row("E-Mail",s.email?`<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`:"")}${row("Beruf",esc(s.beruf))}${row("Ehrungen",esc(s.ehrungen))}
-      ${Object.entries(ex).filter(([k,v])=>v!==""&&v!=null).map(([k,v])=>row(esc(k),esc(v))).join("")}
+      ${Object.entries(ex).filter(([k,v])=>v!==""&&v!=null&&!/^anzahl proben \d{4}$/i.test(k)).map(([k,v])=>row(esc(k),esc(v))).join("")}
       ${s.notizen?`<p class="small" style="margin:10px 0 0;white-space:pre-wrap">${esc(s.notizen)}</p>`:""}
       ${!s.person_id?`<p class="muted small">Noch keine Stammdaten erfasst.</p>`:""}
       <div class="row" style="margin-top:10px"><button class="btn sm" data-act="stedit" data-id="${p.id}">${isV()?"Bearbeiten":"Kontaktdaten ändern"}</button></div></div>
-    ${brd.length?`<div class="sec-h"><h2>Vereinsfunktionen</h2></div><div class="card">${brd.map(b=>row(esc(b.funktion)+(b.gremium==="charge"?` <span class="muted">(Charge)</span>`:""),`${b.von}–${b.bis||"heute"}`)).join("")}</div>`:""}
-    <div class="sec-h"><h2>History</h2>${isV()?`<button class="btn sm" data-act="hnew" data-id="${p.id}">+ Eintrag</button>`:""}</div>
-    <div class="card"><div class="tl">${hist.map(x=>`<div class="tl-item"><div class="tm">${x.jahr||(x.datum?D(x.datum).getFullYear():"")}</div><div><div class="ttl small">${esc(x.art)}</div><div class="who">${esc(x.text)}${x.datum?` · ${fDateY(x.datum)}`:""}${isV()?` · <a href="#" data-act="hdel" data-id="${x.id}">löschen</a>`:""}</div></div></div>`).join("")||`<p class="muted small">Noch keine Einträge.</p>`}</div></div>`}
+    ${stammSections(p,s,hist,brd)}`}
+/* Stammblatt: History in Abschnitten – Proben pro Jahr (mit Grafik), Vorstand, Chargen, Ehrungen, weitere Einträge */
+function probenJahre(ex,app){const m=new Map();
+  for(const[k,v]of Object.entries(ex||{})){const y=(k.match(/^anzahl proben (\d{4})$/i)||[])[1];const n=parseInt(v);if(y&&!isNaN(n))m.set(+y,{jahr:+y,da:n,total:null,quelle:"Webling"})}
+  for(const a of app||[])if(a.total>0&&(!m.has(a.jahr)||a.da>0))m.set(a.jahr,{jahr:a.jahr,da:a.da,total:a.total,quelle:"Chor-App"});
+  return[...m.values()].sort((a,b)=>b.jahr-a.jahr)}
+function probenChart(rows){if(!rows.length)return"";const rs=[...rows].sort((a,b)=>a.jahr-b.jahr),max=Math.max(...rs.map(r=>Math.max(r.da,r.total||0)),1),W=Math.max(rs.length*56,220),H=110,T=18,bw=28;
+  return`<svg viewBox="0 0 ${W} ${H+T+24}" style="width:100%;max-width:${Math.max(W,320)}px;height:auto;display:block;margin:6px auto 4px" role="img" aria-label="Proben pro Jahr">
+    ${rs.map((r,i)=>{const x=i*56+14,h=Math.round(r.da/max*H),ht=r.total?Math.round(r.total/max*H):0;
+      return`${ht?`<rect x="${x}" y="${T+H-ht}" width="${bw}" height="${ht}" rx="3" fill="var(--surface2)" stroke="var(--line)"/>`:""}<rect x="${x}" y="${T+H-h}" width="${bw}" height="${h}" rx="3" fill="var(--brand)"/>
+      <text x="${x+bw/2}" y="${T+H-Math.max(h,ht)-5}" text-anchor="middle" font-size="11" fill="var(--text)" font-weight="700">${r.da}${r.total?`<tspan font-weight="400" fill="var(--muted)">/${r.total}</tspan>`:""}</text>
+      <text x="${x+bw/2}" y="${T+H+16}" text-anchor="middle" font-size="11" fill="var(--muted)">${r.jahr}</text>`}).join("")}</svg>
+    <p class="small muted" style="margin:0 0 6px;text-align:center"><span style="color:var(--brand)">■</span> besuchte Proben${rows.some(r=>r.total)?` · <span style="color:var(--line)">■</span> Proben gesamt`:""}</p>`}
+function stammSections(p,s,hist,brd){const ex=s.extra||{},pj=probenJahre(ex,stammCache.proben);
+  const tot=Math.max(parseInt(ex["Anzahl Proben kumuliert"])||0,parseInt(ex["Proben gesamt"])||0);
+  const yr=x=>x.jahr||(x.datum?D(x.datum).getFullYear():"");
+  const tbl=(head,rows)=>`<table class="t"><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr>${rows.join("")}</table>`;
+  const del=x=>isV()?` <a href="#" class="noprint small" data-act="hdel" data-id="${x.id}">löschen</a>`:"";
+  const fun=g=>brd.filter(b=>(b.gremium||"vorstand")===g).sort((a,b)=>b.von-a.von);
+  const ehr=hist.filter(x=>x.art==="Ehrung").sort((a,b)=>(yr(b)||0)-(yr(a)||0));
+  const rest=hist.filter(x=>x.art!=="Ehrung"&&x.art!=="Mutation"),mut=hist.filter(x=>x.art==="Mutation");
+  let h=`<div class="sec-h"><h2>Proben pro Jahr</h2></div><div class="card">${pj.length?probenChart(pj)+tbl(["Jahr","Proben","Quelle"],pj.map(r=>`<tr><td>${r.jahr}</td><td><b>${r.da}</b>${r.total?` <span class="muted">von ${r.total}</span>`:""}</td><td class="small muted">${r.quelle}</td></tr>`)):`<p class="muted small" style="margin:0">Noch keine Probenzahlen pro Jahr.</p>`}
+    ${tot?`<p class="small" style="margin:8px 0 0"><b>Proben total: ${tot}</b> <span class="muted">(gemäss Webling/Access)</span></p>`:""}</div>`;
+  h+=`<div class="sec-h"><h2>Vorstandsfunktionen</h2></div><div class="card">${fun("vorstand").length?tbl(["Jahre","Funktion"],fun("vorstand").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
+  h+=`<div class="sec-h"><h2>Chargen</h2></div><div class="card">${fun("charge").length?tbl(["Jahre","Charge"],fun("charge").map(b=>`<tr><td style="white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td>${esc(b.funktion)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}</div>`;
+  h+=`<div class="sec-h"><h2>Ehrungen</h2>${isV()?`<button class="btn sm noprint" data-act="hnew" data-id="${p.id}">+ Eintrag</button>`:""}</div><div class="card">${ehr.length?tbl(["Jahr","Ehrung"],ehr.map(x=>`<tr><td>${yr(x)||"–"}</td><td>${esc(x.text)}${del(x)}</td></tr>`)):`<p class="muted small" style="margin:0">${s.ehrungen?esc(s.ehrungen):"–"}</p>`}</div>`;
+  h+=`<div class="sec-h"><h2>Weitere Einträge</h2></div><div class="card">${rest.length?tbl(["Jahr","Art","Eintrag"],rest.sort((a,b)=>(yr(b)||0)-(yr(a)||0)).map(x=>`<tr><td>${yr(x)||"–"}</td><td class="small">${esc(x.art)}</td><td>${esc(x.text)}${x.datum?` <span class="muted small">${fDateY(x.datum)}</span>`:""}${del(x)}</td></tr>`)):`<p class="muted small" style="margin:0">–</p>`}
+    ${mut.length?`<details class="noprint" style="margin-top:8px"><summary class="small" style="cursor:pointer">Änderungsprotokoll (${mut.length})</summary>${tbl(["Datum","Änderung"],mut.map(x=>`<tr><td class="small">${x.datum?fDateY(x.datum):yr(x)}</td><td class="small">${esc(x.text)}</td></tr>`))}</details>`:""}</div>`;
+  return h}
 function stForm(id){const s=(stammCache&&stammCache.stamm)||{},v=isV();
   const f=(k,l,t="text")=>`<label class="small muted">${l}</label><input id="st_${k}" class="input" type="${t}" value="${esc(s[k]||"")}">`;
   modal(`<h2>Stammblatt ${v?"bearbeiten":"– Kontaktdaten"}</h2><div style="display:grid;gap:6px">
@@ -652,12 +693,26 @@ function stForm(id){const s=(stammCache&&stammCache.stamm)||{},v=isV();
 const GREMIEN={vorstand:"Vorstand",charge:"Chargen"};
 const CHARGEN=["Vizechorleiter","Herrenabendkassier","Fähnrich","Vize-Fähnrich","Archivar","Webmaster","Bibliothekar MUKO","Bibliothekar MUKO Stv.","Obmann Ernennungsausschuss","Ernennungsausschuss","Turmwart Chutziturm","Chutziturmkommission","Stimmenchef","Revisor"];
 function vFunktionen(){const ORD=[...FUNKTIONEN,...CHARGEN].map(x=>x.toLowerCase()),rank=f=>{const i=ORD.indexOf(f.toLowerCase());return i<0?999:i};
-  let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="vorstand">← Vorstand & Chargen</button><button class="btn sm primary" data-act="print">🖨 Drucken / PDF</button></div>
+  let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="vorstand">← Vorstand & Chargen</button><button class="btn sm primary" data-act="print">🖨 PDF / Drucken</button></div>
     <p class="eyebrow">Männerchor Thun</p><h1>Vorstand und Chargen nach Funktion</h1><p class="muted small">Pro Funktion alle Amtsträger, neueste zuerst. Stand ${new Date().toLocaleDateString("de-CH")}.</p>`;
   for(const[g,l]of Object.entries(GREMIEN)){const bs=S.board.filter(b=>(b.gremium||"vorstand")===g);if(!bs.length)continue;
     const fs=[...new Set(bs.map(b=>b.funktion))].sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
-    h+=`<div class="sec-h"><h2>${l}</h2></div>`+fs.map(f=>`<div class="card fn"><h3 style="margin:0 0 6px">${esc(f)}</h3><table class="t">${bs.filter(b=>b.funktion===f).sort((a,b)=>(b.von-a.von)||((b.bis||9999)-(a.bis||9999))).map(b=>`<tr><td style="width:110px;white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td><b>${esc(b.name||"")}</b>${!b.bis?` <span class="chip g">aktuell</span>`:""}</td></tr>`).join("")}</table></div>`).join("")}
+    h+=`<div class="sec-h"><h2>${l}</h2></div>`+fs.map(f=>`<div class="card fn"><div class="row between"><h3 style="margin:0 0 6px">${esc(f)}</h3><a href="#/ahnen/${encodeURIComponent(f)}" class="small noprint">Ahnengalerie ›</a></div><table class="t">${bs.filter(b=>b.funktion===f).sort((a,b)=>(b.von-a.von)||((b.bis||9999)-(a.bis||9999))).map(b=>`<tr><td style="width:110px;white-space:nowrap">${b.von}–${b.bis||"heute"}</td><td><b>${esc(b.name||"")}</b>${!b.bis?` <span class="chip g">aktuell</span>`:""}</td></tr>`).join("")}</table></div>`).join("")}
   if(!S.board.length)h+=`<p class="muted">Noch keine Funktionen erfasst.</p>`;
+  return h}
+/* Ahnengalerie pro Funktion (ohne Bilder) */
+const kpiBox=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
+function vAhnen(f){f=decodeURIComponent(f||"");const all=[...new Set(S.board.map(b=>b.funktion))].sort((a,b)=>a.localeCompare(b)),y=new Date().getFullYear();
+  const bs=S.board.filter(b=>b.funktion===f).sort((a,b)=>(b.von-a.von)||((b.bis||9999)-(a.bis||9999)));
+  const dauer=b=>((b.bis||y)-b.von)+(b.bis?1:0),fmt=n=>n<=1?"1 Jahr":n+" Jahre";
+  let h=`<div class="noprint row between" style="margin-bottom:10px"><button class="btn ghost sm" data-act="go" data-r="funktionen">← Nach Funktion</button>${PBTN}</div>
+    <p class="eyebrow">Ahnengalerie</p><h1>${esc(f)||"Funktion wählen"}</h1>
+    <select class="input noprint" data-chg="ahnen" style="margin-bottom:12px"><option value="">Funktion wählen …</option>${all.map(x=>`<option ${x===f?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
+  if(!bs.length)return h+`<p class="muted">Keine Einträge.</p>`;
+  const longest=bs.reduce((a,b)=>dauer(b)>dauer(a)?b:a,bs[0]),first=bs[bs.length-1];
+  h+=`<div class="kpis">${kpiBox(bs.length,"Amtsträger")}${kpiBox(first.von,"erfasst seit")}${kpiBox(fmt(dauer(longest)),"längste Amtszeit")}</div>
+    <div class="card"><div class="ahnen">${bs.map((b,i)=>`<div class="ah ${!b.bis?"cur":""}"><div class="ahy">${b.von}<span>${b.bis?(b.bis===b.von?"":"– "+b.bis):"– heute"}</span></div><div class="ahdot"></div><div class="ahn"><b>${esc(b.name||"")}</b><span>${fmt(dauer(b))}${!b.bis?" · im Amt":""}${(b.gremium||"vorstand")==="charge"?" · Charge":""}</span></div></div>`).join("")}</div></div>
+    <p class="small muted">Erfasst sind die in der Chor-App eingetragenen Amtszeiten. Frühere Amtsträger ergänzt der Vorstand unter «Vorstand & Chargen».</p>`;
   return h}
 function vVorstand(){const y=new Date().getFullYear(),g=S.gTab||"vorstand",bs=S.board.filter(b=>(b.gremium||"vorstand")===g),cur=bs.filter(b=>!b.bis||b.bis>=y),old=bs.filter(b=>b.bis&&b.bis<y);
   const line=b=>`<div class="li" style="cursor:default"><div class="grow"><div class="nm">${esc(b.funktion)}</div><div class="sub">${esc(b.name||"")} · ${b.von}–${b.bis||"heute"}</div></div>${isV()?`<button class="btn sm ghost" data-act="bedit" data-id="${b.id}">Bearbeiten</button>`:""}</div>`;
@@ -696,7 +751,7 @@ function bBulk(){const y=new Date().getFullYear();modal(`<h2>Liste einfügen</h2
   <div class="row" style="margin-top:12px"><button class="btn" data-act="bkprev">Vorschau</button><button class="btn primary" data-act="bksave">Speichern</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`)}
 let statData=null;
 function vStatistik(){const y=new Date().getFullYear();
-  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><h1>Präsenz-Statistik</h1>
+  let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Präsenz-Statistik</h1>${PBTN}</div>
     <div class="row" style="margin-bottom:10px"><select class="input" style="width:auto" data-chg="sjahr">${[y,y-1,y-2,y-3].map(j=>`<option ${S.statJahr===j?"selected":""}>${j}</option>`).join("")}</select>
     <select class="input" style="width:auto" data-chg="styp"><option value="">alle Termine</option>${Object.entries(TYP).map(([k,v])=>`<option value="${k}" ${S.statTyp===k?"selected":""}>${v.l}</option>`).join("")}</select></div>
     <div id="stat"><p class="muted">wird geladen …</p></div>`;
@@ -802,7 +857,7 @@ async function doImport(txt){const b=buildImport(txt);if(b.err)return toast(b.er
 /* ---------- Navigation ---------- */
 const ICONS={start:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',termine:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',chat:'<path d="M4 5h16v11H8l-4 4z"/>',material:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',mehr:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'};
 const TABS=[["start","Start"],["termine","Termine"],["chat","Chat"],["material","Noten"],["mehr","Mehr"]];
-function renderTabs(){const r=route()[0],cur={termin:"termine",mitglieder:"mehr",ehemalige:"mehr",funktionen:"mehr",kalender:"mehr",ehrungen:"mehr",umfragen:"mehr",abwesenheit:"mehr",blatt:"termine",geburtstage:"mehr",stamm:"mehr",vorstand:"mehr",statistik:"mehr",verwaltung:"mehr"}[r]||r;
+function renderTabs(){const r=route()[0],cur={termin:"termine",mitglieder:"mehr",ehemalige:"mehr",funktionen:"mehr",ahnen:"mehr",kalender:"mehr",ehrungen:"mehr",umfragen:"mehr",abwesenheit:"mehr",blatt:"termine",geburtstage:"mehr",stamm:"mehr",vorstand:"mehr",statistik:"mehr",verwaltung:"mehr"}[r]||r;
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="${cur===k?"on":""}" data-act="go" data-r="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>${l}${k==="chat"&&S.unread?`<span class="badge">${S.unread}</span>`:""}</button>`).join("")}
 const route=()=>(location.hash.replace(/^#\/?/,"")||"start").split("/");
 function go(r){location.hash="#/"+r}
@@ -813,7 +868,7 @@ function vChooser(){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="choo
 function render(){if(!S.me){vLogin();return}
   let picked=false;try{picked=sessionStorage.getItem("chor_pick")==="1"}catch(e){picked=true}
   if(!picked&&store.get("chor_nopick")!=="1"&&!location.hash.replace(/^#\/?/,"")){vChooser();return}
-  const[r,id]=route();const V={start:vStart,termine:vTermine,termin:()=>vTermin(id),chat:vChat,material:vMaterial,mehr:vMehr,mitglieder:vMitglieder,geburtstage:vGeburtstage,stamm:()=>vStamm(id||S.me.id),ehemalige:vEhemalige,funktionen:vFunktionen,kalender:vKalender,ehrungen:vEhrungen,umfragen:vUmfragen,abwesenheit:vAbwesenheit,blatt:()=>vBlatt(id),vorstand:vVorstand,statistik:vStatistik,verwaltung:vVerwaltung}[r]||vStart;
+  const[r,id]=route();const V={start:vStart,termine:vTermine,termin:()=>vTermin(id),chat:vChat,material:vMaterial,mehr:vMehr,mitglieder:vMitglieder,geburtstage:vGeburtstage,stamm:()=>vStamm(id||S.me.id),ehemalige:vEhemalige,funktionen:vFunktionen,ahnen:()=>vAhnen(location.hash.split("/").slice(2).join("/")),kalender:vKalender,ehrungen:vEhrungen,umfragen:vUmfragen,abwesenheit:vAbwesenheit,blatt:()=>vBlatt(id),vorstand:vVorstand,statistik:vStatistik,verwaltung:vVerwaltung}[r]||vStart;
   $("#app").innerHTML=V();$("#tabs").hidden=false;renderTabs()}
 function vLogin(msg){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="fotohead" style="max-width:420px;margin:20px auto 0"><img src="${CHORFOTO}" alt="Männerchor Thun am Konzert"></div><div class="card" style="max-width:420px;margin:12px auto 40px;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:70px"><h1 style="margin:12px 0 4px">Chor-App</h1><p class="muted">Für die aktiven Sänger des Männerchors Thun</p>
   ${msg?`<div class="note" style="text-align:left">${esc(msg)}</div>`:""}<input id="code" class="input" placeholder="Persönlicher Code" autocapitalize="characters" autocomplete="off" style="text-align:center;font-size:18px;letter-spacing:2px;margin:10px 0"><button class="btn primary" data-act="login" style="width:100%">Anmelden</button>
@@ -828,9 +883,18 @@ let pollT=null;function startPoll(){clearInterval(pollT);pollT=setInterval(async
     if(r==="chat"){const ta=$("#msg"),v=ta?ta.value:"";render();if($("#msg"))$("#msg").value=v}else{S.unread+=add.filter(p=>p.person_id!==S.me.id).length;renderTabs()}}}catch(e){}},15000)}
 
 /* ---------- Aktionen ---------- */
+/* ===== Druck/PDF: einheitliches Layout mit Logo und «Männerchor Thun 1829» auf jeder Seite ===== */
+function printDoc(){const app=$("#app");if(!app)return;const h1=app.querySelector("h1"),title=h1?h1.textContent.trim():"";
+  let root=$("#printroot");if(!root){root=document.createElement("div");root.id="printroot";document.body.appendChild(root)}
+  root.innerHTML=`<table class="pr"><thead><tr><td><div class="prhead"><img src="${LOGO}" alt=""><div class="prt"><b>Männerchor Thun 1829</b><span>${esc(title)}</span></div><div class="prd">${new Date().toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit",year:"numeric"})}<br>Chor-App</div></div></td></tr></thead><tbody><tr><td>${app.innerHTML}</td></tr></tbody></table>`;
+  root.querySelectorAll("details").forEach(d=>d.open=true);
+  const prevTitle=document.title;document.title=`MCT ${title||"Liste"} ${new Date().toISOString().slice(0,10)}`;
+  const done=()=>{document.title=prevTitle;window.removeEventListener("afterprint",done)};window.addEventListener("afterprint",done);
+  setTimeout(()=>window.print(),50)}
+const PBTN=`<button class="btn sm noprint" data-act="print" title="Als PDF speichern oder drucken">🖨 PDF / Drucken</button>`;
 const A={
   go:d=>{closeModal();go(d.r)},close:()=>closeModal(),
-  print:()=>window.print(),
+  print:()=>printDoc(),
   ernennen:async d=>{const y=S.ehrJahr||new Date().getFullYear(),x=ehrData.find(p=>p.id===d.id),txt=`${d.t} ${y}`;if(!confirm(`${x.vorname} ${x.name} zum «${d.t}» ${y} ernennen?\nDer Eintrag kommt ins Stammblatt und in die History.`))return;
     try{await rpc("chor_history_save",{p_code:S.code,p_id:null,p_person:x.id,p_jahr:y,p_datum:null,p_art:"Ehrung",p_text:txt});
       await rpc("chor_member_save",{p_code:S.code,p_person:x.id,p_data:{ehrungen:x.ehrungen?x.ehrungen+" · "+txt:txt}});ehrData=null;render();toast(`${x.vorname} ${x.name}: ${txt} eingetragen`)}catch(e){toast(e.message)}},
@@ -907,6 +971,7 @@ document.addEventListener("change",e=>{const el=e.target;
   if(el.id==="spfile"&&el.files[0]){const r=new FileReader();r.onload=()=>doSpImport(String(r.result));r.readAsText(el.files[0],"utf-8")}
   if(el.id==="impfile"&&el.files[0]){const f=el.files[0];if(/\.xlsx?$/i.test(f.name)){readXlsx(f).then(doImport).catch(e=>toast(e.message))}else{const r=new FileReader();r.onload=()=>doImport(String(r.result));r.readAsText(f,"utf-8")}}
   if(el.dataset.chg==="sjahr"){S.statJahr=+el.value;render()}
+  if(el.dataset.chg==="ahnen"&&el.value){go("ahnen/"+encodeURIComponent(el.value))}
   if(el.dataset.chg==="ehrjahr"){S.ehrJahr=+el.value;render()}
   if(el.dataset.chg==="styp"){S.statTyp=el.value;render()}
   if(el.dataset.chg==="setfor"){rpc("chor_set_attendance",{p_code:S.code,p_event:el.dataset.ev,p_status:el.value||null,p_grund:null,p_person:el.dataset.id}).then(async()=>{await load();toast("Gespeichert")}).catch(err=>toast(err.message))}
