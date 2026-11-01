@@ -303,7 +303,7 @@ const LOGO="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANAAAABpCAYAAABLYa3JAA
 /* ================= MCT Chor-App =================
    Für die aktiven Sänger des Männerchors Thun. Daten in Supabase (gleiche Datenbank wie die Herrenabend-App),
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code. Dateien im privaten Speicher «chor». */
-const APP_VERSION="1.0"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="1.1"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const FILES_FN=SUPA.url+"/functions/v1/chor-files";
 const TYP={probe:{l:"Probe",ic:"🎵"},auftritt:{l:"Auftritt",ic:"🎤"},anlass:{l:"Anlass",ic:"🍷"},ausflug:{l:"Ausflug",ic:"🚌"}};
@@ -887,7 +887,7 @@ function go(r){location.hash="#/"+r}
 function vChooser(){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="chooser"><img src="${LOGO}" alt="" style="height:60px;margin:0 auto"><h2 style="text-align:center;margin:0">Grüessech ${esc(S.me.vorname)}</h2><p class="muted" style="text-align:center;margin:0">Welche App möchtest du öffnen?</p>
   <button data-act="pick" data-a="chor"><span class="ic">🎵</span><span><b>Chor-App</b><span class="small muted">Proben, Termine, Noten, Chat</span></span></button>
   <button data-act="pick" data-a="ha"><span class="ic">🎩</span><span><b>Herrenabend-App</b><span class="small muted">195. Herrenabend, 12. Dezember 2026</span></span></button>
-  <label class="row small muted" style="justify-content:center"><input type="checkbox" id="nomore"> nicht mehr fragen (direkt zur Chor-App)</label></div>`}
+  <label class="row small muted" style="justify-content:center"><input type="checkbox" id="nomore"> nicht mehr fragen (direkt zur Chor-App)</label><p class="muted" style="text-align:center;font-size:12px;margin:10px 0 0">Chor-App Version ${APP_VERSION}</p></div>`}
 function render(){if(!S.me){vLogin();return}
   let picked=false;try{picked=sessionStorage.getItem("chor_pick")==="1"}catch(e){picked=true}
   if(!picked&&store.get("chor_nopick")!=="1"&&!location.hash.replace(/^#\/?/,"")){vChooser();return}
