@@ -303,6 +303,7 @@ const LOGO="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANAAAABpCAYAAABLYa3JAA
 /* ================= MCT Chor-App =================
    Für die aktiven Sänger des Männerchors Thun. Daten in Supabase (gleiche Datenbank wie die Herrenabend-App),
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code. Dateien im privaten Speicher «chor». */
+const APP_VERSION="1.0"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const FILES_FN=SUPA.url+"/functions/v1/chor-files";
 const TYP={probe:{l:"Probe",ic:"🎵"},auftritt:{l:"Auftritt",ic:"🎤"},anlass:{l:"Anlass",ic:"🍷"},ausflug:{l:"Ausflug",ic:"🚌"}};
@@ -624,7 +625,7 @@ async function loadIcs(neu){const el=$("#ics");if(!el)return;
       <li>Der Link ist persönlich – bitte nicht weitergeben. Falls doch: <a href="#" data-act="icsneu">neuen Link erzeugen</a> (der alte funktioniert dann nicht mehr).</li></ul></div>`}
 function vMehr(){const t=(r,ic,l,d)=>`<button class="tile" data-act="go" data-r="${r}"><span class="ic">${ic}</span><b>${l}</b><span>${d}</span></button>`;
   return`<h1>Mehr</h1><div class="tiles">${t("stamm/"+S.me.id,"🪪","Mein Stammblatt","Daten & History")}${t("mitglieder","👥","Sänger","nach Stimmen")}${t("geburtstage","🎂","Geburtstage","mit Gratulation")}${t("statistik","📊","Präsenz","Statistik")}${t("kalender","📅","Kalender-Abo","Outlook, iPhone, Google")}${t("umfragen","🗳️","Umfragen",(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length?"offen: "+(S.polls||[]).filter(p=>pollOpen(p)&&!(p.mine&&p.mine.length)).length:"abstimmen")}${t("abwesenheit","🤒","Krank & abwesend","melden")}<button class="tile" data-act="toha"><span class="ic">🎩</span><b>Herrenabend-App</b><span>195. Herrenabend</span></button>${t("vorstand","🏛️","Vorstand & Chargen","Funktionen & History")}${isV()?t("ehrungen","🏅","Ehrungen","Veteranen-Ernennungen"):""}${isV()?t("verwaltung","⚙️","Verwaltung","Mitglieder & Import"):""}</div>
-  <div class="card soft small" style="margin-top:14px">Angemeldet als <b>${esc(full(S.me))}</b>${isV()?" (Vorstand)":""}. <a href="#" data-act="logout">Abmelden</a></div>`}
+  <div class="card soft small" style="margin-top:14px">Angemeldet als <b>${esc(full(S.me))}</b>${isV()?" (Vorstand)":""}. <a href="#" data-act="logout">Abmelden</a><br><span class="muted">Chor-App Version ${APP_VERSION}</span></div>`}
 function vMitglieder(){const act=S.members.filter(m=>m.aktiv);
   let h=`<button class="btn ghost sm" data-act="go" data-r="mehr" style="margin-bottom:10px">← Mehr</button><div class="row between"><h1 style="margin:0">Sänger</h1>${PBTN}</div><p class="muted">${act.length} aktive Sänger</p>`;
   for(const st of["Chorleitung",...STIMMEN,null]){const ms=act.filter(m=>st?m.stimme===st:!STIMMEN.includes(m.stimme)&&m.stimme!=="Chorleitung");if(!ms.length)continue;
@@ -894,7 +895,7 @@ function render(){if(!S.me){vLogin();return}
   $("#app").innerHTML=V();$("#tabs").hidden=false;renderTabs()}
 function vLogin(msg){$("#tabs").hidden=true;$("#app").innerHTML=`<div class="fotohead" style="max-width:420px;margin:20px auto 0"><img src="${CHORFOTO}" alt="Männerchor Thun am Konzert"></div><div class="card" style="max-width:420px;margin:12px auto 40px;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:70px"><h1 style="margin:12px 0 4px">Chor-App</h1><p class="muted">Für die aktiven Sänger des Männerchors Thun</p>
   ${msg?`<div class="note" style="text-align:left">${esc(msg)}</div>`:""}<input id="code" class="input" placeholder="Persönlicher Code" autocapitalize="characters" autocomplete="off" style="text-align:center;font-size:18px;letter-spacing:2px;margin:10px 0"><button class="btn primary" data-act="login" style="width:100%">Anmelden</button>
-  <p class="small muted" style="margin-top:12px">Der Code ist derselbe wie für die Herrenabend-App (aus der Webling-Mail).</p></div>`}
+  <p class="small muted" style="margin-top:12px">Der Code ist derselbe wie für die Herrenabend-App (aus der Webling-Mail).</p><p class="small muted" style="margin:6px 0 0">Version ${APP_VERSION}</p></div>`}
 async function login(code){S.code=String(code||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");if(!S.code)return vLogin();
   $("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:60px">Lade …</p>`;
   try{await load();store.set("chor_code",S.code);try{const u=new URL(location.href);if(u.searchParams.has("c")){u.searchParams.delete("c");history.replaceState(null,"",u.toString())}}catch(e){}render();startPoll()}
@@ -999,6 +1000,13 @@ document.addEventListener("change",e=>{const el=e.target;
   if(el.dataset.chg==="setfor"){rpc("chor_set_attendance",{p_code:S.code,p_event:el.dataset.ev,p_status:el.value||null,p_grund:null,p_person:el.dataset.id}).then(async()=>{await load();toast("Gespeichert")}).catch(err=>toast(err.message))}
 });
 window.addEventListener("hashchange",()=>{if(S.me){S.play=null;render();scrollTo(0,0)}});
+/* ===== Versionsprüfung: meldet, wenn auf dem Server eine neuere Version liegt (z.B. nach Upload auf GitHub) ===== */
+function versionCheck(){const url=location.pathname+(location.pathname.endsWith("/")?"index.html":"")+"?v="+Date.now();
+  fetch(url,{cache:"no-store"}).then(r=>r.ok?r.text():"").then(t=>{const m=t.match(/const APP_VERSION="(\d[^"]*)"/);if(!m||m[1]===APP_VERSION||document.getElementById("vbar"))return;
+    const d=document.createElement("div");d.id="vbar";d.style.cssText="position:fixed;left:12px;right:12px;bottom:76px;z-index:70;background:#1f1b18;color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:14px";
+    d.innerHTML=`<span style="flex:1">Neue Version ${m[1]} verfügbar (du hast ${APP_VERSION}).</span><button style="background:#de1034;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer">Neu laden</button>`;
+    d.querySelector("button").onclick=()=>{try{caches&&caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)))}catch(e){}const u=new URL(location.href);u.searchParams.set("v",m[1]);location.replace(u.toString())};document.body.appendChild(d)}).catch(()=>{})}
+setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck()},10*60*1000);
 (function init(){try{if(new URLSearchParams(location.search).get("pick")==="1")sessionStorage.setItem("chor_pick","1")}catch(e){}const q=new URLSearchParams(location.search).get("c");const c=q||store.get("chor_code");if(c)login(c);else vLogin()})();
 
 </script>
