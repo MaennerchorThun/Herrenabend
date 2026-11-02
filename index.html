@@ -584,6 +584,16 @@ function parsePlan(txt){
   if(!n)return{err:"Keine gültigen Zeilen (Format: Tisch;Gruppe)."};
   return{plan,n,bad,tables:Object.keys(plan).length};
 }
+/* Standort im Saal: Bühne links → Spalte 1 = Tische 1–7, Mitte = 8–14, hinten = 15–21 */
+const STANDORT={vorne:"vorne bei der Bühne (Tische 1–7)",mitte:"Mitte (Tische 8–14)",hinten:"hinten (Tische 15–21)"};
+const standortTabs=k=>k==="vorne"?[1,7]:k==="mitte"?[8,14]:k==="hinten"?[15,21]:null;
+function standortSort(g,pool){const r=g&&standortTabs(g.standort);if(!r)return pool;const inR=t=>+t>=r[0]&&+t<=r[1];return[...pool.filter(inR),...pool.filter(t=>!inR(t))]}
+/* Tischplan: fest zugeteilte Tische der Gruppen (Verwaltung → Tische) + optional geladene Vorlage */
+function mergePlan(){const p={},has=new Set();
+  for(const g of S.groups)if(g.tische&&g.tische.length){has.add(g.id);for(const t of g.tische)(p[t]=p[t]||[]).push(g.guest&&words(g.name)[0]==="gastetisch"?["gastetisch"]:words(g.name))}
+  if(PLAN)for(const[gid,tabs]of planMatch(PLAN))if(!has.has(gid)){const g=G(gid);for(const t of tabs)(p[t]=p[t]||[]).push(words(g.name))}
+  return Object.keys(p).length?p:null}
+function mergePlanDbOnly(){const keep=PLAN;PLAN=null;const p=mergePlan();PLAN=keep;return p}
 function planMatch(plan){const m=new Map();
   for(const[tid,toks]of Object.entries(plan))for(const tk of toks){const g=S.groups.find(g=>{const w=words(g.name);return tk.every(x=>w.includes(x))||tk.join("")===w.join("")});
     if(g){if(!m.has(g.id))m.set(g.id,[]);if(!m.get(g.id).includes(tid))m.get(g.id).push(tid)}}
@@ -620,8 +630,11 @@ function allocateGroups(plan=null){
     for(const tid of Object.keys(plan).sort((a,b)=>a-b))for(const[gid,tabs]of pm){if(done.has(gid)||tabs[0]!==tid)continue;
       const g=G(gid),ms=sortM(g),own=[...new Set(members(g).filter(p=>p.tisch).map(p=>p.tisch))];for(const t of pref(g,[...own,...tabs.filter(t=>!own.includes(t))])){if(!ms.length)break;place(ms.splice(0,free.get(t).length),t)}
       if(ms.length)leftovers.push([g,ms]);done.add(gid)}}
+  // Platzhalter: reservierte Plätze einer Gruppe an ihren Tischen freihalten
+  for(const g of S.groups)if(g.plaetze&&g.tische&&g.tische.length){let res=g.plaetze-members(g).filter(p=>p.platz&&g.tische.includes(p.tisch)).length;
+    for(const t of g.tische){const q=free.get(t);while(res>0&&q&&q.length){q.pop();res--}}}
   const fit=(ms,pool,g)=>{
-    pool=pref(g,pool);
+    pool=pref(g,standortSort(g,pool));
     for(const t of pool){if(!ms.length)break;if(g&&members(g).some(p=>p.tisch===t)){const k=free.get(t).length;if(k)place(ms.splice(0,k),t)}}
     while(ms.length>=16){const t=pool.find(id=>free.get(id).length===16);if(!t)break;place(ms.splice(0,16),t)}
     if(!ms.length)return;
@@ -632,7 +645,7 @@ function allocateGroups(plan=null){
   for(const g of S.groups.filter(g=>g.guest&&!done.has(g.id)))fit(sortM(g),[EHREN_TISCH,...normal],g);
   // Gruppen ohne Vorlage zuerst an Tische, die in der Vorlage frei sind
   const resv=new Set(plan?Object.keys(plan):[]),open=normal.filter(t=>!resv.has(t));
-  for(const g of S.groups.filter(g=>!g.guest&&!done.has(g.id)).sort((a,b)=>members(b).length-members(a).length)){const ms=sortM(g);
+  for(const g of S.groups.filter(g=>!g.guest&&!done.has(g.id)).sort((a,b)=>(!a.standort)-(!b.standort)||members(b).length-members(a).length)){const ms=sortM(g);
     if(open.length&&resv.size&&!members(g).some(p=>p.tisch))fit(ms,open,g);if(ms.length)fit(ms,normal,g)}
   for(const[g,ms]of leftovers.sort((a,b)=>b[1].length-a[1].length))fit(ms,normal,g);
   for(const g of S.groups)if(wishesFor(g).length)arrangeGroup(g);
@@ -742,6 +755,9 @@ function adminTables(){
   if(S.wishes.length){const bad=S.wishes.filter(w=>wishState(w)==="verletzt").length,wg=S.groups.filter(g=>wishesFor(g).length);
     h+=`<div class="card"><h3>Sitzwünsche (${S.wishes.length})</h3><p class="small muted">${bad?`⚠ ${bad} nicht erfüllt`:"Alle platzierten Wünsche sind erfüllt."}</p>${wishList(S.wishes,true)}
     <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
+  h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Standort-Wunsch erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden nach Standort-Wunsch verteilt. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
+    <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Standort</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px"><option value="">egal</option>${Object.entries(STANDORT).map(([k,l])=>`<option value="${k}" ${g.standort===k?"selected":""}>${l}</option>`).join("")}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="allocask" data-m="plan">Plätze neu verteilen</button></div></div>`;
   const noT=S.people.filter(p=>!p.tisch).sort(byName);
   if(noT.length)h+=`<div class="card soft small"><b>Ohne Tisch (${noT.length}):</b> ${noT.map(p=>esc(full(p))).join(", ")}</div>`;
   for(const t of TABLES){const ps=S.people.filter(p=>p.tisch===t.id&&p.platz).sort((a,b)=>a.platz-b.platz),gs=groupsAt(t.id),uns=S.people.filter(p=>p.tisch===t.id&&!p.platz);
@@ -882,7 +898,7 @@ function importCSV(txt){
   for(const g of groups){const c=people.find(p=>p.id===g.chef);if(g.guest&&c&&c.typ==="ehrengast")c.typ="aktiv"}
   S.people=people;S.groups=groups;
   let fixed=0;for(const p of people){const t=T(p._ti);if(t&&seatsOf(t).all.includes(p._pl)&&!at(t.id,p._pl)){p.tisch=t.id;p.platz=p._pl;fixed++}}
-  const planned=fixed?0:allocateGroups(PLAN);
+  const planned=fixed?0:allocateGroups(mergePlan());
   for(const p of people){delete p._gc;delete p._alt;delete p._ti;delete p._pl}
   S.orders=[];S.proposals=[];S.apero=new Set();S.surveyDone=new Set();S.cart={};S.demo=false;S.selTable=null;S.userId=null;applyGroupAperos();
   const info={n:people.length,year,skipped,planned,groups:groups.length,chefs:groups.filter(g=>g.chef).length,noChef:groups.filter(g=>!g.guest&&!g.chef).map(g=>g.name),
@@ -1008,7 +1024,7 @@ function vStartVorab(){
   const concertOn=new Date()<new Date("2026-11-16T00:00:00");
   const h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><span class="chip y" style="margin-bottom:8px">Vorabversion</span><p class="eyebrow">Männerchor Thun · Einladung zum ${EVENT.nr}. Herrenabend</p>
     <h1>${S.vname?`Grüessech ${esc(S.vname)}`:`${EVENT.nr}. Herrenabend`}</h1><p class="muted" style="margin:0">${esc(EVENT.datum)} · ${esc(EVENT.ort)}</p></section>
-  ${S.chefGrp?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Gruppenchef · ${esc(S.chefGrp.name)}</p>${(()=>{const a=chefCurApero();return a?`<p class="small" style="margin:0 0 4px">Apéro deiner Tischgruppe:</p><p style="margin:0 0 8px"><b>${aperoTxt(a)}</b></p><button class="btn sm" data-act="go" data-r="apero">Apéro ändern</button>${aperoBtn("primary ")}`:`<p class="small" style="margin:0 0 8px">Du kannst den Apéro deiner Tischgruppe selbst festlegen. Deine Mitglieder sehen ihn sofort in der App.</p><button class="btn sm primary" data-act="go" data-r="apero">Apéro festlegen</button>`})()}${chefMembersBox()}</div>`:""}
+  ${S.chefGrp?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Gruppenchef · ${esc(S.chefGrp.name)}</p>${(()=>{const a=chefCurApero();return a?`<p class="small" style="margin:0 0 4px">Apéro deiner Tischgruppe:</p><p style="margin:0 0 8px"><b>${aperoTxt(a)}</b></p><button class="btn sm" data-act="go" data-r="apero">Apéro ändern</button>${aperoBtn("primary ")}`:`<p class="small" style="margin:0 0 8px">Du kannst den Apéro deiner Tischgruppe selbst festlegen. Deine Mitglieder sehen ihn sofort in der App.</p><button class="btn sm primary" data-act="go" data-r="apero">Apéro festlegen</button>`})()}${chefMembersBox()}</div>${chefPrefBox()}`:""}
   ${mailBox(false)}
   ${S.vorabOk?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">OK-Team</p><h3 style="margin:0 0 6px">Du hast OK-Rechte</h3>
     <p class="small" style="margin:0 0 10px">Öffne die Event-Version als Vorschau: Verwaltung, Saalplan, Service-Board und Benachrichtigungen – mit den echten Daten. Die Mitglieder sehen weiterhin die Vorabversion.</p>
@@ -1068,7 +1084,7 @@ function vSaal(){
   for(const t of TABLES){const cm=colorMap(t.id),gs=groupsAt(t.id);
     h+=`<button class="ttile ${t.front?"ehren":""} ${me.tisch===t.id?"mine":""} ${S.selTable===t.id?"sel":""}" data-act="table" data-id="${t.id}">
       <div class="row between"><b>${esc(t.short)}</b><span class="small muted">${gs.reduce((s,e)=>s+e.n,0)}/16</span></div>
-      <div class="gn">${gs.length?gs.map(e=>esc(e.g?e.g.name:"ohne Gruppe")).join(" · "):"frei"}</div>
+      <div class="gn">${gs.length?gs.map(e=>esc(e.g?e.g.name:"ohne Gruppe")).join(" · "):(()=>{const r=S.groups.filter(g=>(g.tische||[]).includes(t.id));return r.length?"reserviert: "+r.map(g=>esc(g.name)).join(" · "):"frei"})()}</div>
       <div class="dots">${[0,1].map(r=>[0,1,2,3,4,5,6,7].map(c=>{const p=at(t.id,t.start+c*2+r);return`<i class="${p?(p.id===me.id?"m":gcls(cm,p)):""}"></i>`}).join("")).join("")}</div></button>`}
   h+=`</div>`;
   const sel=T(S.selTable||me.tisch||EHREN_TISCH);
@@ -1172,7 +1188,7 @@ function vAperoVorab(){
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Saalöffnung ${EVENT.saal} Uhr</p></div>
     ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p>${aperoBtn()}</div>`
-      :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}`;
+      :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}${S.chefMembers?`<div class="card"><h3 style="margin:0 0 6px">Apéro-Teilnehmer deiner Tischgruppe</h3><p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du die angemeldeten Teilnehmer zum Apéro an- und abmelden.</p>${chefMembersBox(true)}</div>`:""}`;
 }
 /* Vorabversion: Gruppenchef legt den Apéro seiner Tischgruppe fest (set_group_apero, Berechtigung prüft Supabase) */
 /* Vorabversion: Gruppenchef sieht die angemeldeten Teilnehmer seiner Tischgruppe; Tisch/Platz erst, wenn das OK die Tischeinteilung freischaltet (Einstellung seats_visible) */
@@ -1181,10 +1197,15 @@ function chefCurApero(){const g=S.chefGrp;if(!g)return null;if(g.zeit||g.ort)ret
 /* eigene Apéro-Anmeldung (Vorabversion): aus app_session, sonst aus der Liste des Gruppenchefs */
 function vMe(){if(S.vorabMe)return S.vorabMe;const c=S.chefMembers&&(S.chefMembers.members||[]).find(p=>p.chef);return c?{apero:!!c.apero,angemeldet:true}:null}
 function aperoBtn(cls){const m=vMe();if(!m||!m.angemeldet)return"";return`<button class="btn sm ${m.apero?"on":cls||"primary"}" style="margin:${cls?"0 0 0 6px":"10px 0 0"}" data-act="vapero">${m.apero?"✓ Ich komme zum Apéro – abmelden":"Ich komme zum Apéro"}</button>`}
-function chefMembersBox(){const m=S.chefMembers;if(!m)return"";const ms=m.members||[];
-  return`<details style="margin-top:10px"${ms.length?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
-    ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td>${p.apero?`<span class="chip g">✓ dabei</span>`:`<span class="small muted">–</span>`}</td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
+function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.members||[];
+  return`<details style="margin-top:10px"${ms.length&&!open?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
+    ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td><button class="btn sm ${p.apero?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${p.apero?0:1}">${p.apero?"✓ dabei":"anmelden"}</button></td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>`}
+function chefPrefBox(){const g=S.chefGrp;if(!g)return"";
+  return`<div class="card"><h3 style="margin:0 0 6px">Plätze und Standort im Saal</h3><p class="small muted" style="margin:0 0 8px">Wie viele Plätze braucht eure Tischgruppe, und wo im Saal möchtet ihr sitzen? Das OK berücksichtigt den Wunsch bei der Tischeinteilung.${g.tische&&g.tische.length?` <b>Zugeteilt: Tisch ${esc(g.tische.join(", "))}</b>.`:""}</p>
+    <div style="display:grid;gap:6px"><label class="small muted">Anzahl Plätze (inkl. noch nicht Angemeldete)</label><input id="cpp" class="input" type="number" min="1" max="336" value="${g.plaetze||""}" placeholder="z.B. 16">
+    <label class="small muted">Standort-Wunsch</label><select id="cps" class="input"><option value="">egal</option>${Object.entries(STANDORT).map(([k,l])=>`<option value="${k}" ${g.standort===k?"selected":""}>${l}</option>`).join("")}</select></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="cpsave">Speichern</button></div></div>`}
 function chefAperoForm(){const g=S.chefGrp;if(!g)return"";const own=!!(g.zeit||g.ort),cur=own?{zeit:g.zeit,ort:g.ort}:(S.myApero||g.standard||{zeit:"",ort:""});const st=null;
   return`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Für dich als Gruppenchef</p><h3 style="margin:0 0 6px">Apéro ${esc(g.name)} festlegen</h3>
     <p class="small muted" style="margin:0 0 8px">Nur die Mitglieder deiner Tischgruppe sehen diesen Apéro.${st?` Ohne eigenen Eintrag gilt: ${esc([st.zeit,st.ort].filter(Boolean).join(" · "))}.`:""}</p>
@@ -1203,7 +1224,8 @@ function vApero(){
   if(g){const ms=members(g).filter(p=>S.apero.has(p.id));
     h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${g.apero?`Gruppen-Apéro: ${aperoTxt(g.apero)}`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Bierbar in der Halle 0."}</p>
       ${cg&&cg.id===g.id?`<button class="btn sm" data-act="go" data-r="gruppe" style="margin-bottom:10px">Gruppen-Apéro festlegen</button>`:""}
-      <div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div></div>`}
+      ${cg&&cg.id===g.id?`<p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du deine Mitglieder an- und abmelden (${ms.length} von ${members(g).length} dabei):</p><table class="t">${members(g).sort(byName).map(p=>{const on=S.apero.has(p.id);return`<tr><td>${esc(full(p))}</td><td style="text-align:right"><button class="btn sm ${on?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${on?0:1}">${on?"✓ dabei":"anmelden"}</button></td></tr>`}).join("")}</table>`
+      :`<div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div>`}</div>`}
   if(isOk||S.role==="ok"||me.typ==="sponsor"||me.typ==="ehrengast"||g?.guest)h+=`<div class="card soft small"><b>Gästetisch & Sponsoren:</b> Apéro um 17:00 Uhr in der Thun-Expo Halle 0 im separaten Bereich, Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
   if(withA.length&&(isOk||S.role==="ok")){const m=new Map();for(const x of withA){const k=x.apero.zeit+"|"+x.apero.ort;if(!m.has(k))m.set(k,{a:x.apero,gs:[]});m.get(k).gs.push(x.name)}
     h+=`<div class="sec-h"><h2>Gruppen-Apéros</h2></div>${[...m.values()].sort((p,q)=>(p.a.zeit||"99").localeCompare(q.a.zeit||"99")).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${e.a.zeit?esc(e.a.zeit)+" Uhr":"Spontan"}</h3><div class="small">${e.a.zeit?aperoOrt(e.a):esc(e.a.ort)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}`}
@@ -1545,7 +1567,7 @@ function vAdminAlt(){
     <div class="card soft small" style="margin:0 0 10px"><b>Sitzplan Vorjahr</b> (CSV mit <code>Vorname;Name;Tisch;Platz</code>) – wer wieder angemeldet ist, erhält seinen Platz vom Vorjahr, sofern frei. Neue Personen werden bei ihrer Gruppe ergänzt.<br>
     ${PREV?`<span style="color:var(--ok)">✓ ${PREV.size} Plätze aus dem Vorjahr geladen${S.prevPlaced!=null?` · ${S.prevPlaced} davon zuletzt übernommen`:""}</span> <button class="btn sm ghost" data-act="prevclear">entfernen</button>`:`<span class="muted">Kein Vorjahres-Sitzplan geladen.</span>`}
     <input type="file" id="prevfile" accept=".csv,text/csv" class="input" style="margin-top:8px"></div>
-    <div class="row"><button class="btn primary sm" data-act="allocask" data-m="plan" ${PLAN?"":"disabled"}>Nach Vorlage</button><button class="btn sm" data-act="allocask" data-m="auto">Automatisch</button><button class="btn sm" data-act="fillall">${k.noSeat} ohne Platz auffüllen</button><button class="btn sm" data-act="go" data-r="saal">Manuell im Saalplan</button></div></div>`;
+    <div class="row"><button class="btn primary sm" data-act="allocask" data-m="plan" ${PLAN||S.groups.some(g=>g.tische&&g.tische.length)?"":"disabled"}>Nach Vorlage / Tischzuteilung</button><button class="btn sm" data-act="allocask" data-m="auto">Automatisch</button><button class="btn sm" data-act="fillall">${k.noSeat} ohne Platz auffüllen</button><button class="btn sm" data-act="go" data-r="saal">Manuell im Saalplan</button></div></div>`;
   const gs=[...S.groups].sort((a,b)=>members(b).length-members(a).length);
   h+=`<div class="card"><h3>Gruppen (${gs.length})</h3><div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Pers.</th><th>Gruppenchef</th><th>Tische</th></tr>${gs.map(g=>{const ms=members(g);
     return`<tr><td><b>${esc(g.name)}</b>${g.apero?`<br><span class="small muted">Apéro ${esc(g.apero.zeit||"spontan")}</span>`:""}</td><td>${ms.length}${ms.some(p=>!p.platz)?` <span class="chip w">${ms.filter(p=>!p.platz).length} offen</span>`:""}</td>
@@ -1610,7 +1632,7 @@ const A={
   allocask:d=>modal(`<h2>${d.m==="plan"?"Nach Vorlage verteilen?":"Automatisch neu verteilen?"}</h2><p class="muted">Alle bisherigen Tisch- und Platzzuteilungen werden ersetzt.</p><div class="row"><button class="btn primary" data-act="allocate" data-m="${d.m}">Neu verteilen</button><button class="btn ghost" data-act="close">Abbrechen</button></div>`),
   prevclear:()=>{PREV=null;PREV_INFO=null;S.prevPlaced=null;render();toast("Vorjahres-Sitzplan entfernt")},
   planclear:()=>{PLAN=null;PLAN_INFO=null;render();toast("Vorlage entfernt")},
-  allocate:d=>{const n=allocateGroups(d.m==="plan"?PLAN:null);closeModal();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert${d.m==="plan"?` · ${n} Gruppen nach Vorlage`:""}${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`)},
+  allocate:d=>{const n=allocateGroups(d.m==="auto"?(S.groups.some(g=>g.tische&&g.tische.length)?mergePlanDbOnly():null):mergePlan());closeModal();render();toast(`${S.people.filter(p=>p.platz).length} Personen platziert${d.m==="plan"?` · ${n} Gruppen nach Vorlage`:""}${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`)},
   fillall:()=>{const n=fillSingles(S.people.filter(p=>!p.platz));render();toast(n?`${n} Personen platziert`:"Nichts zu verteilen")},
   sendfb:()=>{const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
     if(FEEDBACK.formUrl){const me=ME(),anon=$("#fbanon").checked||me.id==="ok",t=me.tisch?T(me.tisch).short:"",g=G(me.gruppe);
@@ -1681,7 +1703,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="2.6"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="2.9"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1694,7 +1716,7 @@ function call(fn,args,msg){return rpc(fn,{p_code:S.code,...args}).then(async x=>
 function applySession(s){
   const me=s.me,hm=t=>new Date(t).toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
   S.meObj={...me,gruppe:me.group_id,tisch:me.tisch?String(me.tisch):null,platz:me.platz,token:""};
-  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:(g.apero_zeit||g.apero_ort)?{zeit:g.apero_zeit||"",ort:g.apero_ort||""}:null,aperoOwn:!!g.apero_own}));
+  S.groups=s.groups.map(g=>({id:g.id,name:g.name,guest:g.guest,chef:g.chef_id,apero:(g.apero_zeit||g.apero_ort)?{zeit:g.apero_zeit||"",ort:g.apero_ort||""}:null,aperoOwn:!!g.apero_own,tische:g.tische||[],plaetze:g.plaetze||null,standort:g.standort||""}));
   S.people=s.people.map(p=>({id:p.id,vorname:p.vorname,name:p.name,typ:p.typ,funktion:p.funktion||undefined,gruppe:p.group_id,tisch:p.tisch?String(p.tisch):null,platz:p.platz,menu:p.menu||"normal",token:"",hasCode:p.has_code,role:p.role}));
   S.apero=new Set(s.people.filter(p=>p.apero).map(p=>p.id));if(me.apero)S.apero.add(me.id);
   S.orders=s.orders.map(o=>({id:o.id,tisch:String(o.tisch),gruppe:o.group_id,items:o.items,status:o.status,zeit:hm(o.created_at),by:o.by_person}));
@@ -1732,7 +1754,7 @@ async function doImportLive(txt){
     S.busy=`${payload.length} Teilnehmer werden importiert und verteilt …`;render();
     const res=await rpc("admin_import_participants",{p_code:S.code,p_rows:payload});
     await loadLive();
-    allocateGroups(PLAN);
+    allocateGroups(mergePlan());
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});
     S.busy=null;await loadLive();S.importInfo={...info,live:res};render();
     toast(`${res.zugeordnet} Teilnehmer mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen${PREV?` · ${S.prevPlaced} auf Vorjahresplatz`:""}`);
@@ -1759,7 +1781,7 @@ const LIVEA={
   groupfill:()=>saveSeatsDiff(()=>fillSingles(members(chefGroup()))),
   gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!o)return toast("Bitte Ort oder Hinweis angeben (Zeit freiwillig)");call("set_group_apero",{p_group:chefGroup().id,p_zeit:z,p_ort:o},"Gruppen-Apéro gespeichert").catch(()=>{})},
   gaperoclear:()=>call("set_group_apero",{p_group:chefGroup().id,p_zeit:"",p_ort:""},"Gruppen-Apéro entfernt").catch(()=>{}),
-  allocate:d=>{closeModal();saveSeatsAll(()=>allocateGroups(d.m==="plan"?PLAN:null))},
+  allocate:d=>{closeModal();saveSeatsAll(()=>allocateGroups(d.m==="auto"?(S.groups.some(g=>g.tische&&g.tische.length)?mergePlanDbOnly():null):mergePlan()))},
   fillall:()=>saveSeatsAll(()=>fillSingles(S.people.filter(p=>!p.platz))),
   sendsurvey:()=>{const r=S._r||{};if(QS.some(([k])=>!r[k]))return toast("Bitte alle Punkte bewerten");const{wieder,...ratings}=r;
     call("submit_survey",{p_ratings:ratings,p_wieder:!!wieder,p_txt:$("#svtxt").value.trim()},"Umfrage gesendet – merci!").then(()=>{S._r={}}).catch(()=>{})},
@@ -1827,12 +1849,28 @@ A.grpsave=()=>{const pv=$("#gcp").value.trim().toLowerCase(),gn=$("#gcg").value.
   if(og&&og.chef===p.id)og.chef=null;p.gruppe=g.id;if(clr){p.tisch=null;p.platz=null}render();toast(`${p.vorname} ${p.name} → ${g.name}`)};
 A.fbdel=d=>{if(!confirm("Dieses Feedback endgültig löschen?"))return;call("admin_delete_feedback",{p_id:d.id},"Feedback gelöscht").catch(()=>{})};
 A.fbdelall=()=>{if(!confirm(`Alle ${S.feedback.length} Feedbacks endgültig löschen? Das lässt sich nicht rückgängig machen.`))return;call("admin_delete_feedback",{p_id:null},"Alle Feedbacks gelöscht").catch(()=>{})};
+A.chefapero=d=>{const on=d.on==="1";
+  if(LIVE){call("chef_set_apero",{p_person:d.p,p_on:on},on?"Zum Apéro angemeldet":"Vom Apéro abgemeldet").catch(()=>{});return}
+  if(VORAB&&S.code){rpc("chef_set_apero",{p_code:S.code,p_person:d.p,p_on:on}).then(()=>rpc("my_group_members",{p_code:S.code})).then(m=>{if(m)S.chefMembers=m;const c=(m&&m.members||[]).find(x=>x.chef);if(c&&S.vorabMe)S.vorabMe.apero=!!c.apero;toast(on?"Zum Apéro angemeldet":"Vom Apéro abgemeldet");render()}).catch(e=>toast(e.message));return}
+  if(on)S.apero.add(d.p);else S.apero.delete(d.p);render()};
+A.glsave=d=>{const g=G(d.g);if(!g)return;const tis=($("#gt-"+d.g).value||"").split(/[^0-9]+/).filter(Boolean),pl=+$("#gp-"+d.g).value||null,st=$("#gs-"+d.g).value;
+  const bad=tis.filter(t=>!T(t));if(bad.length)return toast("Unbekannter Tisch: "+bad.join(", "));
+  if(LIVE){call("admin_save_group_layout",{p_group:d.g,p_tische:tis,p_plaetze:pl,p_standort:st},`${g.name}: gespeichert`).catch(()=>{});return}
+  g.tische=tis;g.plaetze=pl;g.standort=st;render();toast(`${g.name}: gespeichert`)};
+A.cpsave=()=>{const g=S.chefGrp;const pl=+$("#cpp").value||null,st=$("#cps").value;
+  rpc("chef_save_group_pref",{p_code:S.code,p_group:g.id,p_plaetze:pl,p_standort:st}).then(()=>{g.plaetze=pl;g.standort=st;toast("Gespeichert – das OK berücksichtigt euren Wunsch");render()}).catch(e=>toast(e.message))};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
-function rememberMe(){try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
+
+/* iOS/Android «Zum Home-Bildschirm»: Manifest mit persönlicher Start-Adresse (Code + Vorname), damit die installierte App den Benutzer kennt */
+function personalManifest(code,vname){try{if(!code)return;const l=document.querySelector('link[rel="manifest"]');if(!l)return;
+  const base=location.origin+location.pathname.replace(/index\.html$/,""),q="?c="+encodeURIComponent(code)+(vname?"&n="+encodeURIComponent(vname):"");
+  const m={"name": "195. Herrenabend – Männerchor Thun", "short_name": "Herrenabend", "scope": "./", "display": "fullscreen", "background_color": "#ffffff", "theme_color": "#de1034", "lang": "de-CH", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}, {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}], "display_override": ["fullscreen", "standalone"]};m.start_url=base+q;m.id=base;m.scope=base;m.icons=m.icons.map(i=>({...i,src:base+i.src}));
+  l.setAttribute("href","data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m)))}catch(e){}}
+function rememberMe(){personalManifest(S.code,S.vname);try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
 function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){if(!S.vname&&s.me.vorname){S.vname=cleanName(s.me.vorname);rememberMe()}S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
@@ -1879,7 +1917,7 @@ setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck(
     if(!qc&&sc){qc=normCode(sc);if(!S.vname)S.vname=cleanName(sn)}else if(qc&&!S.vname&&normCode(sc||"")===qc)S.vname=cleanName(sn)}catch(e){}
   S.unlocked=!ACCESS.required||(qc&&ACCESS.hashes.has(sha256(ACCESS.salt+qc).slice(0,16)));
   if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc){S.code=qc;rememberMe()}render();if(S.code){checkOk();askApp()}return}
-  if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;
+  if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;if(qc)rememberMe();
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
       loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
     return}
