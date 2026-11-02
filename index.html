@@ -7,7 +7,9 @@
 <meta name="theme-color" content="#de1034">
 <meta name="color-scheme" content="light only">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
+<script>/* iOS: ohne Manifest übernimmt «Zum Home-Bildschirm» die aktuelle Adresse samt persönlichem Code (?c=…&n=…). Mit Manifest schneidet iOS sie ab. */
+(function(){var ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+if(!ios){var l=document.createElement("link");l.rel="manifest";l.href="manifest.webmanifest";document.head.appendChild(l)}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Herrenabend">
@@ -1703,7 +1705,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="2.9"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.0"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1870,7 +1872,7 @@ function personalManifest(code,vname){try{if(!code)return;const l=document.query
   const base=location.origin+location.pathname.replace(/index\.html$/,""),q="?c="+encodeURIComponent(code)+(vname?"&n="+encodeURIComponent(vname):"");
   const m={"name": "195. Herrenabend – Männerchor Thun", "short_name": "Herrenabend", "scope": "./", "display": "fullscreen", "background_color": "#ffffff", "theme_color": "#de1034", "lang": "de-CH", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}, {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}], "display_override": ["fullscreen", "standalone"]};m.start_url=base+q;m.id=base;m.scope=base;m.icons=m.icons.map(i=>({...i,src:base+i.src}));
   l.setAttribute("href","data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m)))}catch(e){}}
-function rememberMe(){personalManifest(S.code,S.vname);try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
+function rememberMe(){personalManifest(S.code,S.vname);try{if(S.code){const u=new URL(location.href);u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);if(u.toString()!==location.href)history.replaceState(null,"",u.toString())}}catch(e){}try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
 function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){if(!S.vname&&s.me.vorname){S.vname=cleanName(s.me.vorname);rememberMe()}S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
