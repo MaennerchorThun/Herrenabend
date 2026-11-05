@@ -400,7 +400,7 @@ const MENU=[
   {z:"19:45",g:"Vorspeise",d:"Saibling auf Blattspinatbett mit Eschalotten"},
   {z:"20:05",g:"Suppe",d:"Sämige Tomatensuppe mit Gin und Rahm"},
   {z:"20:35",g:"Hauptgang",d:"Entrecôte, grüne Pfeffersauce, Pommes rissolées Bäckerinnen-Art, Gemüseallerlei"},
-  {z:"22:50",g:"Dessert",d:"Traditioneller Coupe Nesselrode"},
+  {z:"21:45",g:"Dessert & Kaffee",d:"Traditioneller Coupe Nesselrode"},
 ];
 const MENU_VEGI="Vegetarische Alternative – Details folgen vom Caterer";
 const LATE=[{n:"Mehlsuppe",i:"gesponsert"},{n:"Schweinswürstli",i:"Einzelinkasso"},{n:"Thunbier",i:"exklusiv ab 01:00"}];
@@ -1703,7 +1703,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="3.1"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.2"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
