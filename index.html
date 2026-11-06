@@ -940,6 +940,7 @@ const SECTIONS=[
   {r:"lieder",ic:"🎵",l:"Gesangsrepertoire",d:"Lieder & Mitsingen"},
   {r:"wein",ic:"🍷",l:"Weinkarte",d:VORAB?"Weine 2026":"Bestellung pro Tisch"},
   {r:"feedback",ic:"💬",l:"Feedback",d:"Direkt ans OK"},
+  {r:"nummern",ic:"☎️",l:"Wichtige Nummern",d:"Notfall · Spital · Taxi"},
   {r:"umfrage",ic:"📝",l:"Umfrage",d:"Nach dem Anlass",ev:1},
   {r:"kuenstler",ic:"🥁",l:SHOW_GUESTS?"Gastreferent & Musik":"Gastmusiker & Solisten",d:SHOW_GUESTS?"Guggisberg · Trio Justistal":"Tambouren & Konzert"},
   {r:"sponsoren",ic:"🤝",l:"Sponsoren & Gönner",d:"Herzlichen Dank"},
@@ -960,7 +961,7 @@ function render(){
   if(VORAB&&EVENT_ONLY.includes(r))r="start";
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
-  const V={dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
+  const V={nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
   $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
@@ -1319,6 +1320,25 @@ function weinBody(){
   return h;
 }
 
+/* ----- Wichtige Nummern (Stand 6.11.2026, Quellen: spitalthun.ch/notfall, search.ch / aataxithun.ch) ----- */
+const NUMMERN=[
+  {h:"Notruf",note:"Bei Lebensgefahr sofort 144 wählen. Standort angeben: ${ORT}.",list:[
+    {n:"Sanität / Rettungsdienst",t:"144",big:1},{n:"Polizei",t:"117"},{n:"Feuerwehr",t:"118"},{n:"Europäischer Notruf",t:"112"},{n:"Vergiftungen (Tox Info Suisse)",t:"145"}]},
+  {h:"Spital und Ärzte",list:[
+    {n:"Notfallzentrum Spital Thun",d:"Krankenhausstrasse 12, Thun · 24 Stunden",t:"058 636 99 99"},
+    {n:"Hausarztnotfall Region Thun",d:"auf dem Spitalareal · Sa 08–22 Uhr · CHF 3.23/Min.",t:"0900 57 67 47"},
+    {n:"Notfall-Apotheke",d:"CHF 1.88/Min.",t:"0900 36 36 36"}]},
+  {h:"Taxi",list:[
+    {n:"Bahnhof Taxi Thun",d:"24 Stunden",t:"033 221 88 88"},
+    {n:"AA Taxi Thun",d:"24 Stunden",t:"033 222 95 95"},
+    {n:"ABC Taxi Thun",t:"033 222 21 21"}]},
+];
+function vNummern(){const tel=x=>"tel:"+x.replace(/\s/g,"");
+  return back()+`<h1>Wichtige Nummern</h1><p class="muted">Antippen, um direkt anzurufen.</p>
+  ${NUMMERN.map(g=>`<div class="sec-h"><h2>${esc(g.h)}</h2></div>${g.note?`<div class="note">${esc(g.note.replace("${ORT}",EVENT.ort))}</div>`:""}<div class="card">${g.list.map(x=>`<a class="row between" href="${tel(x.t)}" style="padding:9px 0;border-bottom:1px dashed var(--line);text-decoration:none;color:inherit;gap:10px"><span><b>${esc(x.n)}</b>${x.d?`<br><span class="small muted">${esc(x.d)}</span>`:""}</span><span class="chip ${x.big?"b":""}" style="white-space:nowrap;font-weight:700${x.big?";font-size:1.1rem":""}">📞 ${esc(x.t)}</span></a>`).join("")}</div>`).join("")}
+  <div class="sec-h"><h2>OK Herrenabend</h2></div>
+  <div class="card"><p style="margin:0 0 10px">Das OK erreichst du während des Anlasses über die Feedback-Funktion – deine Meldung kommt sofort aufs Handy des OK. Eine Telefonnummer gibt es dafür nicht.</p><button class="btn sm primary" data-act="go" data-r="feedback">💬 Nachricht ans OK</button></div>`;
+}
 function vFeedback(){
   const mine=S.feedback.filter(f=>f.by===S.meId);
   const live=!!FEEDBACK.formUrl;
@@ -1703,7 +1723,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="3.2"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.3"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
