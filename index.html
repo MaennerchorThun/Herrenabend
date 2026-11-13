@@ -775,7 +775,20 @@ function adminAperos(){
   h+=withA.map(g=>`<div class="card"><div class="row between"><h3 style="margin:0">${esc(g.name)}</h3><span class="small muted">${members(g).length} Pers. · ${zs(g)} Zusagen</span></div>
     <p class="small" style="margin:6px 0 0">${aperoTxt(g.apero)}${g.aperoOwn?` <span class="chip">vom ${chefLbl(g)} gesetzt</span>`:""}</p>${g.chef?`<p class="small muted" style="margin:4px 0 0">${chefLbl(g)}: ${esc(full(P(g.chef)))}</p>`:""}</div>`).join("")||`<p class="muted small">Noch keine Gruppen-Apéros erfasst.</p>`;
   if(noA.length)h+=`<div class="sec-h"><h2>Ohne eigenen Apéro (${noA.length})</h2></div><div class="card soft"><div class="chips">${noA.map(g=>`<span class="chip">${esc(g.name)} · ${members(g).length}</span>`).join("")}</div></div>`;
-  return h}
+  return h+okAperoBox()}
+/* OK: Zu- und Absagen zum Apéro für alle Tischgruppen (admin_set_apero) */
+function okAperoBox(){
+  const open=S.apOpen||(S.apOpen=new Set());
+  const noG=S.people.filter(p=>!p.gruppe||!G(p.gruppe));
+  const list=[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>({id:g.id,name:g.name,ms:members(g)})).filter(x=>x.ms.length);
+  if(noG.length)list.push({id:"none",name:"ohne Tischgruppe",ms:noG});
+  const row=p=>{const on=S.apero.has(p.id);return`<tr><td>${esc(p.name)} ${esc(p.vorname)}${isChef(p)?` <span class="chip b">Chef</span>`:""}</td><td style="text-align:right"><button class="btn sm ${on?"on":""}" data-act="okapero" data-p="${p.id}" data-on="${on?0:1}">${on?"✓ dabei":"anmelden"}</button></td></tr>`};
+  return`<div class="sec-h"><h2>Zu- und Absagen Apéro</h2></div><p class="small muted" style="margin:-4px 0 8px">Als OK kannst du hier alle angemeldeten Teilnehmer zum Apéro an- oder abmelden – für jede Tischgruppe. ${S.apero.size} von ${S.people.length} sind dabei.</p>
+  ${list.map(x=>{const z=x.ms.filter(p=>S.apero.has(p.id)).length;return`<details class="card" data-apg="${x.id}" style="padding:10px 14px"${open.has(x.id)?" open":""}><summary style="cursor:pointer"><b>${esc(x.name)}</b> <span class="small muted">· ${z} von ${x.ms.length} dabei</span></summary>
+    <div class="row" style="margin:8px 0"><button class="btn sm" data-act="okapero" data-g="${x.id}" data-on="1">Alle anmelden</button><button class="btn sm ghost" data-act="okapero" data-g="${x.id}" data-on="0">Alle abmelden</button></div>
+    <table class="t">${[...x.ms].sort(byName).map(row).join("")}</table></details>`}).join("")}`}
+document.addEventListener("toggle",e=>{const d=e.target;if(d&&d.dataset&&d.dataset.apg){const o=S.apOpen||(S.apOpen=new Set());if(d.open)o.add(d.dataset.apg);else o.delete(d.dataset.apg)}},true);
+
 
 /* ===== Eingabemaske Gruppen-Apéros (Verwaltung → Apéros) =====
    Live: Tabelle apero_groups in Supabase. Zuordnung über die Tischgruppe aus Webling («Herrenabend-Tisch»). */
@@ -1515,7 +1528,7 @@ function feedbackBox(){let h="";
 function vAdminAlt(){
   const k=kpi(),ii=S.importInfo;
   let h="";
-  if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Gruppenchefs sehen in der Vorabversion die angemeldeten Teilnehmer ihrer Tischgruppe. Tisch und Platz erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
+  if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
     h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht an die hier eingetragenen Empfänger – an einzelne Personen oder an eine ganze Telegram-Gruppe (z.B. «OK Herrenabend»).</p>
@@ -1723,7 +1736,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="3.3"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.4"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1856,6 +1869,13 @@ function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new U
       <div style="display:grid;gap:10px"><button class="btn primary" data-act="pickchor" style="padding:14px">🎵 Chor-App<br><span class="small" style="font-weight:400">Proben, Termine, Noten, Chat</span></button>
       <button class="btn" data-act="pickha" style="padding:14px">🎩 Herrenabend-App<br><span class="small" style="font-weight:400">195. Herrenabend, 12. Dezember 2026</span></button>
       <label class="row small muted" style="justify-content:center"><input type="checkbox" id="hanomore"> nicht mehr fragen (direkt zur Herrenabend-App)</label><p class="muted" style="text-align:center;font-size:12px;margin:10px 0 0">Herrenabend-App Version ${APP_VERSION}</p></div>`)}).catch(()=>{})}
+A.okapero=d=>{const on=d.on==="1";let ids;
+  if(d.p)ids=[d.p];else{const ms=d.g==="none"?S.people.filter(p=>!p.gruppe||!G(p.gruppe)):members(G(d.g));ids=ms.filter(p=>S.apero.has(p.id)!==on).map(p=>p.id);
+    if(!ids.length)return toast(on?"Alle sind schon angemeldet":"Niemand ist angemeldet");
+    if(!confirm(`${ids.length} Personen ${on?"zum Apéro anmelden":"vom Apéro abmelden"}?`))return}
+  const msg=ids.length>1?`${ids.length} Personen ${on?"angemeldet":"abgemeldet"}`:(on?"Zum Apéro angemeldet":"Vom Apéro abgemeldet");
+  if(LIVE){call("admin_set_apero",{p_persons:ids,p_on:on},msg).catch(()=>{});return}
+  ids.forEach(id=>on?S.apero.add(id):S.apero.delete(id));render();toast(msg)};
 A.seatsvis=()=>{const on=!S.seatsVisible;if(!confirm(on?"Tischeinteilung für die Gruppenchefs freischalten?":"Tischeinteilung wieder sperren?"))return;rpc("admin_set_setting",{p_code:S.code,p_key:"seats_visible",p_value:on}).then(()=>{S.seatsVisible=on;toast(on?"Tischeinteilung freigeschaltet":"Tischeinteilung gesperrt");render()}).catch(e=>toast(e.message))};
 A.vapero=()=>{const m=vMe();if(!m)return;const on=!m.apero;rpc("set_apero",{p_code:S.code,p_on:on}).then(()=>{S.vorabMe={...m,apero:on};toast(on?"Für den Apéro angemeldet":"Vom Apéro abgemeldet");if(S.chefGrp)rpc("my_group_members",{p_code:S.code}).then(m=>{if(m)S.chefMembers=m;render()}).catch(()=>{});render()}).catch(e=>toast(e.message))};
 A.grpchg=d=>{const p=P(d.p);if(!p)return;const i=$("#gcp");if(i){i.value=p.name+" "+p.vorname;const g=$("#gcg");g.value="";g.focus();i.scrollIntoView({behavior:"smooth",block:"center"})}};
