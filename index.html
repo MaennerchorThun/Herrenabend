@@ -6,7 +6,8 @@
 <title>Herrenabend MCT</title>
 <meta name="theme-color" content="#de1034">
 <meta name="color-scheme" content="light only">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://maennerchorthun.github.io/Herrenabend/apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="https://maennerchorthun.github.io/Herrenabend/apple-touch-icon.png">
 <script>/* iOS: ohne Manifest übernimmt «Zum Home-Bildschirm» die aktuelle Adresse samt persönlichem Code (?c=…&n=…). Mit Manifest schneidet iOS sie ab. */
 (function(){var ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 if(!ios){var l=document.createElement("link");l.rel="manifest";l.href="manifest.webmanifest";document.head.appendChild(l)}})();</script>
@@ -1670,7 +1671,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="3.3"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.4"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
