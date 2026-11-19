@@ -249,6 +249,19 @@ a.sp{color:inherit;text-decoration:none}a.sp:hover .grow,a.card.link:hover b{col
 .art-img{object-fit:cover;width:84px;height:84px;background:#222}
 .art-n{font-size:1.05rem}.art-r{color:var(--brand);font-weight:600;font-size:13px}
 .grow{flex:1;min-width:0}
+
+/* Tische längsseits: Tische einer Reihe (1–7, 8–14, 15–21) bilden eine Linie */
+.saal{row-gap:3px}
+.saal .ttile.lin{display:flex;gap:8px;align-items:stretch;padding:6px 8px}
+.saal .ttile.lin .tinfo{flex:1;min-width:0}
+.saal .dots.v{grid-template-columns:repeat(2,9px);grid-auto-rows:5px;gap:2px;margin:0;align-content:center}
+.saal .dots.v i{height:5px;width:9px}
+.tbl.v{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 30px}
+.tbl.v .num{display:flex;align-items:center;justify-content:center;border-right:0;border-top:1px solid var(--line)}
+.tbl.v .seat{height:36px;border-right:0;border-top:1px solid var(--line);padding:0 6px;justify-content:flex-start}
+.tbl.v .seat span{writing-mode:horizontal-tb;transform:none;max-height:none;max-width:100%;font-size:12.5px}
+.tbl.v .seat.l.l{border-right:4px solid var(--text)}
+.tbl.v>:nth-child(-n+4){border-top:0}
 </style>
 </head>
 <body>
@@ -586,7 +599,12 @@ function parsePlan(txt){
 }
 /* Standort im Saal: Bühne links → Spalte 1 = Tische 1–7, Mitte = 8–14, hinten = 15–21 */
 const STANDORT={vorne:"vorne bei der Bühne (Tische 1–7)",mitte:"Mitte (Tische 8–14)",hinten:"hinten (Tische 15–21)"};
-const standortTabs=k=>k==="vorne"?[1,7]:k==="mitte"?[8,14]:k==="hinten"?[15,21]:null;
+const standortTabs=k=>/^\d+$/.test(k||"")?[+k,+k]:k==="vorne"?[1,7]:k==="mitte"?[8,14]:k==="hinten"?[15,21]:null;
+/* Wunschtisch: konkrete Tischnummer (ausser Gästetisch) oder egal */
+const reiheLbl=n=>n<=7?"Reihe bei der Bühne":n<=14?"mittlere Reihe":"hintere Reihe";
+const standortLbl=k=>/^\d+$/.test(k||"")?`Tisch ${k} (${reiheLbl(+k)})`:STANDORT[k]||"egal";
+function standortOpts(sel,gid){const taken=new Map();for(const g of (LIVE?S.groups:[]))if(g.id!==gid&&/^\d+$/.test(g.standort||""))taken.set(g.standort,[...(taken.get(g.standort)||[]),g.name]);
+  return`<option value="">egal</option>${TABLES.filter(t=>t.id!==EHREN_TISCH).map(t=>`<option value="${t.id}" ${sel===t.id?"selected":""}>Tisch ${t.id} – ${reiheLbl(+t.id)}${taken.has(t.id)?" · gewünscht von "+taken.get(t.id).join(", "):""}</option>`).join("")}${sel&&!/^\d+$/.test(sel)&&STANDORT[sel]?`<option value="${sel}" selected>${STANDORT[sel]} (bisher)</option>`:""}`}
 function standortSort(g,pool){const r=g&&standortTabs(g.standort);if(!r)return pool;const inR=t=>+t>=r[0]&&+t<=r[1];return[...pool.filter(inR),...pool.filter(t=>!inR(t))]}
 /* Tischplan: fest zugeteilte Tische der Gruppen (Verwaltung → Tische) + optional geladene Vorlage */
 function mergePlan(){const p={},has=new Set();
@@ -651,13 +669,16 @@ function allocateGroups(plan=null,opt={}){
   const sidesFor=tabs=>tabs.map((t,i)=>{const prev=i>0&&prevInLine(t)===tabs[i-1],next=i<tabs.length-1&&nextInLine(t)===tabs[i+1];
     return prev&&next?"mid":next?"end":prev?"start":"none"});
   const inStandort=(g,t)=>{const r=g&&standortTabs(g.standort);return!r||(+t>=r[0]&&+t<=r[1])};
+  // Wunschtisch: 0 = Lauf enthält den Wunschtisch, sonst Abstand (gleiche Reihe zählt weniger als andere Reihe)
+  const standortScore=(g,run)=>{const k=g&&g.standort;if(!k)return 0;if(/^\d+$/.test(k)){if(run.includes(k))return 0;
+      return 1+Math.min(...run.map(x=>Math.abs(+x-+k)+(lineOf(x)===lineOf(k)?0:10)))}return run.some(x=>!inStandort(g,x))?1:0};
   // Läufe benachbarter Tische (gleiche Reihe), die n Personen ohne Splitter aufnehmen
   const findRun=(g,n,pool)=>{let best=null;
     for(const t0 of pool)for(let k=1;k<=Math.max(1,Math.ceil(n/16)+1)&&k<=7;k++){const run=[t0];let t=t0;
       for(let i=1;i<k;i++){t=nextInLine(t);if(!t||!pool.includes(t))break;run.push(t)}
       if(run.length<k)break;const caps=run.map(x=>cap.get(x));if(caps.some(c=>c<(k>1?MINPART:1)))continue;
       const sc=splitCounts(n,caps);if(!sc||!sc.ok||sc.counts.length<k)continue;
-      const key=[k,run.some(x=>!inStandort(g,x))?1:0,caps.reduce((a,b)=>a+b,0)-n,+t0];
+      const key=[k,standortScore(g,run),caps.reduce((a,b)=>a+b,0)-n,+t0];
       if(!best||lexLess(key,best.key))best={run,counts:sc.counts,key}}
     return best};
   const place=(g,ms,pool,extra=0)=>{const n=ms.length+extra;if(!n)return;
@@ -820,8 +841,8 @@ function adminTables(){
   if(S.wishes.length){const bad=S.wishes.filter(w=>wishState(w)==="verletzt").length,wg=S.groups.filter(g=>wishesFor(g).length);
     h+=`<div class="card"><h3>Sitzwünsche (${S.wishes.length})</h3><p class="small muted">${bad?`⚠ ${bad} nicht erfüllt`:"Alle platzierten Wünsche sind erfüllt."}</p>${wishList(S.wishes,true)}
     <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
-  h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Standort-Wunsch erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden nach Standort-Wunsch verteilt. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
-    <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Standort</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px"><option value="">egal</option>${Object.entries(STANDORT).map(([k,l])=>`<option value="${k}" ${g.standort===k?"selected":""}>${l}</option>`).join("")}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
+  h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Wunschtisch (konkrete Tischnummer oder egal) erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden möglichst an ihren Wunschtisch gesetzt – grössere Gruppen ab dem Wunschtisch an den Nachbartisch in derselben Reihe. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
+    <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Wunschtisch</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px">${standortOpts(g.standort||"",g.id)}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="allocask" data-m="plan">Plätze neu verteilen</button></div></div>`;
   const noT=S.people.filter(p=>!p.tisch).sort(byName);
   if(noT.length)h+=`<div class="card soft small"><b>Ohne Tisch (${noT.length}):</b> ${noT.map(p=>esc(full(p))).join(", ")}</div>`;
@@ -1160,10 +1181,10 @@ function vSaal(){
     <div class="saal-sum"><span><b>${CAP}</b> Plätze</span><span><b>${seated}</b> belegt</span><span><b>${CAP-seated}</b> frei</span><span><b>${S.people.length}</b> angemeldet</span><span><b>${S.groups.length}</b> Gruppen</span></div>
     <div class="note">Anordnung wie im Saal (Bühne links). Gruppen am selben Tisch haben unterschiedliche Farben.</div><div class="saal"><div class="stage">BÜHNE</div>`;
   for(const t of TABLES){const cm=colorMap(t.id),gs=groupsAt(t.id);
-    h+=`<button class="ttile ${t.front?"ehren":""} ${me.tisch===t.id?"mine":""} ${S.selTable===t.id?"sel":""}" data-act="table" data-id="${t.id}">
+    h+=`<button class="ttile lin ${t.front?"ehren":""} ${me.tisch===t.id?"mine":""} ${S.selTable===t.id?"sel":""}" data-act="table" data-id="${t.id}"><div class="tinfo">
       <div class="row between"><b>${esc(t.short)}</b><span class="small muted">${gs.reduce((s,e)=>s+e.n,0)}/16</span></div>
       <div class="gn">${gs.length?gs.map(e=>esc(e.g?e.g.name:"ohne Gruppe")).join(" · "):(()=>{const r=S.groups.filter(g=>(g.tische||[]).includes(t.id));return r.length?"reserviert: "+r.map(g=>esc(g.name)).join(" · "):"frei"})()}</div>
-      <div class="dots">${[0,1].map(r=>[0,1,2,3,4,5,6,7].map(c=>{const p=at(t.id,t.start+c*2+r);return`<i class="${p?(p.id===me.id?"m":gcls(cm,p)):""}"></i>`}).join("")).join("")}</div></button>`}
+      </div><div class="dots v">${[0,1,2,3,4,5,6,7].map(c=>[0,1].map(r=>{const p=at(t.id,t.start+c*2+r);return`<i class="${p?(p.id===me.id?"m":gcls(cm,p)):""}"></i>`}).join("")).join("")}</div></button>`}
   h+=`</div>`;
   const sel=T(S.selTable||me.tisch||EHREN_TISCH);
   h+=`<div class="sec-h" id="tdetail"><h2>${esc(sel.name)}</h2>${S.role==="ok"?`<span class="chip g">Bearbeiten erlaubt</span>`:chefGroup()&&groupTables(chefGroup()).includes(sel.id)?`<span class="chip g">Eigene Gruppe bearbeitbar</span>`:""}</div>
@@ -1178,7 +1199,7 @@ function tableGrid(t,dim=null){
     if(!p)cls.push("empty");else{cls.push(gcls(cm,p));if(G(p.gruppe)?.chef===p.id)cls.push("c");if(p.id===me.id)cls.push("me");if(p.id===S.hl)cls.push("hl");if(dim&&p.gruppe!==dim)cls.push("dim");if(wv.has(p.id))cls.push("warn")}
     return`<div class="${cls.join(" ")}" data-act="seat" data-t="${t.id}" data-s="${n}" title="Platz ${n}${p?": "+esc(full(p)):""}"><span>${p?esc(full(p)):""}</span></div>`};
   const gs=groupsAt(t.id);
-  return`<div class="tbl">${s.top.map(n=>`<div class="num">${n}</div>`).join("")}${s.top.map(seat).join("")}${s.bot.map(seat).join("")}${s.bot.map(n=>`<div class="num">${n}</div>`).join("")}</div>
+  return`<div class="tbl v">${s.top.map((n,i)=>`<div class="num">${n}</div>${seat(n).replace('class="seat','class="seat l l')}${seat(s.bot[i])}<div class="num">${s.bot[i]}</div>`).join("")}</div>
     <div class="glegend">${gs.map(e=>`<div class="gl"><span class="sw ${e.g?cm.get(e.g.id):"gx"}"></span><b>${e.g?esc(e.g.name):"ohne Gruppe"}</b><span class="muted">${e.n} Pers.${e.g?.chef?` · Chef ${esc(full(P(e.g.chef)))}`:""}</span></div>`).join("")||`<span class="muted small">Tisch noch frei.</span>`}</div>
     <div class="legend"><span><i style="box-shadow:inset 0 0 0 2px var(--brand)"></i>du</span><span><b>fett</b> = Gruppenchef</span><span><i style="background:repeating-linear-gradient(45deg,var(--surface),var(--surface) 3px,var(--surface2) 3px,var(--surface2) 6px)"></i>frei</span></div>`;
 }
@@ -1280,9 +1301,8 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
     ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td><button class="btn sm ${p.apero?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${p.apero?0:1}">${p.apero?"✓ dabei":"anmelden"}</button></td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>`}
 function chefPrefBox(){const g=S.chefGrp;if(!g)return"";
-  return`<div class="card"><h3 style="margin:0 0 6px">Plätze und Standort im Saal</h3><p class="small muted" style="margin:0 0 8px">Wie viele Plätze braucht eure Tischgruppe, und wo im Saal möchtet ihr sitzen? Das OK berücksichtigt den Wunsch bei der Tischeinteilung.${g.tische&&g.tische.length?` <b>Zugeteilt: Tisch ${esc(g.tische.join(", "))}</b>.`:""}</p>
-    <div style="display:grid;gap:6px"><label class="small muted">Anzahl Plätze (inkl. noch nicht Angemeldete)</label><input id="cpp" class="input" type="number" min="1" max="336" value="${g.plaetze||""}" placeholder="z.B. 16">
-    <label class="small muted">Standort-Wunsch</label><select id="cps" class="input"><option value="">egal</option>${Object.entries(STANDORT).map(([k,l])=>`<option value="${k}" ${g.standort===k?"selected":""}>${l}</option>`).join("")}</select></div>
+  return`<div class="card"><h3 style="margin:0 0 6px">Anzahl Plätze</h3><p class="small muted" style="margin:0 0 8px">Wie viele Plätze braucht eure Tischgruppe – inklusive Personen, die sich noch anmelden? Das OK hält sie für euch frei. Die Tische teilt das OK zu.${g.tische&&g.tische.length?` <b>Zugeteilt: Tisch ${esc(g.tische.join(", "))}</b>.`:""}</p>
+    <div style="display:grid;gap:6px"><label class="small muted">Anzahl Plätze (inkl. noch nicht Angemeldete)</label><input id="cpp" class="input" type="number" min="1" max="336" value="${g.plaetze||""}" placeholder="z.B. 16"></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="cpsave">Speichern</button></div></div>`}
 function chefAperoForm(){const g=S.chefGrp;if(!g)return"";const own=!!(g.zeit||g.ort),cur=own?{zeit:g.zeit,ort:g.ort}:(S.myApero||g.standard||{zeit:"",ort:""});const st=null;
   return`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Für dich als Gruppenchef</p><h3 style="margin:0 0 6px">Apéro ${esc(g.name)} festlegen</h3>
@@ -1800,7 +1820,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="3.5"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="3.8"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1965,7 +1985,7 @@ A.glsave=d=>{const g=G(d.g);if(!g)return;const tis=($("#gt-"+d.g).value||"").spl
     if(LIVE)saveSeatsAll(fn);else{fn();render();toast(`${g2.name} neu platziert`)}};
   if(LIVE){call("admin_save_group_layout",{p_group:d.g,p_tische:tis,p_plaetze:pl,p_standort:st},`${g.name}: gespeichert`).then(ask).catch(()=>{});return}
   g.tische=tis;g.plaetze=pl;g.standort=st;render();toast(`${g.name}: gespeichert`);ask()};
-A.cpsave=()=>{const g=S.chefGrp;const pl=+$("#cpp").value||null,st=$("#cps").value;
+A.cpsave=()=>{const g=S.chefGrp;const pl=+$("#cpp").value||null,st=g.standort||"";
   rpc("chef_save_group_pref",{p_code:S.code,p_group:g.id,p_plaetze:pl,p_standort:st}).then(()=>{g.plaetze=pl;g.standort=st;toast("Gespeichert – das OK berücksichtigt euren Wunsch");render()}).catch(e=>toast(e.message))};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
