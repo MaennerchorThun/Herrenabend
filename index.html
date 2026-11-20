@@ -1287,8 +1287,14 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
     <button class="btn sm" data-act="go" data-r="factsheet" style="margin-top:8px">📋 Factsheet: neu dabei & wer fehlt</button>`}
 /* Factsheet für Tischchefs: Mitglieder, die zum ersten Mal dabei sind (Eintritt ab 7.12.2025), und Mitglieder der Tischgruppe ohne Anmeldung */
 const EVENT_YEAR=2026;
+/* Welche Gruppe? OK-Zugang: gewählte Gruppe · Chef-Ansicht (auch Teilnehmer-Vorschau): Gruppe der angezeigten Person · Vorabversion: eigene Gruppe */
+function fsArgs(){const a={p_code:S.code,p_group:null,p_gname:null};
+  if(route()==="factsheetok"){a.p_group=S.fsGroup||null;return a}
+  const cg=!VORAB&&S.groups&&chefGroup();
+  if(cg){if(/^[0-9a-f-]{36}$/.test(cg.id))a.p_group=cg.id;else a.p_gname=cg.name;return a}
+  if(S.chefGrp&&S.chefGrp.id)a.p_group=S.chefGrp.id;return a}
 function vFactsheet(){if(!S.code||!SUPA.url)return back("start")+`<h1>Factsheet</h1><p class="muted">Nur mit persönlichem Code verfügbar.</p>`;
-  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code,p_group:(route()==="factsheetok"&&S.fsGroup)||(LIVE&&chefGroup()&&/^[0-9a-f-]{36}$/.test(chefGroup().id)?chefGroup().id:null)||(S.chefGrp&&S.chefGrp.id)||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
+  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",fsArgs()).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
   const pick=f&&f.gruppen&&route()==="factsheetok"?`<select class="input noprint" data-chg="fsgroup" style="margin-bottom:10px"><option value="">Gruppe wählen …</option>${f.gruppen.map(x=>`<option value="${x.id}" ${x.id===f.gid?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`:"";
   const top=back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>`;
   if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?"Nur für Gruppenchefs und das OK.":"wird geladen …"}</p>${f===false&&S.isOkUser?`<button class="btn sm" data-act="fsok">Gruppen laden</button>`:""}`;
@@ -1810,7 +1816,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.5"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.6"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
