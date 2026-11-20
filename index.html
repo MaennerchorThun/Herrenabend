@@ -1085,7 +1085,7 @@ function vStart(){
   if(cg){const ms=members(cg),pr=S.proposals.filter(x=>x.gruppe===cg.id).length,op=S.orders.filter(o=>o.gruppe===cg.id&&o.status!=="serviert").length;
     h+=`<div class="card" style="border-color:var(--brand)"><div class="row between"><div><p class="eyebrow">${chefLbl(cg)}${cg.guest?" ad interim":""}</p><h3 style="margin:0">${cg.guest?"":"Gruppe "}${esc(cg.name)}</h3></div><span class="chip b">nur ${cg.guest?"Gästetisch":"eigene Gruppe"}</span></div>
       <div class="kpis" style="margin:12px 0">${kpiBox(ms.length,"Personen")}${kpiBox(ms.filter(p=>p.platz).length,"platziert")}${kpiBox(groupTables(cg).length,"Tische")}${kpiBox(pr,"Weinwünsche")}${kpiBox(op,"offene Bestellungen")}</div>
-      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button></div></div>`}
+      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet</button></div></div>`}
   if(S.role==="ok"){const k=kpi();
     h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>${LIVE&&!S.people.length?`<div class="note" style="margin:0 0 10px">Noch keine Teilnehmer in der Datenbank. Die angemeldeten Teilnehmer lädst du unter <b>Verwaltung → Einstellungen &amp; Import → 2. Teilnehmer importieren</b> (Webling-Export «Teilnehmer Herrenabend»).</div>`:""}
       <div class="kpis" style="margin:8px 0 12px">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.newOrders,"neue Bestellungen")}${kpiBox(k.urgent,"dringendes Feedback")}</div>
@@ -1287,7 +1287,7 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
     <button class="btn sm" data-act="go" data-r="factsheet" style="margin-top:8px">📋 Factsheet: neu dabei & wer fehlt</button>`}
 /* Factsheet für Tischchefs: Mitglieder, die zum ersten Mal dabei sind (Eintritt ab 7.12.2025), und Mitglieder der Tischgruppe ohne Anmeldung */
 function vFactsheet(){if(!S.code||!SUPA.url)return back("start")+`<h1>Factsheet</h1><p class="muted">Nur mit persönlichem Code verfügbar.</p>`;
-  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code,p_group:S.fsGroup||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
+  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code,p_group:S.fsGroup||(LIVE&&chefGroup()&&/^[0-9a-f-]{36}$/.test(chefGroup().id)?chefGroup().id:null)||(S.chefGrp&&S.chefGrp.id)||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
   const pick=f&&f.gruppen?`<select class="input noprint" data-chg="fsgroup" style="margin-bottom:10px"><option value="">Gruppe wählen …</option>${f.gruppen.map(x=>`<option value="${x.id}" ${x.id===f.gid?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`:"";
   const top=back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>`;
   if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?"Nur für Gruppenchefs und das OK.":"wird geladen …"}</p>${f===false&&S.isOkUser?`<button class="btn sm" data-act="fsok">Gruppen laden</button>`:""}`;
@@ -1808,7 +1808,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.3"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.4"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
