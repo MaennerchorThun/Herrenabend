@@ -830,6 +830,7 @@ function adminTables(){
   if(S.wishes.length){const bad=S.wishes.filter(w=>wishState(w)==="verletzt").length,wg=S.groups.filter(g=>wishesFor(g).length);
     h+=`<div class="card"><h3>Sitzwünsche (${S.wishes.length})</h3><p class="small muted">${bad?`⚠ ${bad} nicht erfüllt`:"Alle platzierten Wünsche sind erfüllt."}</p>${wishList(S.wishes,true)}
     <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
+  h+=`<div class="card"><h3>Factsheets der Tischgruppen</h3><p class="small muted" style="margin:0 0 8px">Pro Tischgruppe: wer zum ersten Mal dabei ist (Eintritt ab 7.12.2025) und wer aus der Webling-Zuteilung noch nicht angemeldet ist. Die Gruppenchefs sehen ihr eigenes Factsheet in der Gruppenchef-Karte.</p><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheets öffnen</button></div>`;
   h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Wunschtisch (konkrete Tischnummer oder egal) erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden möglichst an ihren Wunschtisch gesetzt – grössere Gruppen ab dem Wunschtisch an den Nachbartisch in derselben Reihe. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
     <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Wunschtisch</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px">${standortOpts(g.standort||"",g.id)}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="allocask" data-m="plan">Plätze neu verteilen</button></div></div>`;
@@ -1048,6 +1049,7 @@ function render(){
   if(VORAB&&EVENT_ONLY.includes(r))r="start";
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
+  if(route()[0]!=="factsheet")S.factsheet=undefined;
   const V={factsheet:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
   $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
@@ -1285,18 +1287,19 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
     <button class="btn sm" data-act="go" data-r="factsheet" style="margin-top:8px">📋 Factsheet: neu dabei & wer fehlt</button>`}
 /* Factsheet für Tischchefs: Mitglieder, die zum ersten Mal dabei sind (Eintritt ab 7.12.2025), und Mitglieder der Tischgruppe ohne Anmeldung */
 function vFactsheet(){if(!LIVE)return back("start")+`<h1>Factsheet</h1><p class="muted">Nur mit persönlichem Code verfügbar.</p>`;
-  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
+  const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code,p_group:S.fsGroup||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
+  const pick=f&&f.gruppen?`<select class="input noprint" data-chg="fsgroup" style="margin-bottom:10px"><option value="">Gruppe wählen …</option>${f.gruppen.map(x=>`<option value="${x.id}" ${x.id===f.gid?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`:"";
   const top=back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>`;
-  if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?"Nur für Gruppenchefs.":"wird geladen …"}</p>`;
+  if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?(S.isOkUser?"Als OK: unten eine Gruppe wählen.":"Nur für Gruppenchefs."):"wird geladen …"}</p>${f===false&&S.isOkUser?`<button class="btn sm" data-act="fsok">Gruppen laden</button>`:""}`;
   const nm=p=>`${esc(p.name)} ${esc(p.vorname)}`,dt=d=>d?new Date(d+"T12:00:00").toLocaleDateString("de-CH"):"";
-  return top+`<p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1 style="margin:0 0 4px">Factsheet Tischgruppe ${esc(f.gruppe)}</h1>
+  return top+pick+`<p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1 style="margin:0 0 4px">Factsheet Tischgruppe ${esc(f.gruppe)}</h1>
   <p class="muted small" style="margin:0 0 12px">${f.angemeldet} angemeldet · Stand ${new Date().toLocaleDateString("de-CH")}</p>
   <div class="card"><h3 style="margin:0 0 6px">🆕 Zum ersten Mal dabei</h3><p class="small muted" style="margin:0 0 8px">Angemeldete Mitglieder deiner Tischgruppe mit Eintritt ab 7.12.2025 – ein herzliches Willkommen am Tisch freut sie bestimmt.</p>
     ${f.neu.length?`<table class="t">${f.neu.map(p=>`<tr><td>${nm(p)}</td><td class="small muted" style="text-align:right">Mitglied seit ${dt(p.seit)}</td></tr>`).join("")}</table>`:`<p class="small" style="margin:0">Niemand – alle sind schon bekannte Gesichter.</p>`}
     ${f.ohne_eintritt?`<p class="small muted" style="margin:8px 0 0">Bei ${f.ohne_eintritt} Angemeldeten fehlt das Eintrittsdatum.</p>`:""}</div>
   <div class="card"><h3 style="margin:0 0 6px">🙋 Noch nicht angemeldet</h3><p class="small muted" style="margin:0 0 8px">Mitglieder, die in Webling deiner Tischgruppe zugeteilt sind, sich aber (noch) nicht angemeldet haben. Vielleicht lohnt sich ein Anruf.</p>
     ${!f.stamm_bekannt?`<p class="small" style="margin:0">Die Tischgruppen-Zuteilung aus Webling ist noch nicht importiert.</p>`:f.fehlen.length?`<table class="t">${f.fehlen.map(p=>`<tr><td>${nm(p)}</td></tr>`).join("")}</table>`:`<p class="small" style="margin:0">Alle sind angemeldet. 👍</p>`}</div>
-  <p class="small muted">Vertraulich – nur für dich als Gruppenchef.</p>`}
+  <p class="small muted">Vertraulich – nur für den Gruppenchef und das OK.</p>`}
 function chefPrefBox(){const g=S.chefGrp;if(!g)return"";
   return`<div class="card"><h3 style="margin:0 0 6px">Anzahl Plätze</h3><p class="small muted" style="margin:0 0 8px">Wie viele Plätze braucht eure Tischgruppe – inklusive Personen, die sich noch anmelden? Das OK hält sie für euch frei. Die Tische teilt das OK zu.${g.tische&&g.tische.length?` <b>Zugeteilt: Tisch ${esc(g.tische.join(", "))}</b>.`:""}</p>
     <div style="display:grid;gap:6px"><label class="small muted">Anzahl Plätze (inkl. noch nicht Angemeldete)</label><input id="cpp" class="input" type="number" min="1" max="336" value="${g.plaetze||""}" placeholder="z.B. 16"></div>
@@ -1805,7 +1808,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.0"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.1"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1977,6 +1980,8 @@ A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
+A.fsok=()=>{S.fsGroup=null;rpc("chef_factsheet",{p_code:S.code,p_group:(S.groups[0]||{}).id||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>toast(e.message))};
+document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.chg==="fsgroup"&&e.target.value){S.fsGroup=e.target.value;S.factsheet=undefined;render()}});
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
 
 /* iOS/Android «Zum Home-Bildschirm»: Manifest mit persönlicher Start-Adresse (Code + Vorname), damit die installierte App den Benutzer kennt */
