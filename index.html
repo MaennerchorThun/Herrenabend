@@ -6,8 +6,8 @@
 <title>Herrenabend MCT</title>
 <meta name="theme-color" content="#de1034">
 <meta name="color-scheme" content="light only">
-<link rel="apple-touch-icon" sizes="180x180" href="https://herrenabend.xn--mnnerchorthun-bfb.ch/apple-touch-icon.png">
-<link rel="apple-touch-icon-precomposed" sizes="180x180" href="https://herrenabend.xn--mnnerchorthun-bfb.ch/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="apple-touch-icon.png">
 <script>/* iOS: ohne Manifest übernimmt «Zum Home-Bildschirm» die aktuelle Adresse samt persönlichem Code (?c=…&n=…). Mit Manifest schneidet iOS sie ab. */
 (function(){var ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 if(!ios){var l=document.createElement("link");l.rel="manifest";l.href="manifest.webmanifest";document.head.appendChild(l)}})();</script>
@@ -1603,7 +1603,7 @@ function vKuenstler(){
 function kpi(){const ps=S.people;return{total:ps.length,groups:S.groups.length,noGroup:ps.filter(p=>!p.gruppe).length,noSeat:ps.filter(p=>!p.platz).length,
   noChef:S.groups.filter(g=>!g.guest&&!g.chef).length,sponsor:ps.filter(p=>p.typ==="sponsor").length,ehren:ps.filter(p=>p.typ==="ehrengast").length,
   apero:S.apero.size,vegi:ps.filter(p=>p.menu==="vegi").length,newOrders:S.orders.filter(o=>o.status==="neu").length,urgent:S.feedback.filter(f=>f.cat==="Problem jetzt").length}}
-const baseUrl=()=>location.origin.startsWith("http")?location.origin+location.pathname:"https://herrenabend.xn--mnnerchorthun-bfb.ch/";
+const baseUrl=()=>location.origin.startsWith("http")?location.origin+location.pathname:"https://herrenabend.maennerchorthun.ch/";
 const linkOf=p=>baseUrl()+"?t="+p.token;
 function feedbackBox(){let h="";
   h+=`<div class="sec-h"><h2>Feedback-Eingang${FEEDBACK.formUrl?"":` (${S.feedback.length})`}</h2>${FEEDBACK.resultsUrl?`<a class="btn sm" href="${esc(FEEDBACK.resultsUrl)}" target="_blank" rel="noopener">Excel öffnen ↗</a>`:""}</div>
@@ -1816,7 +1816,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.8"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.10"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1942,7 +1942,9 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
 
 /* ================= OK-Zugang aus der Vorabversion / Event-Vorschau ================= */
 /* Aktive Sänger: beim Öffnen fragen, ob Chor-App oder Herrenabend-App */
-const chorUrl=()=>`https://chor.xn--mnnerchorthun-bfb.ch/?${S.code?"c="+encodeURIComponent(S.code)+"&":""}${S.vname?"n="+encodeURIComponent(S.vname)+"&":""}pick=1`;
+/* Chor-App: auf github.io unter /Chor/, sonst unter chor.maennerchorthun.ch */
+const CHOR_BASE=()=>/github\.io$/.test(location.hostname)?location.origin+"/Chor/":"https://chor.maennerchorthun.ch/";
+const chorUrl=()=>`${CHOR_BASE()}?${S.code?"c="+encodeURIComponent(S.code)+"&":""}${S.vname?"n="+encodeURIComponent(S.vname)+"&":""}pick=1`;
 function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new URLSearchParams(location.search).get("pick")==="1";
   try{if(skip)sessionStorage.setItem("ha_pick","1");skip=skip||sessionStorage.getItem("ha_pick")==="1"||localStorage.getItem("ha_nopick")==="1"}catch(e){}
   rpc("chor_is_aktiv",{p_code:S.code}).then(ok=>{S.chorAktiv=!!ok;const b=$("#tochor");if(b)b.hidden=!ok;if(!ok||skip)return;if(route()==="mehr")render();
