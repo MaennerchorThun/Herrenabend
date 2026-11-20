@@ -1049,7 +1049,7 @@ function render(){
   if(VORAB&&EVENT_ONLY.includes(r))r="start";
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
-  if(route()[0]!=="factsheet")S.factsheet=undefined;
+  if(r!=="factsheet"&&S.factsheet!==undefined)S.factsheet=undefined;
   const V={factsheet:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
   $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
@@ -1808,7 +1808,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.2"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.3"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1937,7 +1937,7 @@ if(LIVE){const fb=A.sendfb;Object.assign(A,LIVEA);
 const chorUrl=()=>`${location.origin}/Chor/?${S.code?"c="+encodeURIComponent(S.code)+"&":""}${S.vname?"n="+encodeURIComponent(S.vname)+"&":""}pick=1`;
 function askApp(){if(!S.code||askApp.done)return;askApp.done=true;let skip=new URLSearchParams(location.search).get("pick")==="1";
   try{if(skip)sessionStorage.setItem("ha_pick","1");skip=skip||sessionStorage.getItem("ha_pick")==="1"||localStorage.getItem("ha_nopick")==="1"}catch(e){}
-  rpc("chor_is_aktiv",{p_code:S.code}).then(ok=>{S.chorAktiv=!!ok;const b=$("#tochor");if(b)b.hidden=!ok;if(!ok||skip)return;if(route()[0]==="mehr")render();
+  rpc("chor_is_aktiv",{p_code:S.code}).then(ok=>{S.chorAktiv=!!ok;const b=$("#tochor");if(b)b.hidden=!ok;if(!ok||skip)return;if(route()==="mehr")render();
     modal(`<div style="text-align:center"><img src="${LOGO}" alt="" style="height:56px"><h2 style="margin:8px 0 4px">Grüessech${S.vname?" "+esc(S.vname):""}</h2><p class="muted" style="margin:0 0 14px">Als aktiver Sänger hast du zwei Apps. Welche möchtest du öffnen?</p></div>
       <div style="display:grid;gap:10px"><button class="btn primary" data-act="pickchor" style="padding:14px">🎵 Chor-App<br><span class="small" style="font-weight:400">Proben, Termine, Noten, Chat</span></button>
       <button class="btn" data-act="pickha" style="padding:14px">🎩 Herrenabend-App<br><span class="small" style="font-weight:400">195. Herrenabend, 12. Dezember 2026</span></button>
