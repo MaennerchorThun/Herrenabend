@@ -1117,7 +1117,7 @@ function vStartVorab(){
   ${mailBox(false)}
   ${S.vorabOk?`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">OK-Team</p><h3 style="margin:0 0 6px">Du hast OK-Rechte</h3>
     <p class="small" style="margin:0 0 10px">Öffne die Event-Version als Vorschau: Verwaltung, Saalplan, Service-Board und Benachrichtigungen – mit den echten Daten. Die Mitglieder sehen weiterhin die Vorabversion.</p>
-    <button class="btn primary sm" data-act="okevent">OK-Bereich & Event-Vorschau öffnen</button></div>`:""}
+    <div class="row"><button class="btn primary sm" data-act="okevent">OK-Bereich & Event-Vorschau öffnen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheets Tischgruppen</button></div></div>`:""}
   <div class="card" style="border-color:var(--accent);background:var(--accent-soft)"><p class="eyebrow" style="color:var(--text)">Vorabversion</p>
     <h3 style="margin:0 0 6px">Die definitive Version folgt am ${esc(EVENT_SWITCH)}</h3>
     <p class="small" style="margin:0">Du siehst jetzt die Vorabinformationen. Ab dem 5.12.26 findest du hier mit dem gleichen Link deinen <b>Tisch und Platz</b>, deine <b>Gruppe</b>, den <b>Apéro deiner Tischgemeinschaft</b> und die <b>Weinbestellung</b> für deinen Tisch.</p></div>
@@ -1286,11 +1286,11 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>
     <button class="btn sm" data-act="go" data-r="factsheet" style="margin-top:8px">📋 Factsheet: neu dabei & wer fehlt</button>`}
 /* Factsheet für Tischchefs: Mitglieder, die zum ersten Mal dabei sind (Eintritt ab 7.12.2025), und Mitglieder der Tischgruppe ohne Anmeldung */
-function vFactsheet(){if(!LIVE)return back("start")+`<h1>Factsheet</h1><p class="muted">Nur mit persönlichem Code verfügbar.</p>`;
+function vFactsheet(){if(!S.code||!SUPA.url)return back("start")+`<h1>Factsheet</h1><p class="muted">Nur mit persönlichem Code verfügbar.</p>`;
   const f=S.factsheet;if(f===undefined){S.factsheet=null;rpc("chef_factsheet",{p_code:S.code,p_group:S.fsGroup||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>{S.factsheet=false;toast(e.message);render()});}
   const pick=f&&f.gruppen?`<select class="input noprint" data-chg="fsgroup" style="margin-bottom:10px"><option value="">Gruppe wählen …</option>${f.gruppen.map(x=>`<option value="${x.id}" ${x.id===f.gid?"selected":""}>${esc(x.name)}</option>`).join("")}</select>`:"";
   const top=back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>`;
-  if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?(S.isOkUser?"Als OK: unten eine Gruppe wählen.":"Nur für Gruppenchefs."):"wird geladen …"}</p>${f===false&&S.isOkUser?`<button class="btn sm" data-act="fsok">Gruppen laden</button>`:""}`;
+  if(!f)return top+`<h1>Factsheet Tischgruppe</h1><p class="muted">${f===false?"Nur für Gruppenchefs und das OK.":"wird geladen …"}</p>${f===false&&S.isOkUser?`<button class="btn sm" data-act="fsok">Gruppen laden</button>`:""}`;
   const nm=p=>`${esc(p.name)} ${esc(p.vorname)}`,dt=d=>d?new Date(d+"T12:00:00").toLocaleDateString("de-CH"):"";
   return top+pick+`<p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1 style="margin:0 0 4px">Factsheet Tischgruppe ${esc(f.gruppe)}</h1>
   <p class="muted small" style="margin:0 0 12px">${f.angemeldet} angemeldet · Stand ${new Date().toLocaleDateString("de-CH")}</p>
@@ -1808,7 +1808,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.1"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.2"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
