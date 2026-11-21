@@ -1104,16 +1104,29 @@ function vStart(){
   return h+`<div class="sec-h"><h2>Alles zum Abend</h2></div>${tiles()}${nextHABox()}`;
 }
 function tiles(){return`<div class="tiles">${SECTIONS.filter(s=>!(VORAB&&(s.ev||s.role))).filter(s=>!s.role||(s.role==="chef"?!!chefGroup():s.role===S.role)).map(s=>`<button class="tile" data-act="go" data-r="${s.r}"><span class="ic">${s.ic}</span><b>${s.l}</b><span>${s.d}</span></button>`).join("")}${S.chorAktiv?`<button class="tile" data-act="pickchor"><span class="ic">🎵</span><b>Chor-App</b><span>Proben, Noten, Chat</span></button>`:""}</div>`}
-function vLock(){
-  return`<div style="max-width:420px;margin:24px auto 0;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:90px;margin:0 auto 12px;display:block">
-  <p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1>Willkommen</h1>
-  <p class="muted">Bitte gib den persönlichen Zugangscode aus deiner Einladungs-E-Mail ein.</p>
+function vLock(){const st=S.lockStep||"ask";
+  const head=`<div style="max-width:420px;margin:24px auto 0;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:90px;margin:0 auto 12px;display:block">
+  <p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1>Willkommen</h1>`;
+  if(st==="ask")return head+`<p class="muted">Hast du einen persönlichen Zugangscode?</p>
+    <div class="card" style="display:grid;gap:10px"><button class="btn primary" data-act="lockstep" data-s="code" style="padding:14px">Ja, ich habe einen Code</button>
+    <button class="btn" data-act="lockstep" data-s="req" style="padding:14px">Nein – ich brauche meinen Code</button></div></div>`;
+  if(st==="req")return head+`<p class="muted">Gib deinen Namen und deine E-Mail-Adresse an. Stimmt die E-Mail mit unserem Mitgliederverzeichnis überein, erhältst du den Code mit dem persönlichen Link per E-Mail.</p>
+    <div class="card" style="text-align:left;display:grid;gap:6px"><label class="small muted" for="rqv">Vorname</label><input id="rqv" class="input" autocomplete="given-name" maxlength="40">
+    <label class="small muted" for="rqn">Name</label><input id="rqn" class="input" autocomplete="family-name" maxlength="60">
+    <label class="small muted" for="rqe">E-Mail</label><input id="rqe" class="input" type="email" autocomplete="email" maxlength="120" placeholder="name@beispiel.ch">
+    <button class="btn primary" data-act="reqcode" style="margin-top:6px">Code anfordern</button>
+    <button class="btn ghost sm" data-act="lockstep" data-s="ask">← zurück</button></div></div>`;
+  if(st==="sent")return head+`<div class="card" style="text-align:left"><h3 style="margin:0 0 6px">✉️ Danke – deine Anfrage ist unterwegs</h3>
+    <p class="small" style="margin:0 0 8px">Stimmen Name und E-Mail mit unserem Mitgliederverzeichnis überein, erhältst du in wenigen Minuten eine E-Mail mit deinem Code und dem persönlichen Link. Bitte auch im Spam-Ordner nachsehen.</p>
+    <p class="small muted" style="margin:0 0 10px">Ist bei uns keine oder eine andere E-Mail-Adresse hinterlegt, geht deine Anfrage an den Präsidenten – er meldet sich bei dir.</p>
+    <button class="btn" data-act="lockstep" data-s="code">Ich habe den Code – jetzt eingeben</button></div></div>`;
+  return head+`<p class="muted">Bitte gib den persönlichen Zugangscode aus deiner Einladungs-E-Mail ein.</p>
   <div class="card" style="text-align:left"><label class="small muted" for="code">Zugangscode</label>
   <input id="code" class="input" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="z.B. AB3K7M" style="font-size:22px;letter-spacing:.2em;text-transform:uppercase;margin:6px 0 12px;text-align:center">
   <label class="small muted" for="vname">Vorname <span style="opacity:.7">(für die persönliche Begrüssung, freiwillig)</span></label>
   <input id="vname" class="input" autocomplete="given-name" maxlength="30" placeholder="Vorname" style="margin:6px 0 12px">
   <button class="btn primary" style="width:100%" data-act="unlock">App öffnen</button>
-  <p class="small muted" style="margin:12px 0 0">Tipp: Mit dem persönlichen Link aus der E-Mail öffnet sich die App direkt. Code verloren? Melde dich beim Herrenabendkassier: herrenabend@mcthun.ch</p></div></div>`;
+  <p class="small muted" style="margin:12px 0 0">Tipp: Mit dem persönlichen Link aus der E-Mail öffnet sich die App direkt. <a href="#" data-act="lockstep" data-s="req">Code verloren? Hier anfordern</a></p></div></div>`;
 }
 function vStartVorab(){
   const h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><span class="chip y" style="margin-bottom:8px">Vorabversion</span><p class="eyebrow">Männerchor Thun · Einladung zum ${EVENT.nr}. Herrenabend</p>
@@ -1315,7 +1328,10 @@ function vFactsheet(){if(!S.code||!SUPA.url)return back("start")+`<h1>Factsheet<
   <div class="card"><h3 style="margin:0 0 6px">🙋 Noch nicht angemeldet</h3><p class="small muted" style="margin:0 0 8px">Mitglieder, die in Webling deiner Tischgruppe zugeteilt sind, sich aber (noch) nicht angemeldet haben. Vielleicht lohnt sich ein Anruf.</p>
     ${!f.stamm_bekannt?`<p class="small" style="margin:0">Die Tischgruppen-Zuteilung aus Webling ist noch nicht importiert.</p>`:f.fehlen.length?`<table class="t">${f.fehlen.map(p=>`<tr><td>${nm(p)}</td></tr>`).join("")}</table>`:`<p class="small" style="margin:0">Niemand – alle haben sich an- oder abgemeldet. 👍</p>`}</div>
   ${f.entschuldigt&&f.entschuldigt.length?`<div class="card"><h3 style="margin:0 0 6px">✉️ Entschuldigt</h3><p class="small muted" style="margin:0 0 8px">Mitglieder deiner Tischgruppe, die sich für den Herrenabend ${EVENT_YEAR} abgemeldet haben.</p><table class="t">${f.entschuldigt.map(p=>`<tr><td>${nm(p)}</td></tr>`).join("")}</table></div>`:""}
+  <div class="card" style="display:flex;gap:14px;align-items:center"><div style="flex:none;background:#fff;padding:4px;border-radius:8px">${QR_HA}</div>
+    <div><b>Zur Herrenabend-App</b><p class="small" style="margin:4px 0 0">herrenabend.maennerchorthun.ch</p><p class="small muted" style="margin:4px 0 0">QR-Code scannen. Wer keinen Code hat oder ihn verlegt hat, kann ihn dort mit «Ich brauche meinen Code» anfordern.</p></div></div>
   <p class="small muted">Vertraulich – nur für den Gruppenchef und das OK.</p>`}
+const QR_HA=`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 132 132" role="img" aria-label="QR-Code herrenabend.maennerchorthun.ch" class="segno"><path transform="scale(4)" class="qrline" stroke="#1f1b18" d="M2 2.5h7m1 0h3m5 0h1m1 0h3m1 0h7m-29 1h1m5 0h1m1 0h1m1 0h1m2 0h2m2 0h2m3 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m2 0h7m2 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h3m2 0h1m4 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h3m3 0h1m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h2m2 0h1m2 0h5m1 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-21 1h1m3 0h1m1 0h4m-18 1h1m1 0h2m1 0h3m1 0h5m1 0h4m3 0h1m2 0h1m1 0h2m-29 1h1m1 0h2m1 0h1m1 0h1m2 0h1m1 0h1m3 0h9m3 0h1m-26 1h1m2 0h2m1 0h3m2 0h1m1 0h1m1 0h1m1 0h2m1 0h2m1 0h2m-27 1h4m3 0h2m3 0h1m6 0h3m5 0h1m-26 1h2m1 0h3m3 0h1m2 0h3m1 0h1m3 0h1m1 0h2m-26 1h3m3 0h1m1 0h2m1 0h6m1 0h2m1 0h1m3 0h3m-29 1h3m2 0h2m1 0h2m1 0h2m1 0h1m1 0h1m1 0h2m1 0h1m2 0h1m1 0h3m-29 1h2m1 0h1m3 0h1m2 0h1m2 0h1m1 0h1m4 0h3m1 0h1m2 0h1m-26 1h1m1 0h1m1 0h4m1 0h1m3 0h1m2 0h1m1 0h2m2 0h2m1 0h1m-26 1h1m4 0h1m3 0h1m1 0h1m1 0h1m2 0h1m1 0h1m2 0h1m1 0h3m-28 1h1m4 0h3m1 0h2m4 0h1m1 0h2m2 0h1m1 0h2m1 0h1m-25 1h1m1 0h2m10 0h2m1 0h1m1 0h1m4 0h1m-26 1h2m1 0h1m1 0h1m2 0h1m1 0h3m3 0h2m1 0h7m-19 1h3m2 0h2m1 0h1m1 0h1m1 0h1m3 0h5m-29 1h7m1 0h2m1 0h1m1 0h1m5 0h2m1 0h1m1 0h2m1 0h1m-28 1h1m5 0h1m1 0h1m6 0h2m1 0h1m1 0h1m3 0h2m-26 1h1m1 0h3m1 0h1m4 0h2m1 0h4m2 0h5m1 0h1m-27 1h1m1 0h3m1 0h1m1 0h4m1 0h4m2 0h3m1 0h3m2 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h2m1 0h1m8 0h1m2 0h1m1 0h1m-29 1h1m5 0h1m2 0h1m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h2m1 0h1m-28 1h7m1 0h1m1 0h3m2 0h1m2 0h3m1 0h3m2 0h1"/></svg>`;
 function chefPrefBox(){const g=S.chefGrp;if(!g)return"";
   return`<div class="card"><h3 style="margin:0 0 6px">Anzahl Plätze</h3><p class="small muted" style="margin:0 0 8px">Wie viele Plätze braucht eure Tischgruppe – inklusive Personen, die sich noch anmelden? Das OK hält sie für euch frei. Die Tische teilt das OK zu.${g.tische&&g.tische.length?` <b>Zugeteilt: Tisch ${esc(g.tische.join(", "))}</b>.`:""}</p>
     <div style="display:grid;gap:6px"><label class="small muted">Anzahl Plätze (inkl. noch nicht Angemeldete)</label><input id="cpp" class="input" type="number" min="1" max="336" value="${g.plaetze||""}" placeholder="z.B. 16"></div>
@@ -1771,8 +1787,8 @@ const A={
   demo:()=>{seedDemo();setRole("ok");render();toast("Demo-Daten geladen")},
   export:()=>download("herrenabend-sitzplan.csv","Vorname;Name;Typ;Gruppe;Tisch;Platz\n"+[...S.people].sort((a,b)=>(+a.tisch||99)-(+b.tisch||99)||(a.platz||0)-(b.platz||0)).map(p=>[p.vorname,p.name,TYP[p.typ],G(p.gruppe)?.name||"",p.tisch||"",p.platz||""].join(";")).join("\n")),
   exportlinks:()=>download("herrenabend-links.csv","Vorname;Name;Rolle;Gruppe;Tisch;Platz;Link\n"+S.people.map(p=>[p.vorname,p.name,isChef(p)?chefLbl(chefOf(p)):"Teilnehmer",G(p.gruppe)?.name||"",p.tisch||"",p.platz||"",linkOf(p)].join(";")).join("\n")),
-  unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");
-    if(!ACCESS.hashes.has(sha256(ACCESS.salt+c).slice(0,16)))return toast("Code unbekannt – bitte prüfen");
+  unlock:async()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");
+    if(!ACCESS.hashes.has(sha256(ACCESS.salt+c).slice(0,16))){let ok=false;try{ok=!!SUPA.url&&await rpc("code_ok",{p_code:c})}catch(e){}if(!ok)return toast("Code unbekannt – bitte prüfen")}
     S.unlocked=true;S.code=c;const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;rememberMe();
     try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}
     if(VORAB){checkOk();askApp()}
@@ -1824,7 +1840,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.18"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.19"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1863,10 +1879,10 @@ async function doImportLive(txt){
   const hd=rows[0].map(h=>h.trim().toLowerCase());
   try{
     if(hd.some(h=>h.startsWith("login-code"))){
-      const iI=hd.indexOf("mitglieder id"),iV=hd.indexOf("vorname"),iN=hd.indexOf("name"),iC=hd.findIndex(h=>h.startsWith("login-code")),iE=hd.indexOf("mitglied seit"),iT=hd.indexOf("herrenabend-tisch"),iA=hd.indexOf("teilnahme herrenabend");
+      const iI=hd.indexOf("mitglieder id"),iV=hd.indexOf("vorname"),iN=hd.indexOf("name"),iC=hd.findIndex(h=>h.startsWith("login-code")),iE=hd.indexOf("mitglied seit"),iT=hd.indexOf("herrenabend-tisch"),iA=hd.indexOf("teilnahme herrenabend"),iM=hd.indexOf("e-mail");
       const pd=v=>{v=String(v||"").trim();let m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];m=v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:""};
       const data=rows.slice(1).map(r=>{const x={member_id:(r[iI]||"").trim(),vorname:(r[iV]||"").trim(),name:(r[iN]||"").trim(),code:(r[iC]||"").trim()};
-        if(iE>=0)x.eintritt=pd(r[iE]);if(iT>=0){const t=String(r[iT]||"").trim();x.stammgruppe=/^(keine zuteilung|-|)$/i.test(t)?"":t}if(iA>=0)x.abgemeldet=new RegExp("\\b"+EVENT_YEAR+"\\s*Nein","i").test(String(r[iA]||""));return x}).filter(x=>x.member_id&&x.code);
+        if(iE>=0)x.eintritt=pd(r[iE]);if(iT>=0){const t=String(r[iT]||"").trim();x.stammgruppe=/^(keine zuteilung|-|)$/i.test(t)?"":t}if(iM>=0){const m=String(r[iM]||"").trim();if(m)x.email=m}if(iA>=0)x.abgemeldet=new RegExp("\\b"+EVENT_YEAR+"\\s*Nein","i").test(String(r[iA]||""));return x}).filter(x=>x.member_id&&x.code);
       if(!data.length){return toast("Keine Codes gefunden – Spalten «Mitglieder ID» und «Login-Code für App» nötig")}
       S.busy=`${data.length} Zugangscodes werden importiert …`;render();
       const res=await rpc("admin_import_codes",{p_code:S.code,p_rows:data});
@@ -2007,6 +2023,11 @@ A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
+A.lockstep=d=>{S.lockStep=d.s;render()};
+A.reqcode=async()=>{const v=($("#rqv").value||"").trim(),n=($("#rqn").value||"").trim(),e=($("#rqe").value||"").trim();
+  if(!v||!n)return toast("Bitte Vorname und Name angeben");if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return toast("Bitte eine gültige E-Mail-Adresse angeben");
+  const b=document.querySelector('[data-act="reqcode"]');if(b){b.disabled=true;b.textContent="wird gesendet …"}
+  try{await rpc("request_code",{p_vorname:v,p_name:n,p_email:e});S.lockStep="sent";render()}catch(err){toast(err.message);if(b){b.disabled=false;b.textContent="Code anfordern"}}};
 A.fixapply=()=>{const bad=S.groups.flatMap(g=>{const ft=(g.tische||[]).map(String);return ft.length?members(g).filter(p=>!p.platz||!ft.includes(String(p.tisch))):[]});
   const split=S.groups.filter(g=>groupTables(g).length>1);
   if(!bad.length&&!split.length)return toast("Alles in Ordnung – nichts umzusetzen");
@@ -2071,6 +2092,8 @@ setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck(
   try{const sc=localStorage.getItem("ha_code"),sn=localStorage.getItem("ha_vname")||"";
     if(!qc&&sc){qc=normCode(sc);if(!S.vname)S.vname=cleanName(sn)}else if(qc&&!S.vname&&normCode(sc||"")===qc)S.vname=cleanName(sn)}catch(e){}
   S.unlocked=!ACCESS.required||(qc&&ACCESS.hashes.has(sha256(ACCESS.salt+qc).slice(0,16)));
+  /* Code aus dem Link, der (noch) nicht in der App-Liste steht: beim Server prüfen und danach freischalten */
+  if(!S.unlocked&&qc&&SUPA.url&&VORAB){rpc("code_ok",{p_code:qc}).then(ok=>{if(!ok)return;S.unlocked=true;S.code=qc;rememberMe();render();checkOk();askApp()}).catch(()=>{})}
   if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc){S.code=qc;rememberMe()}render();if(S.code){checkOk();askApp()}return}
   if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;if(qc)rememberMe();
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
