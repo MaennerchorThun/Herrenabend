@@ -1691,7 +1691,7 @@ function vAdminAlt(){
     <input id="apg" class="input" list="apglist" placeholder="Gruppe (z.B. Gästetisch)" value="Gästetisch"><datalist id="apglist">${S.groups.map(g=>`<option value="${esc(g.name)}">`).join("")}</datalist></div>
     <input id="apf" class="input" placeholder="Funktion (optional, z.B. Gemeinderat Stadt Thun)" style="margin-top:8px">
     <button class="btn sm primary" style="margin-top:8px" data-act="addperson">Hinzufügen</button></div>`;
-  if(LIVE)h+=`<div class="card"><h3>1. Zugangscodes importieren</h3><p class="muted small">CSV mit den Spalten <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>, <code>Login-Code für App</code> hochladen (die Liste aus dem Webling-Versand). Gespeichert werden nur Name und eine Prüfsumme des Codes – keine E-Mail-Adressen.</p>
+  if(LIVE)h+=`<div class="card"><h3>1. Zugangscodes importieren</h3><p class="muted small">CSV mit den Spalten <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>, <code>Login-Code für App</code> hochladen (Webling-Export «Alle Mitglieder»). Zusätzlich übernommen werden, falls vorhanden: <code>E-Mail</code> (für «Ich brauche meinen Code» – der Code geht nur an diese Adresse), <code>Mitglied seit</code>, <code>Herrenabend-Tisch</code> und <code>Teilnahme Herrenabend</code> (für das Factsheet). Der Code wird verschlüsselt gespeichert.</p>
     ${S.stats&&S.stats.with_code>2?`<div class="okmsg" style="margin:0 0 10px">✓ In der Datenbank: <b>${S.stats.members} Mitglieder</b>, ${S.stats.with_code} Zugangscodes insgesamt (inkl. Admin und Zusatzcodes).${S.codeInfo?`<br>Letzter Import: ${S.codeInfo.neu} neu, ${S.codeInfo.aktualisiert} aktualisiert.`:""}</div>`:""}
     ${S.busy?`<div class="note">⏳ ${esc(S.busy)}</div>`:""}
     <label class="small muted" for="codefile">CSV-Datei wählen – der Import startet automatisch:</label>
@@ -1840,7 +1840,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.19"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.20"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
