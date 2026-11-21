@@ -1055,7 +1055,7 @@ function render(){
   if(r==="gruppe"&&!chefGroup())r="saal";
   if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
   if(r!=="factsheet"&&r!=="factsheetok"&&S.factsheet!==undefined)S.factsheet=undefined;
-  const V={factsheet:vFactsheet,factsheetok:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
+  const V={chefinfo:vChefInfo,factsheet:vFactsheet,factsheetok:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
   $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
@@ -1090,7 +1090,7 @@ function vStart(){
   if(cg){const ms=members(cg),pr=S.proposals.filter(x=>x.gruppe===cg.id).length,op=S.orders.filter(o=>o.gruppe===cg.id&&o.status!=="serviert").length;
     h+=`<div class="card" style="border-color:var(--brand)"><div class="row between"><div><p class="eyebrow">${chefLbl(cg)}${cg.guest?" ad interim":""}</p><h3 style="margin:0">${cg.guest?"":"Gruppe "}${esc(cg.name)}</h3></div><span class="chip b">nur ${cg.guest?"Gästetisch":"eigene Gruppe"}</span></div>
       <div class="kpis" style="margin:12px 0">${kpiBox(ms.length,"Personen")}${kpiBox(ms.filter(p=>p.platz).length,"platziert")}${kpiBox(groupTables(cg).length,"Tische")}${kpiBox(pr,"Weinwünsche")}${kpiBox(op,"offene Bestellungen")}</div>
-      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet</button></div></div>`}
+      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt</button></div></div>`}
   if(S.role==="ok"){const k=kpi();
     h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>${LIVE&&!S.people.length?`<div class="note" style="margin:0 0 10px">Noch keine Teilnehmer in der Datenbank. Die angemeldeten Teilnehmer lädst du unter <b>Verwaltung → Einstellungen &amp; Import → 2. Teilnehmer importieren</b> (Webling-Export «Teilnehmer Herrenabend»).</div>`:""}
       <div class="kpis" style="margin:8px 0 12px">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.newOrders,"neue Bestellungen")}${kpiBox(k.urgent,"dringendes Feedback")}</div>
@@ -1305,7 +1305,62 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
   return`<details style="margin-top:10px"${ms.length&&!open?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
     ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td><button class="btn sm ${p.apero?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${p.apero?0:1}">${p.apero?"✓ dabei":"anmelden"}</button></td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>
-    <button class="btn sm" data-act="go" data-r="factsheet" style="margin-top:8px">📋 Factsheet: neu dabei & wer fehlt</button>`}
+    <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet: neu dabei & wer fehlt</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt für Tischchefs</button></div>`}
+
+/* ===== Merkblatt für Tischchefs (in der App, druckbar) – Stand 21.11.2026 ===== */
+function vChefInfo(){
+  const H=(n,t)=>`<div class="sec-h" style="margin-top:18px"><h2>${n} · ${t}</h2></div>`;
+  const li=a=>`<ul style="margin:4px 0 0;padding-left:18px">${a.map(x=>`<li style="margin:0 0 6px">${x}</li>`).join("")}</ul>`;
+  /* Skizze: Gruppe mit 20 Personen über Tisch 9 und 16 (Linie quer durch den Saal) */
+  const seat=c=>`<i style="display:block;height:12px;border-radius:3px;background:${c==="a"?"var(--brand)":c==="b"?"#3d6fb6":c==="c"?"#2f7d4f":"var(--surface2)"};border:1px solid rgba(0,0,0,.08)"></i>`;
+  const tbl=(n,row)=>`<div style="flex:1;min-width:0"><div class="small" style="text-align:center;font-weight:700;margin-bottom:3px">Tisch ${n}</div><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--surface)">${[...row,...row].map(seat).join("")}</div></div>`;
+  const sk=`<div class="card" style="padding:10px 12px"><div class="row" style="gap:6px;flex-wrap:nowrap;align-items:flex-end">${tbl(9,["b","b","b","b","b","b","b","a"].slice(0,8).map((c,i)=>i<1?"b":"a"))}<div class="small muted" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px">Zwischenraum</div>${tbl(16,["a","a","a","c","c","c","c","c"])}</div>
+    <div class="row small" style="gap:12px;margin-top:6px;flex-wrap:wrap"><span><span style="display:inline-block;width:10px;height:10px;background:var(--brand);border-radius:2px"></span> deine Gruppe (geteilt, in einer Linie)</span><span><span style="display:inline-block;width:10px;height:10px;background:#3d6fb6;border-radius:2px"></span> andere Gruppe</span><span><span style="display:inline-block;width:10px;height:10px;background:#2f7d4f;border-radius:2px"></span> weitere Gruppe</span></div>
+    <p class="small muted" style="margin:6px 0 0">Beispiel: Eine Gruppe mit 20 Personen teilt sich die Tische 9 und 16 – 14 Personen am rechten Ende von Tisch 9, 6 am linken Anfang von Tisch 16.</p></div>`;
+  return back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>
+  <p class="eyebrow">Herrenabend-App · ${EVENT.nr}. Herrenabend, ${esc(EVENT.datum)}</p><h1 style="margin:0 0 6px">Merkblatt für Tischchefs</h1>
+  <p>Als Tischchef bist du Ansprechperson deiner Tischgruppe. Die App nimmt dir dabei einiges ab: Du siehst, wer aus deiner Gruppe angemeldet ist und wer noch fehlt, legst den Apéro fest, verteilst ab dem 5. Dezember die Plätze selbst und bestellst am Abend den Wein für euren Tisch. In der App heisst deine Rolle «Gruppenchef» (beim Gästetisch «Tischchef»). Du siehst und bearbeitest immer nur deine eigene Gruppe.</p>
+  <div class="card" style="border-color:var(--brand)"><h3 style="margin:0 0 4px">So kommst du in deinen Bereich</h3>
+    <p class="small" style="margin:0 0 6px">Öffne die App über deinen persönlichen Link oder den QR-Code: <b>herrenabend.maennerchorthun.ch</b>. Auf der Startseite erscheint die Karte «Gruppenchef · Name deiner Tischgruppe» – dort findest du alles, was nur du siehst. Tipp: «Zum Home-Bildschirm hinzufügen» (iPhone: in Safari) – dann bist du jederzeit mit einem Tipp drin.</p>
+    <p class="small" style="margin:0">Code verlegt oder nie erhalten? Auf der Startseite <b>«Nein – ich brauche meinen Code»</b> wählen und Vorname, Name und E-Mail eingeben. Stimmt die E-Mail mit dem Mitgliederverzeichnis überein, kommt der Code mit Link per Mail. Das gilt auch für die Mitglieder deiner Gruppe.</p></div>
+  ${H(1,"Jetzt bis 4. Dezember (Vorabversion)")}
+  <div class="card"><b>Angemeldete Teilnehmer</b>${li([
+    "In deiner Karte auf der Startseite steht, wie viele Personen deiner Tischgruppe angemeldet sind und wie viele davon zum Apéro kommen. Antippen zeigt die Namen.",
+    "Die Liste zeigt den Stand der Anmeldungen beim OK. Fehlt jemand oder ist jemand falsch zugeteilt, melde es dem OK über «Feedback»."])}</div>
+  <div class="card"><b>Factsheet: neu dabei & wer fehlt</b>${li([
+    "«📋 Factsheet» in deiner Karte zeigt, wer <b>zum ersten Mal dabei</b> ist (Eintritt ab 7.12.2025) – ein herzliches Willkommen am Tisch freut sie bestimmt.",
+    "Dazu, wer aus deiner Tischgruppe <b>noch nicht angemeldet</b> ist (vielleicht lohnt sich ein Anruf) und wer sich <b>entschuldigt</b> hat.",
+    "Das Factsheet lässt sich drucken – mit QR-Code zur App für alle, die noch keinen Zugang haben. Es ist vertraulich und nur für dich und das OK."])}</div>
+  <div class="card"><b>Apéro</b>${li([
+    `Der Apéro für alle beginnt um ${esc(EVENT.apero)} Uhr, ${esc(EVENT.aperoOrt)}.`,
+    "Trifft sich deine Gruppe vorher separat, legst du unter «Apéro» Zeit und Ort eures Gruppen-Apéros fest. Nur die Mitglieder deiner Tischgruppe sehen ihn – sofort nach dem Speichern.",
+    "Ebenfalls dort meldest du Personen deiner Gruppe zum Apéro an oder ab – auch dich selbst, oder wenn jemand nicht selber in die App schaut."])}</div>
+  <div class="card"><b>Anzahl Plätze</b>${li([
+    "Gib an, wie viele Plätze eure Tischgruppe braucht – inklusive Personen, die sich noch anmelden. Diese Plätze hält das OK für euch frei.",
+    "Die Tische teilt das OK zu. Hast du einen Wunsch, wo deine Gruppe sitzen möchte, melde ihn möglichst früh über «Feedback»."])}</div>
+  ${H(2,"So funktioniert die Tischeinteilung")}
+  <div class="card"><p class="small" style="margin:0 0 6px">Der Saal hat 21 Tische à 16 Plätze. Die Tische stehen waagerecht in drei Reihen hintereinander: 1–7 bei der Bühne, 8–14 in der Mitte, 15–21 hinten. Tisch 4 ist der Gästetisch. Das OK teilt die Tische zu; die App setzt die Plätze nach festen Regeln:</p>${li([
+    "Bis 16 Personen sitzt deine Gruppe an einem Tisch – je nach Grösse zusammen mit einer anderen Gruppe.",
+    "Mehr als 16 Personen: Die Gruppe wird geteilt. Am zweiten Tisch sitzen mindestens 6 Personen deiner Gruppe – niemand sitzt als kleines Grüppchen allein.",
+    "Die Teile sitzen in einer Linie quer durch den Saal, z.B. Tisch 2 → 9 → 16: am ersten Tisch am rechten Ende, am nächsten Tisch direkt anschliessend am linken Anfang. So sitzt ihr zusammen, getrennt nur durch den Zwischenraum."])}</div>
+  ${sk}
+  <div class="card">${li([
+    "Einmal vergebene Plätze bleiben. Neue Anmeldungen setzt die App auf freie Plätze bei eurer Gruppe – die anderen werden nicht umgemischt. Wer sich abmeldet, gibt seinen Platz frei.",
+    "Tisch und Platz siehst du, sobald das OK die Tischeinteilung freischaltet. Alle Teilnehmer sehen ihren Platz ab der Event-Version am 5. Dezember."])}</div>
+  ${H(3,"Ab 5. Dezember (Event-Version)")}
+  <div class="card"><p class="small" style="margin:0 0 4px">Jetzt erscheint die Kachel «Meine Gruppe». Du siehst und verwaltest nur deine eigene Gruppe:</p>${li([
+    "<b>Übersicht:</b> alle Personen mit Tisch, Platz und Menü (normal/vegetarisch), die Tische eurer Gruppe und mit wem ihr den Tisch teilt.",
+    "<b>Plätze setzen und tauschen:</b> Im Saalplan einen Platz eurer Gruppe antippen und Personen setzen oder tauschen – auch zwischen euren Tischen, wenn die Gruppe geteilt ist (z.B. Tisch 9 ↔ Tisch 16). Plätze anderer Gruppen sind gesperrt. Wer noch keinen Platz hat, setzt du mit «ohne Platz auf freie Plätze setzen» mit einem Tipp.",
+    "<b>Sitzwünsche:</b> Erfasse, wer neben wem sitzen möchte – oder wer nicht. «Neben» heisst direkt links oder rechts. «Plätze ordnen» setzt deine Gruppe so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.",
+    "<b>Wein bestellen:</b> Du bestellst den Wein für euren Tisch direkt in der App – die Bestellung geht sofort an den Service. Mitglieder deiner Gruppe können dir Weine vorschlagen; ihre Wünsche erscheinen bei dir. Du siehst alle Bestellungen eurer Gruppe mit Total.",
+    "<b>Factsheet und Gruppen-Apéro</b> kannst du weiterhin ansehen bzw. anpassen."])}</div>
+  ${H(4,"Am Abend")}
+  <div class="card">${li([
+    "Weinbestellung bitte vor 18:30 Uhr aufgeben – während der Darbietungen wird nicht serviert.",
+    "Mineralwasser steht auf den Tischen.",
+    "Das OK erreichst du über «Feedback» in der App – die Meldung kommt sofort aufs Handy des OK.",
+    "Notfall, Spital und Taxi findest du unter «Wichtige Nummern»."])}</div>
+  <p>Herzlichen Dank, dass du dich für deine Tischgruppe einsetzt – wir freuen uns auf einen schönen Herrenabend!<br><span class="muted small">OK Herrenabend · Männerchor Thun 1829</span></p>`}
 /* Factsheet für Tischchefs: Mitglieder, die zum ersten Mal dabei sind (Eintritt ab 7.12.2025), und Mitglieder der Tischgruppe ohne Anmeldung */
 const EVENT_YEAR=2026;
 /* Welche Gruppe? OK-Zugang: gewählte Gruppe · Chef-Ansicht (auch Teilnehmer-Vorschau): Gruppe der angezeigten Person · Vorabversion: eigene Gruppe */
@@ -1840,7 +1895,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.20"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.22"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
