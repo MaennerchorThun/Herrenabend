@@ -639,6 +639,8 @@ function splitCounts(n,caps){const out=[];let rest=n;
 function allocateGroups(plan=null,opt={}){
   const keep=!!opt.keep;
   if(!keep)for(const p of S.people){p.tisch=null;p.platz=null}
+  /* Feste Tische (Verwaltung → Tischgruppen im Saal) gelten immer: wer ausserhalb sitzt, wird an die festen Tische umgesetzt */
+  for(const g of S.groups){const ft=(g.tische||[]).map(String);if(!ft.length)continue;for(const p of members(g))if(p.tisch&&!ft.includes(String(p.tisch))){p.tisch=null;p.platz=null}}
   const taken=new Set(S.people.filter(p=>p.tisch&&p.platz).map(p=>p.tisch+":"+p.platz));
   const normal=TABLES.filter(t=>!t.front).map(t=>t.id);
   // 1. Vorjahresplätze (nur beim Neu-Verteilen)
@@ -682,6 +684,7 @@ function allocateGroups(plan=null,opt={}){
     const o=own(g);
     if(o.length){let rest=ms.slice();for(const t of o){const x=Math.min(cap.get(t),rest.length);if(x>0){put(g,[t],[x],rest.splice(0,x),["near"])}}
       if(!rest.length)return;
+      if(fixed&&fixed.length){for(const t of fixed.map(String).filter(t=>!o.includes(t)&&T(t))){const x=Math.min(cap.get(t),rest.length);if(x>0)put(g,[t],[x],rest.splice(0,x),["none"])}if(!rest.length)return}
       const nb=[nextInLine(o[o.length-1]),prevInLine(o[0])].filter(t=>t&&pool.includes(t)&&cap.get(t)>=Math.min(rest.length,MINPART));
       if(nb.length&&cap.get(nb[0])>=rest.length){const t=nb[0];put(g,[t],[rest.length],rest,[+t>+o[o.length-1]?"start":"end"]);return}
       place(g,rest,pool);return}
@@ -691,14 +694,14 @@ function allocateGroups(plan=null,opt={}){
       place(g,ms.slice(k),pool);return}
     place(g,ms,pool,ex)};
   // 2. Gästetisch
-  for(const g of S.groups.filter(g=>g.guest))handle(g,[EHREN_TISCH,...normal],[EHREN_TISCH]);
+  for(const g of S.groups.filter(g=>g.guest)){const ft=g.tische&&g.tische.length?g.tische.map(String):[EHREN_TISCH];handle(g,[...new Set([...ft,...normal])],ft)}
   // 3. Gruppen mit festen Tischen (Verwaltung → Tische) bzw. Vorlage – in Tischreihenfolge
   const pm=plan?planMatch(plan):new Map();
   const fixedOf=g=>g.tische&&g.tische.length?g.tische:pm.get(g.id)||null;
   const withFixed=S.groups.filter(g=>!g.guest&&fixedOf(g)).sort((a,b)=>Math.min(...fixedOf(a))-Math.min(...fixedOf(b)));
   for(const g of withFixed)handle(g,normal,fixedOf(g));
   // 4. übrige Gruppen: zuerst die mit Standort-Wunsch, dann die grossen
-  const resv=new Set(withFixed.flatMap(fixedOf).map(String));
+  const resv=new Set([...withFixed,...S.groups.filter(g=>g.guest)].flatMap(g=>fixedOf(g)||[EHREN_TISCH]).map(String));
   const rest=S.groups.filter(g=>!done.has(g.id)).sort((a,b)=>(!a.standort)-(!b.standort)||sortM(b).length-sortM(a).length);
   for(const g of rest){const pool=normal.filter(t=>!resv.has(t));handle(g,pool.some(t=>cap.get(t)>=Math.min(16,sortM(g).length))?pool:normal,null)}
   // 5. Personen ohne Gruppe
@@ -831,6 +834,7 @@ function adminTables(){
     <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
   h+=`<div class="card"><h3>Factsheets der Tischgruppen</h3><p class="small muted" style="margin:0 0 8px">Pro Tischgruppe: wer zum ersten Mal dabei ist (Eintritt ab 7.12.2025) und wer aus der Webling-Zuteilung noch nicht angemeldet ist. Die Gruppenchefs sehen ihr eigenes Factsheet in der Gruppenchef-Karte.</p><button class="btn sm" data-act="go" data-r="factsheetok">📋 Factsheets öffnen</button></div>`;
   h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Wunschtisch (konkrete Tischnummer oder egal) erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden möglichst an ihren Wunschtisch gesetzt – grössere Gruppen ab dem Wunschtisch an den Nachbartisch in derselben Reihe. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
+    <button class="btn sm primary" data-act="fixapply" style="margin:0 0 8px">📌 Feste Tische anwenden</button> <span class="small muted">setzt nur Personen um, die nicht an den festen Tischen ihrer Gruppe sitzen – alle anderen bleiben.</span>
     <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Wunschtisch</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px">${standortOpts(g.standort||"",g.id)}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="allocask" data-m="plan">Plätze neu verteilen</button></div></div>`;
   const noT=S.people.filter(p=>!p.tisch).sort(byName);
@@ -1815,7 +1819,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.14"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.16"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
@@ -1998,6 +2002,10 @@ A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)
   rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:z,p_ort:o}).then(()=>{S.chefGrp.zeit=z;S.chefGrp.ort=o;S.myApero=undefined;toast("Apéro gespeichert");render()}).catch(e=>toast(e.message))};
 A.cgclear=()=>{if(!confirm("Eigenen Apéro-Eintrag löschen?"))return;rpc("set_group_apero",{p_code:S.code,p_group:S.chefGrp.id,p_zeit:"",p_ort:""}).then(()=>{S.chefGrp.zeit="";S.chefGrp.ort="";S.myApero=undefined;toast("Gelöscht");render()}).catch(e=>toast(e.message))};
 A.pickchor=()=>{location.href=chorUrl()};
+A.fixapply=()=>{const bad=S.groups.flatMap(g=>{const ft=(g.tische||[]).map(String);return ft.length?members(g).filter(p=>!p.platz||!ft.includes(String(p.tisch))):[]});
+  if(!bad.length)return toast("Alle sitzen bereits an den festen Tischen ihrer Gruppe");
+  if(!confirm(`${bad.length} Personen an die festen Tische ihrer Gruppe umsetzen? Alle anderen behalten ihren Platz.`))return;
+  const fn=()=>allocateGroups(null,{keep:true});if(LIVE)saveSeatsAll(fn);else{fn();render();toast("Feste Tische angewendet")}};
 A.fsok=()=>{S.fsGroup=null;rpc("chef_factsheet",{p_code:S.code,p_group:(S.groups[0]||{}).id||null}).then(x=>{S.factsheet=x||false;render()}).catch(e=>toast(e.message))};
 document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.chg==="fsgroup"&&e.target.value){S.fsGroup=e.target.value;S.factsheet=undefined;render()}});
 A.pickha=()=>{try{sessionStorage.setItem("ha_pick","1");if($("#hanomore")?.checked)localStorage.setItem("ha_nopick","1")}catch(e){}closeModal()};
