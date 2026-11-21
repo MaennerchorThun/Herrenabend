@@ -251,8 +251,7 @@ a.sp{color:inherit;text-decoration:none}a.sp:hover .grow,a.card.link:hover b{col
 .art-n{font-size:1.05rem}.art-r{color:var(--brand);font-weight:600;font-size:13px}
 .grow{flex:1;min-width:0}
 
-/* Tische längsseits: Tische einer Reihe (1–7, 8–14, 15–21) bilden eine Linie */
-.saal{row-gap:3px}
+/* Tische waagerecht (Standard); die frühere Längs-Darstellung (.lin/.v) wird nicht mehr verwendet */
 .saal .ttile.lin{display:flex;gap:8px;align-items:stretch;padding:6px 8px}
 .saal .ttile.lin .tinfo{flex:1;min-width:0}
 .saal .dots.v{grid-template-columns:repeat(2,9px);grid-auto-rows:5px;gap:2px;margin:0;align-content:center}
@@ -1165,10 +1164,10 @@ function vSaal(){
     <div class="saal-sum"><span><b>${CAP}</b> Plätze</span><span><b>${seated}</b> belegt</span><span><b>${CAP-seated}</b> frei</span><span><b>${S.people.length}</b> angemeldet</span><span><b>${S.groups.length}</b> Gruppen</span></div>
     <div class="note">Anordnung wie im Saal (Bühne links). Gruppen am selben Tisch haben unterschiedliche Farben.</div><div class="saal"><div class="stage">BÜHNE</div>`;
   for(const t of TABLES){const cm=colorMap(t.id),gs=groupsAt(t.id);
-    h+=`<button class="ttile lin ${t.front?"ehren":""} ${me.tisch===t.id?"mine":""} ${S.selTable===t.id?"sel":""}" data-act="table" data-id="${t.id}"><div class="tinfo">
+    h+=`<button class="ttile ${t.front?"ehren":""} ${me.tisch===t.id?"mine":""} ${S.selTable===t.id?"sel":""}" data-act="table" data-id="${t.id}">
       <div class="row between"><b>${esc(t.short)}</b><span class="small muted">${gs.reduce((s,e)=>s+e.n,0)}/16</span></div>
       <div class="gn">${gs.length?gs.map(e=>esc(e.g?e.g.name:"ohne Gruppe")).join(" · "):(()=>{const r=S.groups.filter(g=>(g.tische||[]).includes(t.id));return r.length?"reserviert: "+r.map(g=>esc(g.name)).join(" · "):"frei"})()}</div>
-      </div><div class="dots v">${[0,1,2,3,4,5,6,7].map(c=>[0,1].map(r=>{const p=at(t.id,t.start+c*2+r);return`<i class="${p?(p.id===me.id?"m":gcls(cm,p)):""}"></i>`}).join("")).join("")}</div></button>`}
+      <div class="dots">${[0,1].map(r=>[0,1,2,3,4,5,6,7].map(c=>{const p=at(t.id,t.start+c*2+r);return`<i class="${p?(p.id===me.id?"m":gcls(cm,p)):""}"></i>`}).join("")).join("")}</div></button>`}
   h+=`</div>`;
   const sel=T(S.selTable||me.tisch||EHREN_TISCH);
   h+=`<div class="sec-h" id="tdetail"><h2>${esc(sel.name)}</h2>${S.role==="ok"?`<span class="chip g">Bearbeiten erlaubt</span>`:chefGroup()&&groupTables(chefGroup()).includes(sel.id)?`<span class="chip g">Eigene Gruppe bearbeitbar</span>`:""}</div>
@@ -1183,7 +1182,7 @@ function tableGrid(t,dim=null){
     if(!p)cls.push("empty");else{cls.push(gcls(cm,p));if(G(p.gruppe)?.chef===p.id)cls.push("c");if(p.id===me.id)cls.push("me");if(p.id===S.hl)cls.push("hl");if(dim&&p.gruppe!==dim)cls.push("dim");if(wv.has(p.id))cls.push("warn")}
     return`<div class="${cls.join(" ")}" data-act="seat" data-t="${t.id}" data-s="${n}" title="Platz ${n}${p?": "+esc(full(p)):""}"><span>${p?esc(full(p)):""}</span></div>`};
   const gs=groupsAt(t.id);
-  return`<div class="tbl v">${s.top.map((n,i)=>`<div class="num">${n}</div>${seat(n).replace('class="seat','class="seat l l')}${seat(s.bot[i])}<div class="num">${s.bot[i]}</div>`).join("")}</div>
+  return`<div class="tbl">${s.top.map(n=>`<div class="num">${n}</div>`).join("")}${s.top.map(seat).join("")}${s.bot.map(seat).join("")}${s.bot.map(n=>`<div class="num">${n}</div>`).join("")}</div>
     <div class="glegend">${gs.map(e=>`<div class="gl"><span class="sw ${e.g?cm.get(e.g.id):"gx"}"></span><b>${e.g?esc(e.g.name):"ohne Gruppe"}</b><span class="muted">${e.n} Pers.${e.g?.chef?` · Chef ${esc(full(P(e.g.chef)))}`:""}</span></div>`).join("")||`<span class="muted small">Tisch noch frei.</span>`}</div>
     <div class="legend"><span><i style="box-shadow:inset 0 0 0 2px var(--brand)"></i>du</span><span><b>fett</b> = Gruppenchef</span><span><i style="background:repeating-linear-gradient(45deg,var(--surface),var(--surface) 3px,var(--surface2) 3px,var(--surface2) 6px)"></i>frei</span></div>`;
 }
@@ -1816,7 +1815,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.13"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.14"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
