@@ -1208,10 +1208,13 @@ function openSeat(tid,n){
       <div class="row" style="margin-top:16px"><button class="btn" data-act="close">Schliessen</button></div>`);
   }
   const cg=chefGroup();
-  let cands=S.role==="ok"?S.people.filter(x=>!x.platz||x.tisch===tid):members(cg);
-  cands=cands.filter(x=>x!==p).sort((a,b)=>(!!a.platz)-(!!b.platz)||(a.gruppe||"").localeCompare(b.gruppe||"")||byName(a,b));
+  /* Tauschpartner: ganze Gruppe (auch an anderen Tischen), dazu Personen ohne Platz und – beim OK – alle an diesem Tisch */
+  const tg=new Set(p&&p.gruppe?[p.gruppe]:groupsAt(tid).map(e=>e.g&&e.g.id).filter(Boolean));
+  let cands=S.role==="ok"?S.people.filter(x=>!x.platz||x.tisch===tid||(x.gruppe&&tg.has(x.gruppe))):members(cg);
+  const rk=x=>p&&x.gruppe===p.gruppe?0:!x.platz?1:2;
+  cands=cands.filter(x=>x!==p).sort((a,b)=>rk(a)-rk(b)||(a.gruppe||"").localeCompare(b.gruppe||"")||(+a.tisch||0)-(+b.tisch||0)||byName(a,b));
   modal(`<p class="eyebrow">${esc(t.short)} · Platz ${n}</p><h2>${p?esc(full(p)):"Freier Platz"}</h2>
-    <p class="muted small">${S.role==="ok"?"Person ohne Platz setzen oder mit jemandem an diesem Tisch tauschen.":"Du kannst Personen deiner Gruppe platzieren oder Plätze tauschen."}</p>
+    <p class="muted small">${S.role==="ok"?"Person ohne Platz setzen oder tauschen – mit jemandem an diesem Tisch oder aus derselben Gruppe an einem anderen Tisch.":"Du kannst Personen deiner Gruppe platzieren oder Plätze tauschen – auch zwischen euren Tischen."}</p>
     <div class="list">${cands.map(c=>`<button class="li" data-act="assign" data-p="${c.id}" data-t="${tid}" data-s="${n}"><div class="av">${ini(c)}</div><div class="grow"><div class="nm">${esc(full(c))}</div><div class="sub">${G(c.gruppe)?esc(G(c.gruppe).name):"ohne Gruppe"} · ${c.platz?`${esc(T(c.tisch).short)}, Platz ${c.platz}`:"ohne Platz"}</div></div><div class="rt">${p&&c.platz?"tauschen":"setzen"}</div></button>`).join("")||`<p class="muted">Keine Personen verfügbar.</p>`}</div>
     <div class="row" style="margin-top:14px">${p?`<button class="btn" data-act="clearseat" data-t="${tid}" data-s="${n}">Platz leeren</button>`:""}<button class="btn ghost" data-act="close">Abbrechen</button></div>`);
 }
@@ -1821,7 +1824,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.17"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.18"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
