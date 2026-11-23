@@ -1694,6 +1694,7 @@ function vAdminAlt(){
   const k=kpi(),ii=S.importInfo;
   let h="";
   if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
+  if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button><div id="wtres" style="margin-top:8px"></div></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet).</p><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button></div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
@@ -1897,8 +1898,15 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.23"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.24"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
+/* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
+const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
+async function weblingTischRows(){const r=await fetch(WEBLING_FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:SUPA.key},body:JSON.stringify({code:S.code,action:"tischgruppen"})});const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||("Webling: Fehler "+r.status));const m=new Map();
+  for(const x of j.mitglieder||[]){if(/^(gruppenchef|keine zuteilung)$/i.test(x.gruppe))continue;if(!m.has(x.member_id))m.set(x.member_id,[]);m.get(x.member_id).push(x.gruppe)}
+  return[...m].map(([member_id,gruppen])=>({member_id,gruppen:gruppen.sort()}))}
+async function weblingTischSync(apply){const rows=await weblingTischRows();return rpc("admin_sync_tischgruppen",{p_code:S.code,p_rows:rows,p_apply:!!apply})}
 const LIVE=!VORAB&&!!SUPA.url&&new URLSearchParams(location.search).get("demo")!=="1";
 async function rpc(fn,args={}){
   const r=await fetch(`${SUPA.url}/rest/v1/rpc/${fn}`,{method:"POST",headers:{"apikey":SUPA.key,"Content-Type":"application/json"},body:JSON.stringify(args)});
@@ -1949,6 +1957,7 @@ async function doImportLive(txt){
     const payload=S.people.map(p=>{const g=G(p.gruppe);return{member_id:p.mid||"",vorname:p.vorname,name:p.name,typ:p.typ,gruppe:g?g.name:"",guest:!!(g&&g.guest),chef:!!(g&&g.chef===p.id),funktion:p.funktion||""}});
     S.busy=`${payload.length} Teilnehmer werden importiert und verteilt …`;render();
     const res=await rpc("admin_import_participants",{p_code:S.code,p_rows:payload});
+    let wsync=null;try{S.busy="Tischgruppen aus Webling übernehmen …";render();wsync=await weblingTischSync(true)}catch(e){wsync={fehler:e.message}}
     await loadLive();
     const before=S.people.filter(p=>p.platz).length;
     allocateGroups(null,{keep:true});   /* bestehende Plätze bleiben, nur Neue/Gruppenwechsler werden gesetzt */
@@ -1960,6 +1969,8 @@ async function doImportLive(txt){
       <tr><td>neu angemeldet</td><td style="text-align:right"><b>${res.neu_angemeldet??"–"}</b></td></tr>
       <tr><td>Gruppe gewechselt</td><td style="text-align:right"><b>${res.gruppe_gewechselt??"–"}</b></td></tr>
       <tr><td>abgemeldet (Platz frei)</td><td style="text-align:right"><b>${res.abgemeldet??"–"}</b></td></tr>
+      <tr><td>Tischgruppe gemäss Webling-Gruppen angepasst</td><td style="text-align:right"><b>${wsync&&!wsync.fehler?wsync.umgesetzt:"–"}</b></td></tr>
+      ${wsync&&wsync.fehler?`<tr><td colspan="2" class="small" style="color:#b3261e">Webling-Gruppen nicht abrufbar: ${esc(wsync.fehler)}</td></tr>`:""}
       <tr><td>davon jetzt automatisch platziert</td><td style="text-align:right"><b>${Math.max(0,nn)}</b></td></tr>
       <tr><td>noch ohne Platz</td><td style="text-align:right"><b>${S.people.filter(p=>!p.platz).length}</b></td></tr></table>
       <p class="small muted">${res.zugeordnet} mit Code zugeordnet · ${res.neu_ohne_code} ohne Code · ${res.gruppen} Gruppen. Alles neu mischen nur bei Bedarf mit «Neu verteilen».</p><div class="row"><button class="btn primary" data-act="close">OK</button></div>`);
@@ -2059,6 +2070,18 @@ A.fsremgo=d=>{const test=d.t==="1",ids=S.remIds||[];if(!test&&!confirm(`Erinneru
   rpc("chef_remind",a).then(j=>{const x=[];if(j.ohne_mail&&j.ohne_mail.length)x.push("ohne E-Mail: "+j.ohne_mail.join(", "));if(j.heute_schon&&j.heute_schon.length)x.push("heute schon erinnert: "+j.heute_schon.join(", "));
     $("#frres").innerHTML=`<div class="okmsg">✓ ${test?"Testmail an dich gesendet":j.sent+" Erinnerung"+(j.sent===1?"":"en")+" gesendet"}${x.length?"<br><span class='small'>"+esc(x.join(" · "))+"</span>":""}</div>`;
     if(!test){S.factsheet=undefined;setTimeout(()=>{closeModal();render()},1200)}}).catch(e=>{$("#frres").innerHTML=`<div class="note">${esc(e.message)}</div>`})};
+A.wtsync=async()=>{const el=$("#wtres");el.innerHTML=`<p class="small">Webling wird gelesen …</p>`;
+  try{const j=await weblingTischSync(false);S.wtDry=j;const w=j.wechsel||[],u=j.umbenannt||[];
+    el.innerHTML=(!w.length&&!u.length?`<div class="okmsg">✓ Alle Tischgruppen stimmen mit Webling überein.</div>`:
+      `${u.length?`<p class="small"><b>Andere Schreibweise – Gruppe wird umbenannt:</b><br>${u.map(x=>`${esc(x.von)} → ${esc(x.nach)}`).join("<br>")}</p>`:""}
+      ${w.length?`<p class="small"><b>${w.length} Gruppenwechsel</b> (Platz wird frei und neu vergeben):</p><table class="t small">${w.map(x=>`<tr><td>${esc(x.name)} ${esc(x.vorname)}</td><td>${esc(x.von||"ohne Gruppe")} → <b>${esc(x.nach)}</b></td></tr>`).join("")}</table>`:""}
+      <button class="btn sm primary" data-act="wtsyncgo" style="margin-top:8px">Übernehmen und Plätze nachführen</button>`)+
+      `<p class="small muted" style="margin:6px 0 0">${j.stamm} Webling-Zuteilungen nachgeführt · ${j.ohne_webling_gruppe} Angemeldete ohne Webling-Tischgruppe.</p>`}
+  catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.wtsyncgo=async()=>{if(!confirm("Tischgruppen gemäss Webling übernehmen? Gruppenwechsler verlieren ihren Platz und werden neu platziert."))return;const el=$("#wtres");el.innerHTML=`<p class="small">wird übernommen …</p>`;
+  try{const j=await weblingTischSync(true);await loadLive();allocateGroups(null,{keep:true});
+    await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});await loadLive();render();
+    toast(`✓ ${j.umgesetzt} Gruppenwechsel übernommen${(j.umbenannt||[]).length?`, ${j.umbenannt.length} Gruppe umbenannt`:""}`)}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
 A.okchefs=()=>{const intro=`Die Anmeldefrist für den ${EVENT.nr}. Herrenabend ist abgelaufen. Hier der aktuelle Stand deiner Tischgruppe – vielleicht magst du die noch nicht Angemeldeten persönlich ansprechen oder in der App per E-Mail erinnern.`;
   modal(`<h2>Tischchefs informieren</h2><p class="small muted">Jeder Tischchef erhält eine E-Mail mit dem Stand seiner Tischgruppe: angemeldet, noch nicht angemeldet, entschuldigt – plus seinen persönlichen Link zur App. Tisch und Platz werden nicht erwähnt.</p>
     <div style="display:grid;gap:6px"><label class="small muted">Einleitung (optional)</label><textarea id="ocI" class="input" rows="5">${esc(intro)}</textarea><div id="ocres"></div>
