@@ -531,22 +531,7 @@ const byName=(a,b)=>a.name.localeCompare(b.name)||a.vorname.localeCompare(b.vorn
 function groupsAt(tid){const m=new Map();for(const p of S.people){if(p.tisch!==tid||!p.platz)continue;const k=p.gruppe||"_";
   if(!m.has(k))m.set(k,{g:G(p.gruppe),n:0,min:p.platz});const e=m.get(k);e.n++;e.min=Math.min(e.min,p.platz)}
   return[...m.values()].sort((a,b)=>a.min-b.min)}
-/* Gruppenfarben saalweit: eine Gruppe behält ihre Farbe an allen Tischen.
-   Gruppen am selben Tisch erhalten verschiedene Farben; wenn möglich auch Gruppen an Nachbartischen. */
-function colorMap(tid){
-  const at2=new Map(),first=new Map();
-  for(const p of S.people){if(!p.tisch||!p.platz||!p.gruppe)continue;if(!at2.has(p.tisch))at2.set(p.tisch,new Set());at2.get(p.tisch).add(p.gruppe);
-    const k=(+p.tisch)*1000+p.platz;if(!first.has(p.gruppe)||k<first.get(p.gruppe))first.set(p.gruppe,k)}
-  const hard=new Map(),soft=new Map(),add=(m,a,b)=>{if(a===b)return;if(!m.has(a))m.set(a,new Set());m.get(a).add(b)};
-  for(const gs of at2.values())for(const a of gs)for(const b of gs)add(hard,a,b);
-  // Nachbartische: in der Linie (nextInLine) und im Saalplan darüber/darunter (gleiche Spalte)
-  const nbs=t=>[typeof nextInLine==="function"?nextInLine(t):null,(+t%7)?String(+t+1):null].filter(Boolean);
-  for(const[t,gs]of at2)for(const n of nbs(t)){const ns=at2.get(n);if(ns)for(const a of gs)for(const b of ns){add(soft,a,b);add(soft,b,a)}}
-  const col=new Map();
-  for(const g of[...first.keys()].sort((a,b)=>first.get(a)-first.get(b))){
-    const hb=new Set([...(hard.get(g)||[])].map(x=>col.get(x)).filter(Boolean)),sb=new Set([...(soft.get(g)||[])].map(x=>col.get(x)).filter(Boolean));
-    const c=["g0","g1","g2","g3","g4"].find(c=>!hb.has(c)&&!sb.has(c))||["g0","g1","g2","g3","g4"].find(c=>!hb.has(c))||"g0";col.set(g,c)}
-  return col}
+function colorMap(tid){const m=new Map();let i=0;for(const e of groupsAt(tid))if(e.g)m.set(e.g.id,"g"+(i++%5));return m}
 const gcls=(cm,p)=>p&&p.gruppe&&cm.has(p.gruppe)?cm.get(p.gruppe):"gx";
 
 /* ================= Zuteilung ================= */
@@ -1090,7 +1075,7 @@ function vStart(){
   let h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><p class="eyebrow">${EVENT.datum} · ${EVENT.ort}</p>
     <h1>Grüessech ${esc(me.vorname)}</h1><p class="muted" style="margin:0">${isOk?"Übersicht für das Organisationskomitee.":notReg?"Schön, dass du vorbeischaust.":"Schön, bist du am Herrenabend des Männerchors Thun dabei."}</p></section>`;
   if(notReg&&!isOk)return h+`<div class="card" style="border-color:var(--accent);background:var(--accent-soft)"><h3>Du bist für den ${EVENT.nr}. Herrenabend nicht angemeldet</h3>
-    <p class="small">Möchtest du noch dabei sein? Melde dich beim Herrenabendkassier Hanspeter Gerber: <a href="mailto:herrenabend@mcthun.com">herrenabend@mcthun.com</a>. Die Anmeldung gilt nach Einzahlung der Bankettkarte (CHF ${EVENT.preis}.–).</p>
+    <p class="small">Möchtest du noch dabei sein? Melde dich beim Herrenabendkassier Hanspeter Gerber: <a href="mailto:herrenabend@mcthun.ch">herrenabend@mcthun.ch</a>. Die Anmeldung gilt nach Einzahlung der Bankettkarte (CHF ${EVENT.preis}.–).</p>
     <p class="small muted" style="margin:0">Programm, Menu, Weinkarte und alles Weitere findest du trotzdem hier.</p></div><div class="sec-h"><h2>Alles zum Abend</h2></div>${tiles()}`;
   h+=`<div class="grid g2">`;
   if(!isOk)h+=`<div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Dein Platz</p>
@@ -1161,7 +1146,7 @@ function vStartVorab(){
     <p class="small">Die Anmeldung erfolgt durch Einzahlung des Bankettkartenpreises per Einzahlungsschein oder auf das Konto bei der AEK Bank 1826, 3602 Thun.</p>
     <div class="card soft small" style="margin:8px 0"><b>IBAN CH59 0870 4018 6811 4911 5</b> <button class="btn sm ghost" data-act="copyiban">kopieren</button><br>Vermerk: Männerchor Thun · Postcheck 30-38118-3</div>
     <p class="small">Die Anmeldung gilt nach Zahlungseingang. Gehörst du zu einer Tischgemeinschaft, informiere deinen Tischobmann – so nimmt er dich in die Sammelanmeldung auf und reserviert deinen Platz in der gewohnten Gemeinschaft.</p>
-    <p class="small muted">Abmeldungen nach dem 27. November 2026 werden nur ausnahmsweise rückerstattet. Fragen: Herrenabendkassier Hanspeter Gerber, <a href="mailto:herrenabend@mcthun.com">herrenabend@mcthun.com</a>.</p></div>
+    <p class="small muted">Abmeldungen nach dem 27. November 2026 werden nur ausnahmsweise rückerstattet. Fragen: Herrenabendkassier Hanspeter Gerber, <a href="mailto:herrenabend@mcthun.ch">herrenabend@mcthun.ch</a>.</p></div>
   <div class="card"><p class="eyebrow">Was dich erwartet</p>
     <div class="list">
       ${SHOW_GUESTS?`      <button class="li" data-act="go" data-r="kuenstler"><div class="av c">🎤</div><div class="grow"><div class="nm">Gastreferat: ${esc(SPEAKER.n)}</div><div class="sub">${esc(SPEAKER.r)}</div></div><div class="rt">›</div></button>
@@ -1709,7 +1694,7 @@ function vAdminAlt(){
   const k=kpi(),ii=S.importInfo;
   let h="";
   if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
-  if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button><div id="wtres" style="margin-top:8px"></div></div>`;
+  if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button><button class="btn sm" data-act="grpclean">Leere Gruppen löschen …</button></div><div id="wtres" style="margin-top:8px"></div></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet).</p><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button></div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
@@ -1720,10 +1705,10 @@ function vAdminAlt(){
     <div class="filter" style="margin-top:8px"><button class="chip ${ch==="tgbot"?"on":""}" data-act="wch" data-c="tgbot">Telegram (eigener Bot)</button><button class="chip ${ch==="email"?"on":""}" data-act="wch" data-c="email">E-Mail</button><button class="chip ${ch==="whatsapp"?"on":""}" data-act="wch" data-c="whatsapp">WhatsApp</button></div>
     ${ch==="email"?(!ml.has_key?`<div class="card soft small" style="margin:0"><b>Schritt 1 – E-Mail-Versand einrichten (einmalig, ca. 5 Minuten)</b>
       <ol style="margin:8px 0;padding-left:18px"><li>Gratis-Konto bei <a href="https://www.brevo.com" target="_blank" rel="noopener"><b>brevo.com</b></a> eröffnen (bis 300 E-Mails pro Tag gratis).</li>
-      <li>Unter <b>Senders, Domains & Dedicated IPs → Senders</b> die Absender-Adresse hinzufügen (z.B. herrenabend@mcthun.com) und den Bestätigungslink im Postfach anklicken.</li>
+      <li>Unter <b>Senders, Domains & Dedicated IPs → Senders</b> die Absender-Adresse hinzufügen (z.B. herrenabend@mcthun.ch) und den Bestätigungslink im Postfach anklicken.</li>
       <li>Unter <b>SMTP & API → API Keys</b> einen neuen API-Key erstellen (beginnt mit <i>xkeysib-</i>) und hier einfügen:</li></ol>
       <input id="mkey" class="input" autocapitalize="off" spellcheck="false" placeholder="xkeysib-…">
-      <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:8px"><input id="msender" class="input" inputmode="email" placeholder="Absender, z.B. herrenabend@mcthun.com"><input id="mname" class="input" placeholder="Absendername" value="Herrenabend-App MCT"></div>
+      <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:8px"><input id="msender" class="input" inputmode="email" placeholder="Absender, z.B. herrenabend@mcthun.ch"><input id="mname" class="input" placeholder="Absendername" value="Herrenabend-App MCT"></div>
       <button class="btn sm primary" style="margin-top:8px" data-act="msave">E-Mail-Versand speichern</button></div>`
      :`<div class="card soft small" style="margin:0"><p style="margin:0 0 8px">✓ E-Mail-Versand eingerichtet · Absender <b>${esc(ml.name||"")}</b> &lt;${esc(ml.sender||"")}&gt;</p>
       <b>Empfänger hinzufügen</b> <span class="muted">(z.B. Service-Leitung oder Bar – ideal für Weinbestellungen)</span>
@@ -1913,7 +1898,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.26"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.25"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2093,6 +2078,10 @@ A.wtsync=async()=>{const el=$("#wtres");el.innerHTML=`<p class="small">Webling w
       <button class="btn sm primary" data-act="wtsyncgo" style="margin-top:8px">Übernehmen und Plätze nachführen</button>`)+
       `<p class="small muted" style="margin:6px 0 0">${j.stamm} Webling-Zuteilungen nachgeführt · ${j.ohne_webling_gruppe} Angemeldete ohne Webling-Tischgruppe.</p>`}
   catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.grpclean=async()=>{const el=$("#wtres");try{const j=await rpc("admin_delete_empty_groups",{p_code:S.code,p_dry:true});const L=j.leer||[];
+  el.innerHTML=L.length?`<p class="small"><b>Gruppen ohne Teilnehmer:</b></p>${L.map(g=>`<label class="row small" style="padding:2px 0"><input type="checkbox" class="gcl" value="${g.id}" checked> ${esc(g.name)}</label>`).join("")}<button class="btn sm primary" data-act="grpcleango" style="margin-top:6px">Ausgewählte löschen</button><p class="small muted" style="margin:6px 0 0">Gelöscht wird nur die leere Gruppe in der App. In Webling ändert sich nichts.</p>`:`<div class="okmsg">✓ Keine leeren Gruppen.</div>`}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.grpcleango=async()=>{const ids=[...document.querySelectorAll(".gcl:checked")].map(c=>c.value);if(!ids.length)return toast("Nichts ausgewählt");
+  try{const j=await rpc("admin_delete_empty_groups",{p_code:S.code,p_dry:false,p_ids:ids});await loadLive();render();toast(`✓ ${j.geloescht} Gruppe${j.geloescht===1?"":"n"} gelöscht`)}catch(e){toast(e.message)}};
 A.wtsyncgo=async()=>{if(!confirm("Tischgruppen gemäss Webling übernehmen? Gruppenwechsler verlieren ihren Platz und werden neu platziert."))return;const el=$("#wtres");el.innerHTML=`<p class="small">wird übernommen …</p>`;
   try{const j=await weblingTischSync(true);await loadLive();allocateGroups(null,{keep:true});
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});await loadLive();render();
