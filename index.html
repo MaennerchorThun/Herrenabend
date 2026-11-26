@@ -676,8 +676,11 @@ function allocateGroups(plan=null,opt={}){
   const sortM=g=>members(g).filter(p=>!p.platz).sort((a,b)=>(b.id===g.chef)-(a.id===g.chef)||byName(a,b));
   const put=(g,tabs,counts,ms,sides)=>{let k=0;tabs.forEach((t,i)=>{const n=counts[i];if(!n)return;cap.set(t,cap.get(t)-n);
     chunks.get(t).push({g,n,side:sides[i],ms:ms.slice(k,k+n)});k+=n})};
-  const sidesFor=tabs=>tabs.map((t,i)=>{const prev=i>0&&prevInLine(t)===tabs[i-1],next=i<tabs.length-1&&nextInLine(t)===tabs[i+1];
-    return prev&&next?"mid":next?"end":prev?"start":"none"});
+  /* Seite am Tisch, an der die Gruppe sitzt: grenzt der Nachbar in der Liste rechts an (nextInLine) → Tischende, links (prevInLine) → Tischanfang.
+     Funktioniert in beiden Richtungen, z.B. «17,10,3» wie «3,10,17». */
+  const sidesFor=tabs=>tabs.map((t,i)=>{const nb=[tabs[i-1],tabs[i+1]].filter(Boolean);
+    const right=nb.includes(nextInLine(t)),left=nb.includes(prevInLine(t));
+    return right&&left?"mid":right?"end":left?"start":"none"});
   const inStandort=(g,t)=>{const r=g&&standortTabs(g.standort);return!r||(+t>=r[0]&&+t<=r[1])};
   // Wunschtisch: 0 = Lauf enthält den Wunschtisch, sonst Abstand (gleiche Reihe zählt weniger als andere Reihe)
   const standortScore=(g,run)=>{const k=g&&g.standort;if(!k)return 0;if(/^\d+$/.test(k)){if(run.includes(k))return 0;
@@ -727,7 +730,7 @@ function allocateGroups(plan=null,opt={}){
         put(g,[c.to],[rest.length+mov],[...movers,...rest],[c.side]);return}
       if(keep){unplaced.push(...rest);return}
       place(g,rest,pool);return}
-    if(fixed&&fixed.length){const tabs=fixed.filter(t=>T(t)).sort((a,b)=>a-b),n=ms.length+ex,sc=splitCounts(n,tabs.map(t=>cap.get(t)));
+    if(fixed&&fixed.length){const tabs=fixed.map(String).filter(t=>T(t)),n=ms.length+ex   /* Reihenfolge wie im Feld «Tische» eingegeben */,sc=splitCounts(n,tabs.map(t=>cap.get(t)));
       if(sc){put(g,tabs,sc.counts,ms,sidesFor(tabs));planned++;return}
       { // reicht nicht: direkt angrenzenden Tisch in der Linie anhängen, dort mindestens MINPART der Gruppe
         const caps=tabs.map(t=>cap.get(t)),over=n-caps.reduce((a,b)=>a+b,0),ext=[];
@@ -903,7 +906,7 @@ function adminTables(){
     h+=`<div class="card"><h3>Sitzwünsche (${S.wishes.length})</h3><p class="small muted">${bad?`⚠ ${bad} nicht erfüllt`:"Alle platzierten Wünsche sind erfüllt."}</p>${wishList(S.wishes,true)}
     <div class="row" style="margin-top:8px">${wg.map(g=>`<button class="btn sm" data-act="arrange" data-g="${g.id}">${esc(g.name)} ordnen</button>`).join("")}</div></div>`}
   h+=`<div class="card"><h3>Factsheets der Tischgruppen</h3><p class="small muted" style="margin:0 0 8px">Pro Tischgruppe: wer zum ersten Mal dabei ist (Eintritt ab 7.12.2025) und wer aus der Webling-Zuteilung noch nicht angemeldet ist. Die Gruppenchefs sehen ihr eigenes Factsheet in der Gruppenchef-Karte.</p><button class="btn sm" data-act="go" data-r="factsheetok">📋 Factsheets öffnen</button></div>`;
-  h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal (z.B. «5,6»), die Anzahl Plätze als Platzhalter und den Wunschtisch (konkrete Tischnummer oder egal) erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden möglichst an ihren Wunschtisch gesetzt – grössere Gruppen ab dem Wunschtisch an den Nachbartisch in derselben Reihe. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
+  h+=`<div class="card"><h3>Tischgruppen im Saal</h3><p class="small muted">Pro Tischgruppe die Tische im Saal <b>in der Reihenfolge der Belegung</b> (z.B. «4,11»: zuerst Tisch 4 füllen, dann Tisch 11; Tische in einer Linie: 1–8–15, 2–9–16 … 7–14–21), die Anzahl Plätze als Platzhalter und den Wunschtisch (konkrete Tischnummer oder egal) erfassen. Die Plätze bleiben für die Gruppe reserviert, auch wenn noch nicht alle angemeldet sind. Gruppen ohne feste Tische werden möglichst an ihren Wunschtisch gesetzt – grössere Gruppen ab dem Wunschtisch an den Nachbartisch in derselben Reihe. Danach unter «Einstellungen & Import» bzw. im Saalplan neu verteilen.</p>
     <button class="btn sm primary" data-act="fixapply" style="margin:0 0 8px">📌 Feste Tische & Reihenfolge anwenden</button> <span class="small muted">setzt Personen an die festen Tische ihrer Gruppe und ordnet geteilte Gruppen fortlaufend an (Ende Tisch 9 → Anfang Tisch 16) – alle anderen bleiben.</span>
     <div class="scroll"><table class="t"><tr><th>Gruppe</th><th>Angem.</th><th>Plätze</th><th>Tische</th><th>Wunschtisch</th><th></th></tr>${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<tr><td>${esc(g.name)}</td><td>${members(g).length}</td><td><input id="gp-${g.id}" class="input" type="number" min="1" max="336" style="width:70px;padding:4px" value="${g.plaetze||""}"></td><td><input id="gt-${g.id}" class="input" style="width:90px;padding:4px" placeholder="z.B. 5,6" value="${esc((g.tische||[]).join(","))}"></td><td><select id="gs-${g.id}" class="input" style="width:auto;padding:4px">${standortOpts(g.standort||"",g.id)}</select></td><td><button class="btn sm" data-act="glsave" data-g="${g.id}">Speichern</button></td></tr>`).join("")}</table></div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="allocask" data-m="plan">Plätze neu verteilen</button></div></div>`;
@@ -1971,7 +1974,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.29"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.30"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2179,7 +2182,7 @@ A.chefapero=d=>{const on=d.on==="1";
   if(LIVE){call("chef_set_apero",{p_person:d.p,p_on:on},on?"Zum Apéro angemeldet":"Vom Apéro abgemeldet").catch(()=>{});return}
   if(VORAB&&S.code){rpc("chef_set_apero",{p_code:S.code,p_person:d.p,p_on:on}).then(()=>rpc("my_group_members",{p_code:S.code})).then(m=>{if(m)S.chefMembers=m;const c=(m&&m.members||[]).find(x=>x.chef);if(c&&S.vorabMe)S.vorabMe.apero=!!c.apero;toast(on?"Zum Apéro angemeldet":"Vom Apéro abgemeldet");render()}).catch(e=>toast(e.message));return}
   if(on)S.apero.add(d.p);else S.apero.delete(d.p);render()};
-A.glsave=d=>{const g=G(d.g);if(!g)return;const tis=($("#gt-"+d.g).value||"").split(/[^0-9]+/).filter(Boolean),pl=+$("#gp-"+d.g).value||null,st=$("#gs-"+d.g).value;
+A.glsave=d=>{const g=G(d.g);if(!g)return;const tis=[...new Set(($("#gt-"+d.g).value||"").split(/[^0-9]+/).filter(Boolean).map(t=>String(+t)))],pl=+$("#gp-"+d.g).value||null,st=$("#gs-"+d.g).value;
   const bad=tis.filter(t=>!T(t));if(bad.length)return toast("Unbekannter Tisch: "+bad.join(", "));
   const changed=tis.join(",")!==(g.tische||[]).join(","),ask=()=>{const g2=G(d.g);if(!changed||!g2||!tis.length||!members(g2).length)return;
     if(S.seatsLocked)return toast("Tische gespeichert. Die Einteilung ist fixiert – Personen bei Bedarf im Saalplan von Hand umsetzen.");
