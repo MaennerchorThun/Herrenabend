@@ -639,7 +639,7 @@ function parsePrev(txt){
      am nächsten Tisch am linken Tischanfang → die Gruppe sitzt in einer Linie, getrennt nur durch den Zwischenraum.
    · keep:true (Standard bei Import und Änderungen) lässt bestehende Plätze unverändert und setzt nur Personen ohne Platz.
      Alles neu gemischt wird nur mit «Neu verteilen». */
-const MINPART=6;
+const MINPART=4;   /* mindestens 4 Personen einer Gruppe pro Tisch */
 const lexLess=(a,b)=>{for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]<b[i];return false};
 /* Tische stehen waagerecht: eine Linie bilden die Tische quer durch den Saal, z.B. 2 – 9 – 16 (je +7).
    Das rechte Ende von Tisch 9 grenzt an das linke Ende von Tisch 16. */
@@ -691,11 +691,17 @@ function allocateGroups(plan=null,opt={}){
       const key=[k,standortScore(g,run),caps.reduce((a,b)=>a+b,0)-n,+t0];
       if(!best||lexLess(key,best.key))best={run,counts:sc.counts,key}}
     return best};
+  const unplaced=[];
   const place=(g,ms,pool,extra=0)=>{const n=ms.length+extra;if(!n)return;
     const r=findRun(g,n,pool.filter(t=>cap.get(t)>0));
     if(r){put(g,r.run,r.counts,ms,sidesFor(r.run));return}
-    // kein passender Lauf: grösste freie Tische nehmen (Notlösung)
-    const tabs=[],cn=[];let rest=n;for(const t of[...pool].sort((a,b)=>cap.get(b)-cap.get(a))){if(rest<=0)break;const x=Math.min(cap.get(t),rest);if(x<=0)continue;tabs.push(t);cn.push(x);rest-=x}
+    // Nachplatzieren (bestehende Einteilung bleibt): nicht verstreuen – ohne Platz lassen, das OK setzt von Hand
+    if(keep){unplaced.push(...ms);return}
+    // kein passender Lauf: grösste freie Tische nehmen (Notlösung) – auch hier mind. MINPART pro Tisch, wenn möglich
+    const tabs=[],cn=[];let rest=n;const big=[...pool].sort((a,b)=>cap.get(b)-cap.get(a)),okT=big.filter(t=>cap.get(t)>=Math.min(MINPART,n));
+    for(const t of(okT.length?okT:big)){if(rest<=0)break;let x=Math.min(cap.get(t),rest);if(x<=0)continue;
+      if(rest-x>0&&rest-x<MINPART&&x-(MINPART-(rest-x))>=MINPART)x-=MINPART-(rest-x);tabs.push(t);cn.push(x);rest-=x}
+    if(rest>0)for(const t of big){if(rest<=0)break;const i=tabs.indexOf(t),f=cap.get(t)-(i>=0?cn[i]:0),x=Math.min(f,rest);if(x<=0)continue;if(i>=0)cn[i]+=x;else{tabs.push(t);cn.push(x)}rest-=x}
     const ord=tabs.map((t,i)=>[t,cn[i]]).sort((a,b)=>a[0]-b[0]);put(g,ord.map(x=>x[0]),ord.map(x=>x[1]),ms,sidesFor(ord.map(x=>x[0])))};
   // Gruppen, die schon sitzen (keep): neue Mitglieder an die eigenen Tische, sonst an den Nachbartisch in der Linie
   const own=g=>[...new Set(members(g).filter(p=>p.platz).map(p=>p.tisch))].sort((a,b)=>a-b);
@@ -705,11 +711,34 @@ function allocateGroups(plan=null,opt={}){
     if(o.length){let rest=ms.slice();for(const t of o){const x=Math.min(cap.get(t),rest.length);if(x>0){put(g,[t],[x],rest.splice(0,x),["near"])}}
       if(!rest.length)return;
       if(fixed&&fixed.length){for(const t of fixed.map(String).filter(t=>!o.includes(t)&&T(t))){const x=Math.min(cap.get(t),rest.length);if(x>0)put(g,[t],[x],rest.splice(0,x),["none"])}if(!rest.length)return}
-      const nb=[nextInLine(o[o.length-1]),prevInLine(o[0])].filter(t=>t&&pool.includes(t)&&cap.get(t)>=Math.min(rest.length,MINPART));
-      if(nb.length&&cap.get(nb[0])>=rest.length){const t=nb[0];put(g,[t],[rest.length],rest,[+t>+o[o.length-1]?"start":"end"]);return}
+      // Überlauf: an den direkt angrenzenden Tisch in der Linie (längsseits). Dort sitzen mindestens MINPART der Gruppe –
+      // fehlen Personen, rücken Gruppenmitglieder vom angrenzenden Tischende nach (Chef bleibt sitzen).
+      const seatedAt=t=>members(g).filter(p=>p.tisch===t&&p.platz);
+      const cands=[];for(const t of o){const nx=nextInLine(t),pv=prevInLine(t);
+        if(nx&&!o.includes(nx))cands.push({from:t,to:nx,side:"start"});if(pv&&!o.includes(pv))cands.push({from:t,to:pv,side:"end"})}
+      cands.sort((a,b)=>cap.get(b.to)-cap.get(a.to));
+      for(const c of cands){if(!normal.includes(c.to))continue;   // auch Tische mit festen Gruppen, sofern dort Platz frei ist
+        const mov=Math.max(0,MINPART-rest.length),here=seatedAt(c.from);
+        if(cap.get(c.to)<rest.length+mov)continue;
+        if(mov&&here.length-mov<MINPART)continue;
+        const movers=here.filter(p=>p.id!==g.chef).sort((a,b)=>c.side==="start"?b.platz-a.platz:a.platz-b.platz).slice(0,mov);
+        if(movers.length<mov)continue;
+        for(const p of movers){taken.delete(p.tisch+":"+p.platz);p.tisch=null;p.platz=null}cap.set(c.from,cap.get(c.from)+mov);
+        put(g,[c.to],[rest.length+mov],[...movers,...rest],[c.side]);return}
+      if(keep){unplaced.push(...rest);return}
       place(g,rest,pool);return}
     if(fixed&&fixed.length){const tabs=fixed.filter(t=>T(t)).sort((a,b)=>a-b),n=ms.length+ex,sc=splitCounts(n,tabs.map(t=>cap.get(t)));
       if(sc){put(g,tabs,sc.counts,ms,sidesFor(tabs));planned++;return}
+      { // reicht nicht: direkt angrenzenden Tisch in der Linie anhängen, dort mindestens MINPART der Gruppe
+        const caps=tabs.map(t=>cap.get(t)),over=n-caps.reduce((a,b)=>a+b,0),ext=[];
+        for(const t of tabs){const nx=nextInLine(t),pv=prevInLine(t);
+          if(nx&&!tabs.includes(nx)&&pool.includes(nx))ext.push({x:nx,from:t,side:"start",fromSide:"end"});
+          if(pv&&!tabs.includes(pv)&&pool.includes(pv))ext.push({x:pv,from:t,side:"end",fromSide:"start"})}
+        ext.sort((a,b)=>cap.get(b.x)-cap.get(a.x));
+        for(const e of ext){const need=Math.max(over,MINPART);if(cap.get(e.x)<need)continue;
+          const counts=caps.slice(),fi=tabs.indexOf(e.from);counts[fi]-=need-over;if(counts[fi]<MINPART)continue;
+          const sides=sidesFor(tabs);if(sides[fi]==="none")sides[fi]=e.fromSide;
+          put(g,[...tabs,e.x],[...counts,need],ms,[...sides,e.side]);planned++;return}}
       const fit=tabs.reduce((s,t)=>s+cap.get(t),0),k=Math.min(ms.length,fit);if(k>0){const sc2=splitCounts(k,tabs.map(t=>cap.get(t)));put(g,tabs,sc2.counts,ms.slice(0,k),sidesFor(tabs));planned++}
       place(g,ms.slice(k),pool);return}
     place(g,ms,pool,ex)};
@@ -739,9 +768,24 @@ function allocateGroups(plan=null,opt={}){
     for(const c of cs.filter(c=>c.side==="none"))seat(c,take(c.n,false),false)}
   // 7. Sitzwünsche innerhalb der Gruppe (nur Plätze tauschen, Block bleibt zusammen)
   for(const g of S.groups)if(wishesFor(g).length)arrangeGroup(g,true);
+  S.lastUnplaced=unplaced;
   return planned;
 }
-/* Prüfung der Tischeinteilung: geteilte Gruppen mit Teilen < 6 oder nicht nebeneinander in der Linie */
+/* OK: Personen ohne Platz nach den Regeln einsetzen und Splitter (< MINPART an einem Tisch) bereinigen.
+   Bestehende Plätze bleiben, ausser es rücken Gruppenmitglieder an den Nachbartisch nach. Wer keinen regelkonformen Platz findet,
+   behält seinen bisherigen Platz bzw. bleibt ohne Platz (von Hand im Saalplan setzen). */
+function placeByRules(){
+  const before=new Map(S.people.map(p=>[p.id,[p.tisch,p.platz]]));
+  const splin=[];for(const g of S.groups){if(members(g).length<MINPART)continue;const tabs=groupTables(g);if(tabs.length<2)continue;
+    for(const t of tabs){const ms=members(g).filter(p=>p.tisch===t&&p.platz);if(ms.length<MINPART)splin.push(...ms)}}
+  for(const p of splin){p.tisch=null;p.platz=null}
+  const newcomers=S.people.filter(p=>!before.get(p.id)[1]).length;
+  allocateGroups(null,{keep:true,force:true});
+  let restored=0;for(const p of splin)if(!p.platz){const[t,pl]=before.get(p.id);if(!at(t,pl)){p.tisch=t;p.platz=pl;restored++}}
+  const moved=S.people.filter(p=>{const b=before.get(p.id);return b[1]&&p.platz&&(b[0]!==p.tisch||b[1]!==p.platz)}).length;
+  const placed=S.people.filter(p=>!before.get(p.id)[1]&&p.platz).length;
+  return{placed,newcomers,splinter:splin.length-restored,restored,moved,ohne:S.people.filter(p=>!p.platz).length}}
+/* Prüfung der Tischeinteilung: geteilte Gruppen mit Teilen < MINPART oder nicht nebeneinander in der Linie */
 function seatIssues(){const out=[];for(const g of S.groups){const tabs=groupTables(g);if(tabs.length<2)continue;
   const parts=tabs.map(t=>members(g).filter(p=>p.tisch===t).length),adj=tabs.every((t,i)=>!i||nextInLine(tabs[i-1])===t);
   if(!adj||parts.some(x=>x<MINPART))out.push({g,txt:tabs.map((t,i)=>`Tisch ${t}: ${parts[i]}`).join(" · ")+(adj?"":" · nicht nebeneinander")})}return out}
@@ -761,21 +805,25 @@ function fillSingles(list){
 
 /* ================= Sitzwünsche (neben / nicht neben) =================
    «neben» = direkt links oder rechts in derselben Tischreihe. Wünsche sehen nur der Gruppenchef und das OK. */
+/* direkt gegenüber: gleiche Position auf der anderen Tischseite (Platzpaar oben/unten) */
+function opposite(tid,n){const t=T(tid);if(!t)return null;return(n-t.start)%2===0?n+1:n-1}
+function wishOk(typ,ta,na,tb,nb){if(ta!==tb)return typ==="nicht";if(typ==="gegenueber")return opposite(ta,na)===nb;const adj=neighbors(ta,na).includes(nb);return typ==="neben"?adj:!adj}
+const WISH_LBL={neben:"möchte neben",nicht:"nicht neben",gegenueber:"möchte gegenüber"},WISH_IC={neben:"🤝",nicht:"↔︎",gegenueber:"⇅"};
 function neighbors(tid,n){const s=seatsOf(T(tid));for(const row of[s.top,s.bot]){const i=row.indexOf(n);if(i>=0)return[row[i-1],row[i+1]].filter(x=>x!=null)}return[]}
 const wishesFor=g=>g?S.wishes.filter(w=>P(w.a)?.gruppe===g.id):[];
 function wishState(w){const a=P(w.a),b=P(w.b);if(!a||!b||!a.platz||!b.platz)return"offen";
-  const adj=a.tisch===b.tisch&&neighbors(a.tisch,a.platz).includes(b.platz);return(w.typ==="neben")===adj?"ok":"verletzt"}
+  return wishOk(w.typ,a.tisch,a.platz,b.tisch,b.platz)?"ok":"verletzt"}
 function violSet(){const s=new Set();for(const w of S.wishes)if(wishState(w)==="verletzt"){s.add(w.a);s.add(w.b)}return s}
 function wishList(ws,del){
   const st={ok:`<span class="chip g">erfüllt</span>`,verletzt:`<span class="chip w">⚠ nicht erfüllt</span>`,offen:`<span class="chip">noch ohne Platz</span>`};
-  return`<div class="list">${ws.map(w=>{const a=P(w.a),b=P(w.b);return`<div class="li" style="cursor:default"><div class="av">${w.typ==="neben"?"🤝":"↔︎"}</div><div class="grow"><div class="nm">${esc(full(a))} <span class="muted">${w.typ==="neben"?"möchte neben":"nicht neben"}</span> ${esc(full(b))}</div><div class="sub">${a&&G(a.gruppe)?esc(G(a.gruppe).name):""}</div></div>${st[wishState(w)]}${del?`<button class="btn sm ghost" data-act="wishdel" data-id="${w.id}" aria-label="Wunsch löschen">✕</button>`:""}</div>`}).join("")}</div>`}
+  return`<div class="list">${ws.map(w=>{const a=P(w.a),b=P(w.b);return`<div class="li" style="cursor:default"><div class="av">${WISH_IC[w.typ]||"↔︎"}</div><div class="grow"><div class="nm">${esc(full(a))} <span class="muted">${WISH_LBL[w.typ]||w.typ}</span> ${esc(full(b))}</div><div class="sub">${a&&G(a.gruppe)?esc(G(a.gruppe).name):""}</div></div>${st[wishState(w)]}${del?`<button class="btn sm ghost" data-act="wishdel" data-id="${w.id}" aria-label="Wunsch löschen">✕</button>`:""}</div>`}).join("")}</div>`}
 function wishCard(g){
   const ms=members(g).sort(byName),tabs=groupTables(g),others=S.people.filter(p=>p.gruppe!==g.id&&p.platz&&tabs.includes(p.tisch)).sort(byName),ws=wishesFor(g);
   const opt=l=>l.map(p=>`<option value="${p.id}">${esc(full(p))}</option>`).join("");
-  return`<div class="card"><h3>Sitzwünsche</h3><p class="muted small">Wer möchte neben wem sitzen – und wer nicht? «Neben» heisst direkt links oder rechts. «Plätze ordnen» setzt deine Gruppe an euren Tischen so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.</p>
+  return`<div class="card"><h3>Sitzwünsche</h3><p class="muted small">Wer möchte neben oder direkt gegenüber von wem sitzen – und wer nicht? «Neben» heisst direkt links oder rechts, «gegenüber» auf der anderen Tischseite genau vis-à-vis. «Plätze ordnen» setzt deine Gruppe an euren Tischen so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.</p>
     ${ws.length?wishList(ws,true):`<p class="small muted">Noch keine Wünsche erfasst.</p>`}
     <div style="display:grid;gap:6px;margin-top:10px"><select id="wa" class="input"><option value="">Person wählen …</option>${opt(ms)}</select>
-    <select id="wt" class="input"><option value="neben">möchte neben</option><option value="nicht">darf nicht neben</option></select>
+    <select id="wt" class="input"><option value="neben">möchte neben</option><option value="gegenueber">möchte direkt gegenüber</option><option value="nicht">darf nicht neben</option></select>
     <select id="wb" class="input"><option value="">… wem sitzen? (Person wählen)</option><optgroup label="Deine Gruppe">${opt(ms)}</optgroup>${others.length?`<optgroup label="Andere Gruppen an euren Tischen">${opt(others)}</optgroup>`:""}</select></div>
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="wishadd">Wunsch hinzufügen</button><button class="btn sm primary" data-act="arrange" data-g="${g.id}" ${tabs.length?"":"disabled"}>Plätze ordnen</button></div></div>`}
 /* Gruppe an ihren Tischen neu ordnen: möglichst alle Wünsche erfüllen, möglichst wenige Umplatzierungen */
@@ -790,9 +838,11 @@ function arrangeGroup(g,ownOnly=false){
   ppl.forEach((p,i)=>{if(p.platz){const j=slots.findIndex(s=>s.t===p.tisch&&s.n===p.platz);if(j>=0&&!used.has(j)){asg[i]=j;used.add(j)}}});
   ppl.forEach((p,i)=>{if(asg[i]<0){const j=slots.findIndex((s,k)=>!used.has(k));asg[i]=j;used.add(j)}});
   const orig=asg.slice();
-  const fixedAdj=(i,pid)=>{const q=P(pid);if(!q||!q.platz)return false;const s=slots[asg[i]];return s.t===q.tisch&&neighbors(s.t,s.n).includes(q.platz)};
-  const isAdj=w=>{const ia=idx.get(w.a),ib=idx.get(w.b);if(ia!=null&&ib!=null)return adj[asg[ia]][asg[ib]];return ia!=null?fixedAdj(ia,w.b):fixedAdj(ib,w.a)};
-  const viol=()=>ws.filter(w=>(w.typ==="neben")!==isAdj(w)).length;
+  // Wunsch erfüllt? (neben / nicht neben / gegenüber) – Partner ausserhalb der Gruppe sitzt fest
+  const ok=w=>{const ia=idx.get(w.a),ib=idx.get(w.b);
+    const sa=ia!=null?slots[asg[ia]]:(P(w.a)&&P(w.a).platz?{t:P(w.a).tisch,n:P(w.a).platz}:null),sb=ib!=null?slots[asg[ib]]:(P(w.b)&&P(w.b).platz?{t:P(w.b).tisch,n:P(w.b).platz}:null);
+    if(!sa||!sb)return w.typ==="nicht";return wishOk(w.typ,sa.t,sa.n,sb.t,sb.n)};
+  const viol=()=>ws.filter(w=>!ok(w)).length;
   const cost=()=>{let c=viol()*10;for(let i=0;i<asg.length;i++)if(asg[i]!==orig[i])c+=0.3;return c};
   if(ws.length&&ppl.length>1){
     // 1. Einzelne Verschiebungen/Tausche, solange es besser wird (wenig Umplatzierungen)
@@ -1715,7 +1765,7 @@ function vAdminAlt(){
     h+=`<div class="card" style="${S.seatsLocked?"border-color:var(--ok)":""}"><h3>Tischeinteilung fixieren</h3><p class="muted small">${S.seatsLocked?"<b>Fixiert.</b> Import, Webling-Abgleich und Änderungen an den Tischgruppen setzen niemanden mehr um. Neu angemeldete Teilnehmer und Gruppenwechsler bleiben <b>ohne Platz</b> und werden hier separat platziert – bei ihrer Tischgruppe, soweit dort Platz frei ist, oder von Hand im Saalplan.":"Solange nicht fixiert, platziert die App neue Teilnehmer beim Import automatisch und setzt Gruppen nach ihren festen Tischen."}</p>
     <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm ${S.seatsLocked?"on":"primary"}" data-act="seatslock">${S.seatsLocked?"✓ Fixiert – Fixierung aufheben":"Tischeinteilung jetzt fixieren"}</button></div>
     ${S.seatsLocked?`<div style="margin-top:10px"><b class="small">Ohne Platz: ${ohne.length}</b>${ohne.length?`<div class="chips" style="margin:6px 0">${ohne.map(p=>`<span class="chip w">${esc(full(p))}${G(p.gruppe)?` · ${esc(G(p.gruppe).name)}`:""}</span>`).join("")}</div>
-      <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="fillall">Bei ihrer Tischgruppe einsetzen</button><button class="btn sm" data-act="go" data-r="saal">Von Hand im Saalplan</button></div>`:`<p class="small muted" style="margin:4px 0 0">Alle angemeldeten Teilnehmer haben einen Platz.</p>`}</div>`:""}</div>`}
+      <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="fillall">Nach Regeln platzieren</button><button class="btn sm" data-act="go" data-r="saal">Von Hand im Saalplan</button></div>`:`<p class="small muted" style="margin:4px 0 0">Alle angemeldeten Teilnehmer haben einen Platz.</p>`}</div>`:""}</div>`}
   if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button><div id="wtres" style="margin-top:8px"></div></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet).</p><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button></div>`;
@@ -1921,7 +1971,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.27"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.29"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2021,7 +2071,7 @@ const LIVEA={
   gaperosave:()=>{const z=$("#gaz").value,o=$("#gao").value.trim();if(!o)return toast("Bitte Ort oder Hinweis angeben (Zeit freiwillig)");call("set_group_apero",{p_group:chefGroup().id,p_zeit:z,p_ort:o},"Gruppen-Apéro gespeichert").catch(()=>{})},
   gaperoclear:()=>call("set_group_apero",{p_group:chefGroup().id,p_zeit:"",p_ort:""},"Gruppen-Apéro entfernt").catch(()=>{}),
   allocate:d=>{closeModal();if(S.seatsLocked)return toast("Die Tischeinteilung ist fixiert – zuerst unter Einstellungen die Fixierung aufheben");saveSeatsAll(()=>allocateGroups(d.m==="auto"?(S.groups.some(g=>g.tische&&g.tische.length)?mergePlanDbOnly():null):mergePlan()))},
-  fillall:()=>saveSeatsAll(()=>fillSingles(S.people.filter(p=>!p.platz))),
+  fillall:()=>{let r;saveSeatsAll(()=>{r=placeByRules()}).then(()=>{if(r)modal(`<h2>Nach Regeln platziert</h2><table class="t"><tr><td>Neu platziert</td><td style="text-align:right"><b>${r.placed}</b> von ${r.newcomers}</td></tr><tr><td>Splitter bereinigt</td><td style="text-align:right"><b>${r.splinter}</b></td></tr><tr><td>Umgesetzt (Nachrücken an Nachbartisch)</td><td style="text-align:right"><b>${r.moved}</b></td></tr><tr><td>Weiterhin ohne Platz</td><td style="text-align:right"><b>${r.ohne}</b></td></tr></table>${r.ohne?`<p class="small muted">Für diese Personen gibt es keinen Platz nach der Regel (mind. ${MINPART} der Gruppe an einem Tisch, angrenzend längsseits). Bitte im Saalplan von Hand setzen.</p>`:""}${r.restored?`<p class="small muted">${r.restored} Personen eines Splitters behalten ihren bisherigen Platz, weil es keine regelkonforme Alternative gibt.</p>`:""}<div class="row" style="margin-top:8px"><button class="btn primary" data-act="close">OK</button></div>`)})},
   sendsurvey:()=>{const r=S._r||{};if(QS.some(([k])=>!r[k]))return toast("Bitte alle Punkte bewerten");const{wieder,...ratings}=r;
     call("submit_survey",{p_ratings:ratings,p_wieder:!!wieder,p_txt:$("#svtxt").value.trim()},"Umfrage gesendet – merci!").then(()=>{S._r={}}).catch(()=>{})},
   opensurvey:()=>{if(S.role!=="ok")return toast("Die Umfrage öffnet nach dem Anlass");call("admin_set_setting",{p_key:"survey_open",p_value:!S.surveyOpen},!S.surveyOpen?"Umfrage freigeschaltet":"Umfrage gesperrt").catch(()=>{})},
