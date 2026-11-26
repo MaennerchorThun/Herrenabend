@@ -2149,7 +2149,7 @@ A.reqcode=async()=>{const v=($("#rqv").value||"").trim(),n=($("#rqn").value||"")
   if(!v||!n)return toast("Bitte Vorname und Name angeben");if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return toast("Bitte eine gültige E-Mail-Adresse angeben");
   const b=document.querySelector('[data-act="reqcode"]');if(b){b.disabled=true;b.textContent="wird gesendet …"}
   try{await rpc("request_code",{p_vorname:v,p_name:n,p_email:e});S.lockStep="sent";render()}catch(err){toast(err.message);if(b){b.disabled=false;b.textContent="Code anfordern"}}};
-A.fixapply=()=>{const bad=S.groups.flatMap(g=>{const ft=(g.tische||[]).map(String);return ft.length?members(g).filter(p=>!p.platz||!ft.includes(String(p.tisch))):[]});
+A.fixapply=()=>{if(S.seatsLocked)return toast("Die Tischeinteilung ist fixiert – zuerst unter Einstellungen die Fixierung aufheben");const bad=S.groups.flatMap(g=>{const ft=(g.tische||[]).map(String);return ft.length?members(g).filter(p=>!p.platz||!ft.includes(String(p.tisch))):[]});
   const split=S.groups.filter(g=>groupTables(g).length>1);
   if(!bad.length&&!split.length)return toast("Alles in Ordnung – nichts umzusetzen");
   if(!confirm(`${bad.length?bad.length+" Personen an die festen Tische ihrer Gruppe umsetzen":""}${bad.length&&split.length?" und ":""}${split.length?split.length+" geteilte Gruppen an ihren Tischen in der richtigen Reihenfolge neu anordnen (Ende Tisch → Anfang Nachbartisch)":""}?\nAlle anderen behalten ihren Platz.`))return;
