@@ -57,7 +57,7 @@ main{max-width:980px;margin:0 auto;padding:16px 16px 100px}
 .tabs button.on{color:var(--brand);font-weight:600}
 /* Components */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
-.card.brand{background:var(--brand);color:#fff;border-color:transparent}
+.card.brand{background:var(--brand);color:#fff;border-color:transparent}.card.brand a{color:#fff;text-decoration:underline}
 .card.brand .muted{color:rgba(255,255,255,.85)}
 .card.soft{background:var(--surface2)}
 .grid{display:grid;gap:12px}
@@ -1188,7 +1188,7 @@ function vStart(){
   if(cg){const ms=members(cg),pr=S.proposals.filter(x=>x.gruppe===cg.id).length,op=S.orders.filter(o=>o.gruppe===cg.id&&o.status!=="serviert").length;
     h+=`<div class="card" style="border-color:var(--brand)"><div class="row between"><div><p class="eyebrow">${chefLbl(cg)}${cg.guest?" ad interim":""}</p><h3 style="margin:0">${cg.guest?"":"Gruppe "}${esc(cg.name)}</h3></div><span class="chip b">nur ${cg.guest?"Gästetisch":"eigene Gruppe"}</span></div>
       <div class="kpis" style="margin:12px 0">${kpiBox(ms.length,"Personen")}${kpiBox(ms.filter(p=>p.platz).length,"platziert")}${kpiBox(groupTables(cg).length,"Tische")}${kpiBox(pr,"Weinwünsche")}${kpiBox(op,"offene Bestellungen")}</div>
-      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt</button></div></div>`}
+      <div class="row"><button class="btn primary sm" data-act="go" data-r="gruppe">Meine Gruppe</button><button class="btn sm" data-act="go" data-r="wein">Wein bestellen</button><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet</button><button class="btn sm" data-act="grpmail">✉️ Mail an meine Gruppe</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt</button></div></div>`}
   if(S.role==="ok"){const k=kpi();
     h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Organisation</p>${LIVE&&!S.people.length?`<div class="note" style="margin:0 0 10px">Noch keine Teilnehmer in der Datenbank. Die angemeldeten Teilnehmer lädst du unter <b>Verwaltung → Einstellungen &amp; Import → 2. Teilnehmer importieren</b> (Webling-Export «Teilnehmer Herrenabend»).</div>`:""}
       <div class="kpis" style="margin:8px 0 12px">${kpiBox(k.total,"Angemeldet")}${kpiBox(k.groups,"Gruppen")}${kpiBox(k.noSeat,"ohne Platz")}${kpiBox(k.newOrders,"neue Bestellungen")}${kpiBox(k.urgent,"dringendes Feedback")}</div>
@@ -1398,11 +1398,13 @@ function vAperoVorab(){
   const local=()=>{const ws=key.split(" "),x=GROUP_APEROS.find(a=>a.g.every(w=>ws.includes(w)));return x?{n:x.n,zeit:x.zeit,ort:x.ort}:false};
   if(S.code&&S.myApero===undefined){S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false}).catch(()=>{S.myApero=local()}).finally(()=>{if(/apero/.test(location.hash))render()})}
   const ga=S.myApero;
+  const gaz=ga&&(ga.zeit||ga.ort);
   return back()+`<h1>Apéro</h1>
-    <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
+    ${gaz?`<div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Apéro deiner Tischgemeinschaft · ${esc(ga.n)}</p><h2>${ga.zeit?esc(ga.zeit)+" Uhr · ":""}${ga.zeit?aperoOrt(ga):esc(ga.ort)}</h2>
+    <p class="muted" style="margin:0">Besammlung für alle ab ${EVENT.apero} Uhr · ${esc(EVENT.aperoOrt)} · Saalöffnung ${EVENT.saal} Uhr</p>${(()=>{const m=vMe();return m&&m.angemeldet?`<button class="btn sm" style="margin-top:10px" data-act="vapero">${m.apero?"✓ Ich komme zum Apéro – abmelden":"Ich komme zum Apéro"}</button>`:""})()}</div>`
+    :`<div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Besammlung für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
     <p class="muted" style="margin:0">Saalöffnung ${EVENT.saal} Uhr</p></div>
-    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:ga?`<div class="card"><p class="eyebrow">Apéro deiner Tischgemeinschaft</p><h3 style="margin:0 0 6px">${esc(ga.n)}</h3><p class="small" style="margin:0">${aperoTxt(ga)}</p>${aperoBtn()}</div>`
-      :`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}${chefAperoForm()}${S.chefMembers?`<div class="card"><h3 style="margin:0 0 6px">Apéro-Teilnehmer deiner Tischgruppe</h3><p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du die angemeldeten Teilnehmer zum Apéro an- und abmelden.</p>${chefMembersBox(true)}</div>`:""}`;
+    ${ga===null&&S.code?`<div class="card soft small">Apéro deiner Tischgemeinschaft wird geladen …</div>`:`<div class="card soft small">Für deine Tischgemeinschaft ist kein eigener Apéro gemeldet – wir sehen uns an der Besammlung für alle.</div>`}`}${chefAperoForm()}${S.chefMembers?`<div class="card"><h3 style="margin:0 0 6px">Apéro-Teilnehmer deiner Tischgruppe</h3><p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du die angemeldeten Teilnehmer zum Apéro an- und abmelden.</p>${chefMembersBox(true)}</div>`:""}`;
 }
 /* Vorabversion: Gruppenchef legt den Apéro seiner Tischgruppe fest (set_group_apero, Berechtigung prüft Supabase) */
 /* Vorabversion: Gruppenchef sieht die angemeldeten Teilnehmer seiner Tischgruppe; Tisch/Platz erst, wenn das OK die Tischeinteilung freischaltet (Einstellung seats_visible) */
@@ -1415,7 +1417,7 @@ function chefMembersBox(open){const m=S.chefMembers;if(!m)return"";const ms=m.me
   return`<details style="margin-top:10px"${ms.length&&!open?"":" open"}><summary class="small" style="cursor:pointer"><b>Angemeldete Teilnehmer: ${ms.length}</b>${ms.length?` · davon am Apéro: <b>${ms.filter(p=>p.apero).length}</b>`:""}</summary>
     ${ms.length?`<table class="t" style="margin-top:6px"><tr><th>Name</th><th>Apéro</th>${m.seats?"<th>Tisch</th><th>Platz</th>":""}</tr>${ms.map(p=>`<tr><td>${esc(p.name)} ${esc(p.vorname)}${p.chef?` <span class="chip b">Chef</span>`:""}${p.typ&&p.typ!=="mitglied"?` <span class="small muted">${esc(p.typ)}</span>`:""}</td><td><button class="btn sm ${p.apero?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${p.apero?0:1}">${p.apero?"✓ dabei":"anmelden"}</button></td>${m.seats?`<td>${esc(p.tisch||"–")}</td><td>${esc(p.platz||"–")}</td>`:""}</tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Noch niemand aus deiner Tischgruppe angemeldet.</p>`}
     <p class="small muted" style="margin:6px 0 0">${m.seats?"Die Tischeinteilung ist freigeschaltet.":"Die Tischeinteilung siehst du hier, sobald das OK sie freischaltet."} Stand der Anmeldungen beim OK.</p></details>
-    <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet: neu dabei, wer fehlt – erinnern</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt für Tischchefs</button></div>`}
+    <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn sm" data-act="go" data-r="factsheet">📋 Factsheet: neu dabei, wer fehlt – erinnern</button><button class="btn sm" data-act="grpmail">✉️ Mail an meine Gruppe</button><button class="btn sm" data-act="go" data-r="chefinfo">📘 Merkblatt für Tischchefs</button></div>`}
 
 /* ===== Merkblatt für Tischchefs (in der App, druckbar) – Stand 21.11.2026 ===== */
 function vChefInfo(){
@@ -1513,12 +1515,15 @@ function vApero(){
   if(VORAB)return vAperoVorab();
   const me=ME(),isOk=me.id==="ok"||S.role==="catering",g=S.role==="catering"?null:G(me.gruppe),ap=S.apero.has(me.id),cg=chefGroup();
   const withA=S.groups.filter(x=>x.apero);
+  const ga=g&&g.apero&&(g.apero.zeit||g.apero.ort)?g.apero:null;
   let h=back()+`<h1>Apéro</h1>
-    <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Apéro für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
-    <p class="muted" style="margin:0 0 12px">Baröffnung 16:00 Uhr · Saalöffnung ${EVENT.saal} Uhr</p>
+    <div class="card brand">${ga?`<p class="eyebrow" style="color:#fff;opacity:.85">Apéro deiner Gruppe · ${esc(g.name)}</p><h2>${ga.zeit?esc(ga.zeit)+" Uhr · ":""}${ga.zeit?aperoOrt(ga):esc(ga.ort)}</h2>
+    <p class="muted" style="margin:0 0 12px">Apéro für alle ab ${EVENT.apero} Uhr · ${esc(EVENT.aperoOrt)} · Saalöffnung ${EVENT.saal} Uhr</p>`
+    :`<p class="eyebrow" style="color:#fff;opacity:.85">Apéro für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
+    <p class="muted" style="margin:0 0 12px">Baröffnung 16:00 Uhr · Saalöffnung ${EVENT.saal} Uhr</p>`}
     ${isOk?"":`<button class="btn sm" data-act="apero">${ap?"✓ Ich komme – abmelden":"Ich komme zum Apéro"}</button>`}</div>`;
   if(g){const ms=members(g).filter(p=>S.apero.has(p.id));
-    h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${g.apero?`Gruppen-Apéro: ${aperoTxt(g.apero)}`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Bierbar in der Halle 0."}</p>
+    h+=`<div class="card"><h3>Deine Gruppe · ${esc(g.name)}</h3><p class="muted small">${ga?`Euer Gruppen-Apéro steht oben. Der Apéro für alle beginnt um ${EVENT.apero} Uhr in der ${esc(EVENT.aperoOrt)}.`:"Kein eigener Gruppen-Apéro gemeldet – ihr trefft euch mit allen an der Bierbar in der Halle 0."}</p>
       ${cg&&cg.id===g.id?`<button class="btn sm" data-act="go" data-r="gruppe" style="margin-bottom:10px">Gruppen-Apéro festlegen</button>`:""}
       ${cg&&cg.id===g.id?`<p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du deine Mitglieder an- und abmelden (${ms.length} von ${members(g).length} dabei):</p><table class="t">${members(g).sort(byName).map(p=>{const on=S.apero.has(p.id);return`<tr><td>${esc(full(p))}</td><td style="text-align:right"><button class="btn sm ${on?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${on?0:1}">${on?"✓ dabei":"anmelden"}</button></td></tr>`}).join("")}</table>`
       :`<div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div>`}</div>`}
@@ -1821,7 +1826,7 @@ function vAdminAlt(){
     ${S.seatsLocked?`<div style="margin-top:10px"><b class="small">Ohne Platz: ${ohne.length}</b>${ohne.length?`<div class="chips" style="margin:6px 0">${ohne.map(p=>`<span class="chip w">${esc(full(p))}${G(p.gruppe)?` · ${esc(G(p.gruppe).name)}`:""}</span>`).join("")}</div>
       <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="fillall">Nach Regeln platzieren</button><button class="btn sm" data-act="go" data-r="saal">Von Hand im Saalplan</button></div>`:`<p class="small muted" style="margin:4px 0 0">Alle angemeldeten Teilnehmer haben einen Platz.</p>`}</div>`:""}</div>`}
   if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
-  if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button><div id="wtres" style="margin-top:8px"></div></div>`;
+  if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button> <button class="btn sm" data-act="wback">App → Webling zurückschreiben …</button> <button class="btn sm" data-act="grpclean">Leere Gruppen löschen …</button><div id="wtres" style="margin-top:8px"></div></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet).</p><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button></div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
@@ -2025,7 +2030,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.35"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.36"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2209,6 +2214,28 @@ A.wtsyncgo=async()=>{if(!confirm("Tischgruppen gemäss Webling übernehmen? Grup
   try{const j=await weblingTischSync(true);await loadLive();allocateGroups(null,{keep:true});
     await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});await loadLive();render();
     toast(`✓ ${j.umgesetzt} Gruppenwechsel übernommen${(j.umbenannt||[]).length?`, ${j.umbenannt.length} Gruppe umbenannt`:""}`)}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.grpmail=async()=>{let info=null;try{info=await rpc("chef_group_mail_info",{p_code:S.code})}catch(e){return toast(e.message)}if(!info)return toast("Nur für Tischchefs");
+  const me=S.vname||"",txt=`Liebe Tischgemeinschaft «${info.gruppe}»\n\nLieber {vorname}\n\n…\n\nAlle Infos zum ${EVENT.nr}. Herrenabend findest du in der App:\n{link}\n\nHerzliche Grüsse\n${me}`;
+  modal(`<h2>Mail an meine Gruppe</h2><div style="display:grid;gap:6px"><label class="small muted">Empfänger</label><select id="gmW" class="input"><option value="angemeldet">alle Angemeldeten (${info.angemeldet})</option><option value="alle">ganze Tischgruppe: Angemeldete + noch nicht Angemeldete (${info.angemeldet+info.fehlen})</option><option value="fehlen">nur noch nicht Angemeldete (${info.fehlen})</option></select>
+    <p class="small muted" style="margin:0">{vorname} und {link} (persönlicher Zugang zur App) werden pro Person ersetzt. Antworten kommen direkt zu dir.${info.ohne_mail?` ${info.ohne_mail} Personen ohne E-Mail erreichst du so nicht.`:""}</p>
+    <input id="gmS" class="input" value="${esc(EVENT.nr+". Herrenabend – Tischgemeinschaft "+info.gruppe)}"><textarea id="gmT" class="input" rows="11">${esc(txt)}</textarea><div id="gmres"></div>
+    <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close">Abbrechen</button><button class="btn" data-act="grpmailgo" data-t="1">Testmail an mich</button><button class="btn primary" data-act="grpmailgo">Senden</button></div></div>`)};
+A.grpmailgo=d=>{const test=d.t==="1",w=$("#gmW").value;if(!test&&!confirm("E-Mail an "+$("#gmW").selectedOptions[0].text+" senden?"))return;
+  rpc("chef_group_mail",{p_code:S.code,p_wer:w,p_subject:$("#gmS").value,p_text:$("#gmT").value,p_test:test}).then(j=>{$("#gmres").innerHTML=`<div class="okmsg">✓ ${test?"Testmail an dich gesendet":j.sent+" E-Mails gesendet"}${j.ohne_mail&&j.ohne_mail.length?`<br><span class="small">ohne E-Mail: ${esc(j.ohne_mail.join(", "))}</span>`:""}</div>`}).catch(e=>{$("#gmres").innerHTML=`<div class="note">${esc(e.message)}</div>`})};
+A.wback=async()=>{const el=$("#wtres");el.innerHTML=`<p class="small">Webling wird gelesen … (dauert etwa 20 Sekunden)</p>`;
+  try{const r=await fetch(WEBLING_FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:SUPA.key},body:JSON.stringify({code:S.code,action:"zurueck",dry:true})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||("Fehler "+r.status));
+    const w=j.wechsel||[];el.innerHTML=`<p class="small"><b>Vorschau App → Webling</b></p><p class="small" style="margin:0 0 6px">Feld «letzte Platznr.»: <b>${j.plaetze}</b> Platznummern werden geschrieben.<br>Tischgruppe in Webling: <b>${w.length}</b> Änderungen${w.length?" (abwählen, was nicht geändert werden soll)":""}:</p>
+      ${w.map(x=>`<label class="row small" style="padding:2px 0"><input type="checkbox" class="wbsel" value="${esc(x.member_id)}" checked> ${esc(x.name)} ${esc(x.vorname)} <span class="muted">· ${esc(x.von||"keine Tischgruppe")} → <b>${esc(x.nach)}</b></span></label>`).join("")}
+      ${(j.gruppe_fehlt_in_webling||[]).length?`<p class="small" style="color:#b3261e">Diese App-Gruppen gibt es in Webling unter «Herrenabendtische» nicht: ${esc(j.gruppe_fehlt_in_webling.join(", "))} – dort zuerst anlegen.</p>`:""}
+      ${(j.nicht_in_webling||[]).length?`<p class="small muted">Nicht in Webling gefunden: ${esc(j.nicht_in_webling.join(", "))}</p>`:""}
+      <button class="btn sm primary" data-act="wbackgo" style="margin-top:6px">In Webling schreiben</button>`}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.wbackgo=async()=>{const mids=[...document.querySelectorAll(".wbsel:checked")].map(c=>c.value);if(!confirm("Tischgruppen und Platznummern jetzt in Webling schreiben?"))return;const el=$("#wtres");el.innerHTML=`<p class="small">wird geschrieben … (bis 1 Minute)</p>`;
+  try{const r=await fetch(WEBLING_FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:SUPA.key},body:JSON.stringify({code:S.code,action:"zurueck",gruppen_mids:mids})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||("Fehler "+r.status));
+    el.innerHTML=`<div class="okmsg">✓ ${j.geschrieben} Mitglieder in Webling nachgeführt (${j.gruppen} Gruppen, ${j.plaetze} Platznummern).</div>${(j.fehler||[]).length?`<div class="note small">Nicht geschrieben:<br>${j.fehler.map(esc).join("<br>")}</div>`:""}`}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.grpclean=async()=>{const el=$("#wtres");try{const j=await rpc("admin_delete_empty_groups",{p_code:S.code,p_dry:true});const L=j.leer||[];
+  el.innerHTML=L.length?`<p class="small"><b>Gruppen ohne Teilnehmer:</b></p>${L.map(g=>`<label class="row small" style="padding:2px 0"><input type="checkbox" class="gcl" value="${g.id}" checked> ${esc(g.name)}</label>`).join("")}<button class="btn sm primary" data-act="grpcleango" style="margin-top:6px">Ausgewählte löschen</button><p class="small muted" style="margin:6px 0 0">Gelöscht wird nur die leere Gruppe in der App. In Webling ändert sich nichts.</p>`:`<div class="okmsg">✓ Keine leeren Gruppen.</div>`}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+A.grpcleango=async()=>{const ids=[...document.querySelectorAll(".gcl:checked")].map(c=>c.value);if(!ids.length)return toast("Nichts ausgewählt");
+  try{const j=await rpc("admin_delete_empty_groups",{p_code:S.code,p_dry:false,p_ids:ids});await loadLive();render();toast(`✓ ${j.geloescht} Gruppe${j.geloescht===1?"":"n"} gelöscht`)}catch(e){toast(e.message)}};
 A.okchefs=()=>{const intro=S.seatsVisible?`Die Tischeinteilung für den ${EVENT.nr}. Herrenabend steht! Ab sofort siehst du in der Herrenabend-App unter «Meine Tischgruppe», an welchen Tischen und auf welchen Plätzen deine Gruppe sitzt. Unten findest du die Liste mit Tisch und Platz.\n\nNachmeldungen platzieren wir separat, möglichst bei ihrer Tischgruppe. Hast du einen Wunsch oder stimmt etwas nicht, melde dich bitte bis am 4. Dezember über «Feedback» in der App. Ab dem 5. Dezember sehen alle Teilnehmer ihren Platz.`:`Die Anmeldefrist für den ${EVENT.nr}. Herrenabend ist abgelaufen. Hier der aktuelle Stand deiner Tischgruppe – vielleicht magst du die noch nicht Angemeldeten persönlich ansprechen oder in der App per E-Mail erinnern.`;
   modal(`<h2>Tischchefs informieren</h2><p class="small muted">Jeder Tischchef erhält eine E-Mail mit dem Stand seiner Tischgruppe: angemeldet, noch nicht angemeldet, entschuldigt – plus seinen persönlichen Link zur App. ${S.seatsVisible?"Da die Tischeinteilung freigeschaltet ist, steht bei jeder Person auch Tisch und Platz.":"Tisch und Platz werden nicht erwähnt (erst nach dem Freischalten der Tischeinteilung)."}</p>
     <div style="display:grid;gap:6px"><label class="small muted">Einleitung (optional)</label><textarea id="ocI" class="input" rows="5">${esc(intro)}</textarea><div id="ocres"></div>
