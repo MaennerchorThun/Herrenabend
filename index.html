@@ -734,10 +734,10 @@ function allocateGroups(plan=null,opt={}){
         put(g,[c.to],[rest.length+mov],[...movers,...rest],[c.side]);return}
       if(keep){unplaced.push(...rest);return}
       place(g,rest,pool);return}
-    if(fixed&&fixed.length){const tabs=fixed.map(String).filter(t=>T(t)),n=ms.length+ex   /* Reihenfolge wie im Feld «Tische» eingegeben */,sc=splitCounts(n,tabs.map(t=>cap.get(t)));
+    if(fixed&&fixed.length){const tabs=fixed.map(String).filter(t=>T(t)),n=ms.length+ex   /* Reihenfolge wie im Feld «Tische» eingegeben */,sc=splitCounts(n,tabs.map(t=>avail(t,g)));
       if(sc){put(g,tabs,sc.counts,ms,sidesFor(tabs));planned++;return}
       { // reicht nicht: direkt angrenzenden Tisch in der Linie anhängen, dort mindestens MINPART der Gruppe
-        const caps=tabs.map(t=>cap.get(t)),over=n-caps.reduce((a,b)=>a+b,0),ext=[];
+        const caps=tabs.map(t=>avail(t,g)),over=n-caps.reduce((a,b)=>a+b,0),ext=[];
         for(const t of tabs){const nx=nextInLine(t),pv=prevInLine(t);
           if(nx&&!tabs.includes(nx)&&pool.includes(nx))ext.push({x:nx,from:t,side:"start",fromSide:"end"});
           if(pv&&!tabs.includes(pv)&&pool.includes(pv))ext.push({x:pv,from:t,side:"end",fromSide:"start"})}
@@ -746,9 +746,18 @@ function allocateGroups(plan=null,opt={}){
           const counts=caps.slice(),fi=tabs.indexOf(e.from);counts[fi]-=need-over;if(counts[fi]<MINPART)continue;
           const sides=sidesFor(tabs);if(sides[fi]==="none")sides[fi]=e.fromSide;
           put(g,[...tabs,e.x],[...counts,need],ms,[...sides,e.side]);planned++;return}}
-      const fit=tabs.reduce((s,t)=>s+cap.get(t),0),k=Math.min(ms.length,fit);if(k>0){const sc2=splitCounts(k,tabs.map(t=>cap.get(t)));put(g,tabs,sc2.counts,ms.slice(0,k),sidesFor(tabs));planned++}
+      const fit=tabs.reduce((s,t)=>s+avail(t,g),0),k=Math.min(ms.length,fit);if(k>0){const sc2=splitCounts(k,tabs.map(t=>avail(t,g)));put(g,tabs,sc2.counts,ms.slice(0,k),sidesFor(tabs));planned++}
       place(g,ms.slice(k),pool);return}
     place(g,ms,pool,ex)};
+  // Feste Tische, die mehrere Gruppen teilen: jeder Gruppe vorab reservieren, was sie dort mindestens braucht
+  // (Gruppengrösse minus Plätze an ihren eigenen Tischen, mind. MINPART) – sonst füllt die erste Gruppe den gemeinsamen Tisch ganz.
+  const RES=new Map();
+  { const fx=S.groups.map(g=>({g,tabs:(g.tische&&g.tische.length?g.tische:(g.guest?[EHREN_TISCH]:[])).map(String).filter(t=>T(t))})).filter(x=>x.tabs.length);
+    const users=new Map();for(const x of fx)for(const t of x.tabs)users.set(t,(users.get(t)||0)+1);
+    for(const x of fx){const n=sortM(x.g).length+(keep&&own(x.g).length?0:phantom(x.g));const shared=x.tabs.filter(t=>users.get(t)>1);if(!shared.length)continue;
+      let need=n-x.tabs.filter(t=>users.get(t)===1).reduce((s,t)=>s+cap.get(t),0);if(need<=0)continue;if(n>=MINPART)need=Math.max(need,MINPART);
+      for(const t of shared){if(need<=0)break;const a=Math.min(need,cap.get(t));if(!RES.has(t))RES.set(t,new Map());RES.get(t).set(x.g.id,a);need-=a}}}
+  const avail=(t,g)=>{let c=cap.get(t);const r=RES.get(t);if(r)for(const[gid,a]of r)if(gid!==g.id&&!done.has(gid))c-=a;return Math.max(0,c)};
   // 2. Gästetisch
   for(const g of S.groups.filter(g=>g.guest)){const ft=g.tische&&g.tische.length?g.tische.map(String):[EHREN_TISCH];handle(g,[...new Set([...ft,...normal])],ft)}
   // 3. Gruppen mit festen Tischen (Verwaltung → Tische) bzw. Vorlage – in Tischreihenfolge
@@ -1981,7 +1990,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.31"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.32"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
