@@ -363,6 +363,13 @@ const TABLES=Array.from({length:21},(_,k)=>{const n=String(k+1),e=n===EHREN_TISC
 let TSIZE={};
 const tsize=t=>(t&&TSIZE[t.id]===12)?12:16;
 const capTotal=()=>TABLES.reduce((s,t)=>s+tsize(t),0);
+/* Catering: Alle Plätze werden aufgedeckt, leere nach Bedarf abgeräumt, sobald alle sitzen.
+   Linie-Aquavit nach dem Hauptgang (Tradition) für bestimmte Gruppen – im OK einstellbar
+   (Menu → Catering-Übersicht, Einstellung «aquavit_groups», Liste von Gruppennamen). */
+const AQUAVIT_DEFAULT=["Bautisch","Junioren"];
+let AQUAVIT=AQUAVIT_DEFAULT.slice();
+const aqName=n=>AQUAVIT.some(a=>a.trim().toLowerCase()===String(n||"").trim().toLowerCase());
+const isAq=p=>{const g=G(p.gruppe);return !!g&&aqName(g.name)};
 const T=id=>TABLES.find(t=>t.id===id);
 function seatsOf(t){const top=[],bot=[],n=tsize(t)/2;for(let i=0;i<n;i++){top.push(t.start+i*2);bot.push(t.start+i*2+1)}return{top,bot,all:[...top,...bot]}}
 /* Reihenfolge beim Platzieren: gegenüberliegende Paare von links nach rechts → Gruppen sitzen zusammen */
@@ -1518,11 +1525,23 @@ function vMenu(){
   const vg=me.menu==="vegi";
   h+=`<div class="card">${MENU.map(m=>`<div class="tl-item"><div class="tm">${m.z}</div><div><div class="eyebrow" style="margin:0">${esc(m.g)}</div><div class="ttl">${esc(m.d)}</div>${vg?`<div class="who">${esc(MENU_VEGI)}</div>`:""}</div></div>`).join("")}</div>`;
   h+=`<div class="sec-h"><h2>Ab 01:00 in der Halle 0</h2></div><div class="card">${LATE.map(l=>`<div class="row between" style="padding:6px 0"><span>${esc(l.n)}</span><span class="chip">${esc(l.i)}</span></div>`).join("")}<p class="small muted" style="margin:8px 0 0">Restliches Angebot folgt.</p></div>`;
-  if(S.role==="ok"){let tn=0,tv=0;
-    h+=`<div class="sec-h"><h2>Catering-Übersicht</h2></div><div class="card scroll"><table class="t"><tr><th>Tisch</th><th>Normal</th><th>Vegi</th><th>Total</th></tr>`;
-    for(const t of[...TABLES,{id:null,short:"ohne Tisch"}]){const ps=S.people.filter(p=>p.tisch===t.id);if(!ps.length)continue;const v=ps.filter(p=>p.menu==="vegi").length;tn+=ps.length-v;tv+=v;
-      h+=`<tr><td>${esc(t.short)}</td><td>${ps.length-v}</td><td>${v}</td><td>${ps.length}</td></tr>`}
-    h+=`<tr><th>Total</th><th>${tn}</th><th>${tv}</th><th>${tn+tv}</th></tr></table></div>`}
+  if(S.role==="ok"){
+    const cap=capTotal(),seated=S.people.filter(p=>p.tisch&&p.platz).length,haupt=(MENU.find(m=>/hauptgang/i.test(m.g))||{}).z;
+    const aqG=S.groups.filter(g=>aqName(g.name)),aqTot=S.people.filter(p=>p.tisch&&isAq(p)).length;
+    h+=`<div class="sec-h"><h2>Catering-Übersicht</h2></div>
+    <div class="card"><p class="small" style="margin:0 0 6px"><b>Aufdecken:</b> Alle ${cap} Plätze werden aufgedeckt. Die leeren Plätze (zurzeit ${cap-seated}) werden nach Bedarf abgeräumt, sobald alle Teilnehmer sitzen.</p>
+    <p class="small" style="margin:0"><b>★ Linie-Aquavit</b> nach dem Hauptgang${haupt?` (Hauptgang ${esc(haupt)})`:""}: ${aqG.length?aqG.map(g=>`<b>${esc(g.name)}</b> (${members(g).filter(p=>p.tisch).length})`).join(" und "):`<span class="muted">keine Gruppe gewählt</span>`} – total <b>${aqTot} Gläser</b>.</p>
+    <details style="margin-top:8px"><summary class="small">Aquavit-Gruppen ändern</summary>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;margin:8px 0">${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<label class="small row"><input type="checkbox" class="aqg" value="${esc(g.name)}" ${aqName(g.name)?"checked":""}> ${esc(g.name)}</label>`).join("")}</div>
+    <p class="small muted" style="margin:0 0 6px">Gespeichert werden die Gruppennamen – sie gelten auch nächstes Jahr, solange die Gruppen gleich heissen. Tradition: ${AQUAVIT_DEFAULT.join(" und ")}.</p>
+    <button class="btn sm primary" data-act="aqsave">Aquavit-Gruppen speichern</button></details></div>
+    <div class="card scroll"><table class="t"><tr><th>Tisch</th><th>Plätze</th><th>Pers.</th><th>Vegi</th><th>Frei (aufgedeckt)</th><th>★ Aquavit</th></tr>`;
+    let tp=0,tn=0,tv=0,tf=0;
+    for(const t of TABLES){const ps=S.people.filter(p=>p.tisch===t.id),v=ps.filter(p=>p.menu==="vegi").length,a=ps.filter(isAq).length,sz=tsize(t),fr=Math.max(0,sz-ps.length);tp+=sz;tn+=ps.length;tv+=v;tf+=fr;
+      h+=`<tr><td>${esc(t.short)}${t.front?" (Gäste)":""}</td><td>${sz}</td><td>${ps.length}</td><td>${v||""}</td><td>${fr||""}</td><td>${a?`★ ${a}`:""}</td></tr>`}
+    const ot=S.people.filter(p=>!p.tisch);
+    if(ot.length)h+=`<tr><td>ohne Tisch</td><td></td><td>${ot.length}</td><td>${ot.filter(p=>p.menu==="vegi").length||""}</td><td></td><td>${ot.filter(isAq).length?`★ ${ot.filter(isAq).length}`:""}</td></tr>`;
+    h+=`<tr><th>Total</th><th>${tp}</th><th>${tn+ot.length}</th><th>${tv+ot.filter(p=>p.menu==="vegi").length}</th><th>${tf}</th><th>${aqTot}</th></tr></table></div>`}
   return h;
 }
 
@@ -1990,7 +2009,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.32"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.33"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2018,7 +2037,7 @@ function applySession(s){
   S.proposals=s.proposals.map(x=>({id:x.id,gruppe:x.group_id,w:x.wine_id,by:x.by_person}));
   S.feedback=(me.role==="ok"?s.feedback:s.my_feedback.map(f=>({...f,by_person:me.id}))).map(f=>({id:f.id||uid(),cat:f.cat,txt:f.txt,by:f.by_person,zeit:hm(f.created_at)}));
   S.survey=s.survey.map(x=>({r:x.ratings,wieder:x.wieder,txt:x.txt||""}));
-  S.surveyDone=new Set(s.survey_done?[me.id]:[]);S.surveyOpen=s.settings&&s.settings.survey_open===true;S.seatsVisible=!!(s.settings&&s.settings.seats_visible===true);S.seatsLocked=!!(s.settings&&s.settings.seats_locked===true);TSIZE=(s.settings&&s.settings.table_sizes&&typeof s.settings.table_sizes==="object")?s.settings.table_sizes:{};
+  S.surveyDone=new Set(s.survey_done?[me.id]:[]);S.surveyOpen=s.settings&&s.settings.survey_open===true;S.seatsVisible=!!(s.settings&&s.settings.seats_visible===true);S.seatsLocked=!!(s.settings&&s.settings.seats_locked===true);TSIZE=(s.settings&&s.settings.table_sizes&&typeof s.settings.table_sizes==="object")?s.settings.table_sizes:{};AQUAVIT=(s.settings&&Array.isArray(s.settings.aquavit_groups))?s.settings.aquavit_groups.map(String):AQUAVIT_DEFAULT.slice();
   S.stats=s.stats;S.isOkUser=me.role==="ok";S.demo=false;S.userId=null;S.meId=me.id;
   if(!S.roleChosen)S.role=S.isOkUser?"ok":(S.groups.some(g=>g.chef===me.id)?"chef":"gast");
   if(S.role==="ok"&&!S.isOkUser)S.role="gast";
@@ -2181,6 +2200,10 @@ A.okchefs=()=>{const intro=S.seatsVisible?`Die Tischeinteilung für den ${EVENT.
 A.okchefsgo=d=>{const test=d.t==="1";if(!test&&!confirm("Allen Tischchefs den Stand ihrer Tischgruppe mailen?"))return;
   rpc("admin_mail_chefs",{p_code:S.code,p_intro:$("#ocI").value,p_test:test}).then(j=>{$("#ocres").innerHTML=`<div class="okmsg">✓ ${test?"Testmail an dich gesendet":j.sent+" Tischchefs informiert"}${j.ohne_mail&&j.ohne_mail.length?`<br><span class="small">ohne E-Mail: ${esc(j.ohne_mail.join(", "))}</span>`:""}</div>`}).catch(e=>{$("#ocres").innerHTML=`<div class="note">${esc(e.message)}</div>`})};
 A.seatslock=()=>{const on=!S.seatsLocked;if(!confirm(on?"Tischeinteilung fixieren?\n\nAb jetzt wird niemand mehr automatisch umgesetzt. Neue Teilnehmer bleiben ohne Platz und werden separat platziert.":"Fixierung aufheben?\n\nDanach kann die App beim Import und mit «Neu verteilen» wieder Plätze ändern."))return;rpc("admin_set_setting",{p_code:S.code,p_key:"seats_locked",p_value:on}).then(()=>{S.seatsLocked=on;toast(on?"Tischeinteilung fixiert":"Fixierung aufgehoben");render()}).catch(e=>toast(e.message))};
+A.aqsave=()=>{const neu=[...document.querySelectorAll(".aqg")].filter(x=>x.checked).map(x=>x.value);
+  if(!confirm(`Linie-Aquavit nach dem Hauptgang für:\n${neu.length?neu.join(", "):"keine Gruppe"}`))return;
+  if(!LIVE){AQUAVIT=neu;render();toast("Aquavit-Gruppen gespeichert");return}
+  rpc("admin_set_setting",{p_code:S.code,p_key:"aquavit_groups",p_value:neu}).then(()=>{AQUAVIT=neu;render();toast("Aquavit-Gruppen gespeichert")}).catch(e=>toast(e.message))};
 A.tsave=()=>{const neu={};for(const t of TABLES){const v=+($("#ts-"+t.id)?.value||16);if(v===12)neu[t.id]=12}
   const lost=S.people.filter(p=>p.platz&&p.tisch&&neu[p.tisch]===12&&p.platz>T(p.tisch).start+11);
   if(!confirm(`Tischgrössen speichern?\n${Object.keys(neu).length?"12er-Tische: "+Object.keys(neu).join(", "):"Alle Tische 16 Plätze"}${lost.length?`\n\n${lost.length} Personen sitzen auf wegfallenden Plätzen und verlieren ihren Platz.`:""}`))return;
