@@ -1142,19 +1142,23 @@ function go(r){if(route()===r){render();scrollTo(0,0)}else location.hash="#/"+r}
 window.addEventListener("hashchange",()=>{render();scrollTo(0,0)});
 
 const EVENT_ONLY=["saal","teilnehmer","gaeste","umfrage","gruppe","service","admin"];
+/* Catering-Zugang (Rolle «catering»): Saalplan, Programm, Menu mit Catering-Übersicht/PDF, Apéros, Wein & Service-Board */
+const CAT_ROUTES=["start","saal","programm","menu","service","wein","apero","nummern","mehr"];
+const NAV_CAT=[NAV[0],NAV[1],NAV[2],{r:"menu",l:"Menu",svg:'<path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 1.5-3 4-3 7h3v11"/>'},{r:"service",l:"Service",svg:NAV[3].svg}];
+const navList=()=>VORAB?NAV_VORAB:S.role==="catering"?NAV_CAT:NAV;
 function render(){
   let r=route();
   if(ACCESS.required&&!S.unlocked){$("#app").innerHTML=vLock();$("#tabs").innerHTML="";$("#demo").innerHTML="Männerchor Thun · Zugang für Mitglieder";const i=$("#code");if(i)setTimeout(()=>i.focus(),50);return}
   if(VORAB&&EVENT_ONLY.includes(r))r="start";
   if(r==="gruppe"&&!chefGroup())r="saal";
-  if((r==="admin"||r==="service")&&S.role!=="ok")r="start";
+  if(r==="admin"&&S.role!=="ok")r="start";if(r==="service"&&S.role!=="ok"&&S.role!=="catering")r="start";if(S.role==="catering"&&!CAT_ROUTES.includes(r))r="start";
   if(r!=="factsheet"&&r!=="factsheetok"&&S.factsheet!==undefined)S.factsheet=undefined;
-  const V={chefinfo:vChefInfo,factsheet:vFactsheet,factsheetok:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
-  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
+  const V={chefinfo:vChefInfo,factsheet:vFactsheet,factsheetok:vFactsheet,nummern:vNummern,dieseapp:vDieseApp,start:VORAB?vStartVorab:S.role==="catering"?vStartCat:vStart,programm:vProgramm,saal:vSaal,wein:vWein,mehr:vMehr,teilnehmer:vTeilnehmer,gaeste:vGaeste,apero:vApero,menu:vMenu,lieder:vLieder,feedback:vFeedback,umfrage:vUmfrage,laut:vLaut,mitglieder:vMitglieder,lied:vLied,sponsoren:vSponsoren,kuenstler:vKuenstler,gruppe:vGruppe,service:vService,admin:vAdmin}[r]||vStart;
+  $("#demo").innerHTML=VORAB?`<b>Vorabversion</b> · definitive Version ab 5.12.26`:LIVE?(S.role==="catering"?`<b>Catering</b> · ${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}`:APP_MODE==="vorab"?`<b>Event-Vorschau (nur OK)</b> · <a href="#" data-act="demoview">Teilnehmer-Vorschau</a> · <a href="#" data-act="govorab">zur Vorabversion</a>`:`${EVENT.nr}. Herrenabend · ${esc(full(ME()))}${S.role==="ok"?" · Organisation":S.role==="chef"?" · Gruppenchef":""}`):S.demo?((S.userId?`<b>Teilnehmer-Vorschau</b> · ${esc(full(P(S.userId)))} · <a href="#" data-act="whoami">Person wechseln</a>`:`<b>Teilnehmer-Vorschau</b> (fiktive Daten) · <a href="#" data-act="whoami">Person wählen</a>`)+(APP_MODE==="vorab"&&S.code?` · <a href="#" data-act="okevent">zurück zur OK-Vorschau</a>`:"")):`Importierte Teilnehmer ${S.importInfo?.year||""} · nur in diesem Fenster, nicht gespeichert`;
   $("#app").classList.remove("shake");
   $("#app").innerHTML=V();
-  const navKey=(VORAB?NAV_VORAB:NAV).some(n=>n.r===r)?r:"mehr";
-  $("#tabs").innerHTML=(VORAB?NAV_VORAB:NAV).map(n=>`<button data-act="go" data-r="${n.r}" class="${n.r===navKey?"on":""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg>${n.l}</button>`).join("");
+  const navKey=navList().some(n=>n.r===r)?r:"mehr";
+  $("#tabs").innerHTML=navList().map(n=>`<button data-act="go" data-r="${n.r}" class="${n.r===navKey?"on":""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg>${n.l}</button>`).join("");
   if(r==="teilnehmer")renderPeople();
   if(r==="laut")initKnob();
   if(S.hl){setTimeout(()=>{const el=document.querySelector(".seat.hl");if(el)el.scrollIntoView({block:"center",behavior:"smooth"});S.hl=null},50)}
@@ -1197,7 +1201,19 @@ function vStart(){
     <div style="margin-top:6px">${PROG.filter(x=>!x.int).slice(0,3).map(x=>`<div class="tl-item"><div class="tm">${x.z}</div><div><div class="ttl">${esc(x.t)}</div><div class="who">${esc(x.i)}</div></div></div>`).join("")}</div></div>`;
   return h+`<div class="sec-h"><h2>Alles zum Abend</h2></div>${tiles()}${nextHABox()}`;
 }
-function tiles(){return`<div class="tiles">${SECTIONS.filter(s=>!(VORAB&&(s.ev||s.role))).filter(s=>!s.role||(s.role==="chef"?!!chefGroup():s.role===S.role)).map(s=>`<button class="tile" data-act="go" data-r="${s.r}"><span class="ic">${s.ic}</span><b>${s.l}</b><span>${s.d}</span></button>`).join("")}${S.chorAktiv?`<button class="tile" data-act="pickchor"><span class="ic">🎵</span><b>Chor-App</b><span>Proben, Noten, Chat</span></button>`:""}</div>`}
+function vStartCat(){
+  const seated=S.people.filter(p=>p.tisch&&p.platz),cap=capTotal(),vg=seated.filter(p=>p.menu==="vegi").length,aq=seated.filter(isAq).length;
+  const on=S.orders.filter(o=>o.status==="neu").length,oa=S.orders.filter(o=>o.status==="arbeit").length,sal=PROG.find(x=>/saalöffnung/i.test(x.t));
+  let h=`<section class="hero"><img class="hero-logo" src="${LOGO}" alt=""><p class="eyebrow">${EVENT.datum} · ${EVENT.ort}</p>
+    <h1>Grüessech Catering-Team</h1><p class="muted" style="margin:0">Alles für den Service am ${EVENT.nr}. Herrenabend – laufend aktuell.</p></section>`;
+  h+=`<div class="card" style="border-color:var(--brand)"><p class="eyebrow">Übersicht</p><div class="kpis" style="margin:8px 0 12px">${kpiBox(seated.length,"Personen")}${kpiBox(cap,"Plätze aufdecken")}${kpiBox(cap-seated.length,"leer – nach Bedarf abräumen")}${kpiBox(vg,"vegetarisch")}${kpiBox(aq,"★ Linie-Aquavit")}</div>
+    <div class="row"><button class="btn primary sm" data-act="go" data-r="saal">Saalplan</button><button class="btn sm" data-act="go" data-r="menu">Menu &amp; Catering-Übersicht</button><button class="btn sm" data-act="catpdf">🖨 Catering-PDF</button></div></div>`;
+  h+=`<div class="card"><div class="row between"><div><p class="eyebrow">Wein</p><h3 style="margin:0">${on} neu · ${oa} in Arbeit</h3></div><button class="btn primary sm" data-act="go" data-r="service">Service-Board</button></div>
+    <p class="small muted" style="margin:8px 0 0">Die Tischchefs bestellen den Wein pro Tisch in der App; die Bestellungen erscheinen hier und im Service-Board.</p></div>`;
+  h+=`<div class="card"><div class="row between"><h3 style="margin:0">Ablauf</h3><button class="btn ghost sm" data-act="go" data-r="programm">Ganzes Programm</button></div>
+    <div style="margin-top:6px">${PROG.filter(x=>/service/i.test(x.v)||/saalöffnung|eröffnung|pause|apéro/i.test(x.t)).map(x=>`<div class="tl-item"><div class="tm">${x.z}</div><div><div class="ttl">${esc((MENU.find(m=>m.z===x.z)||{}).g?MENU.find(m=>m.z===x.z).g+": "+MENU.find(m=>m.z===x.z).d:x.t)}</div><div class="who">${esc(x.i)}</div></div></div>`).join("")}</div></div>`;
+  return h+`<div class="sec-h"><h2>Bereiche</h2></div>${tiles()}`}
+function tiles(){if(S.role==="catering")return`<div class="tiles">${SECTIONS.filter(s=>CAT_ROUTES.includes(s.r)).map(s=>`<button class="tile" data-act="go" data-r="${s.r}"><span class="ic">${s.ic}</span><b>${s.l}</b><span>${s.d}</span></button>`).join("")}</div>`;return`<div class="tiles">${SECTIONS.filter(s=>!(VORAB&&(s.ev||s.role))).filter(s=>!s.role||(s.role==="chef"?!!chefGroup():s.role===S.role)).map(s=>`<button class="tile" data-act="go" data-r="${s.r}"><span class="ic">${s.ic}</span><b>${s.l}</b><span>${s.d}</span></button>`).join("")}${S.chorAktiv?`<button class="tile" data-act="pickchor"><span class="ic">🎵</span><b>Chor-App</b><span>Proben, Noten, Chat</span></button>`:""}</div>`}
 function vLock(){const st=S.lockStep||"ask";
   const head=`<div style="max-width:420px;margin:24px auto 0;text-align:center"><img src="${LOGO}" alt="Männerchor Thun" style="height:90px;margin:0 auto 12px;display:block">
   <p class="eyebrow">${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}</p><h1>Willkommen</h1>`;
@@ -1260,7 +1276,7 @@ function vDieseApp(){return back("mehr","Mehr")+`<p class="eyebrow">In eigener S
 function vMehr(){return`<h1>Mehr</h1><p class="muted">Alle Bereiche der App.</p>${tiles()}<button class="card" data-act="go" data-r="dieseapp" style="display:block;width:100%;text-align:left;cursor:pointer;margin-top:12px;border-color:var(--brand)"><b>📱 Interessiert an dieser App?</b> <span style="color:var(--brand)">Können wir.</span><div class="small muted">Für euren Verein – mehr erfahren ›</div></button>${mailBox(true)}<p class="small muted" style="text-align:center;margin-top:18px">Herrenabend-App Version ${APP_VERSION}</p>`}
 
 function vProgramm(){
-  const showInt=S.role==="ok";
+  const showInt=S.role==="ok"||S.role==="catering";
   let h=`<h1>Programm</h1><p class="muted">${EVENT.datum} · ${EVENT.ort}</p><div class="card soft small"><b>${EVENT.nr}. Herrenabend</b> · Apéro ab 16:00 in der Halle 0 · Saalöffnung ${EVENT.saal} · <b style="color:var(--brand)">18:30 Begrüssung und Konzert</b><br>Dresscode: ${EVENT.dress} · Bitte den Saalplatz frühzeitig einnehmen – alle Plätze sind nummeriert.<br>Während des Konzerts wird nicht serviert.</div>`;
   if(showInt)h+=`<p class="small muted">Organisationsansicht: interne Drehbuch-Punkte (markiert mit ·) und Verantwortlichkeiten sind sichtbar.</p>`;
   let part="";h+=`<div class="tl">`;
@@ -1495,7 +1511,7 @@ function chefAperoForm(){const g=S.chefGrp;if(!g)return"";const own=!!(g.zeit||g
     <div class="row" style="margin-top:10px"><button class="btn sm primary" data-act="cgsave">Speichern</button>${own?`<button class="btn sm ghost" data-act="cgclear">Eigenen Eintrag löschen (zurück zum Eintrag des OK)</button>`:""}</div></div>`}
 function vApero(){
   if(VORAB)return vAperoVorab();
-  const me=ME(),isOk=me.id==="ok",g=G(me.gruppe),ap=S.apero.has(me.id),cg=chefGroup();
+  const me=ME(),isOk=me.id==="ok"||S.role==="catering",g=S.role==="catering"?null:G(me.gruppe),ap=S.apero.has(me.id),cg=chefGroup();
   const withA=S.groups.filter(x=>x.apero);
   let h=back()+`<h1>Apéro</h1>
     <div class="card brand"><p class="eyebrow" style="color:#fff;opacity:.85">Apéro für alle</p><h2>${EVENT.apero} Uhr · ${EVENT.aperoOrt}</h2>
@@ -1506,8 +1522,8 @@ function vApero(){
       ${cg&&cg.id===g.id?`<button class="btn sm" data-act="go" data-r="gruppe" style="margin-bottom:10px">Gruppen-Apéro festlegen</button>`:""}
       ${cg&&cg.id===g.id?`<p class="small muted" style="margin:0 0 6px">Als Gruppenchef kannst du deine Mitglieder an- und abmelden (${ms.length} von ${members(g).length} dabei):</p><table class="t">${members(g).sort(byName).map(p=>{const on=S.apero.has(p.id);return`<tr><td>${esc(full(p))}</td><td style="text-align:right"><button class="btn sm ${on?"on":""}" data-act="chefapero" data-p="${p.id}" data-on="${on?0:1}">${on?"✓ dabei":"anmelden"}</button></td></tr>`}).join("")}</table>`
       :`<div class="chips">${ms.map(p=>`<span class="chip ${p.id===me.id?"b":""}">${esc(full(p))}</span>`).join("")||`<span class="muted small">Noch niemand angemeldet.</span>`}</div>`}</div>`}
-  if(isOk||S.role==="ok"||me.typ==="sponsor"||me.typ==="ehrengast"||g?.guest)h+=`<div class="card soft small"><b>Gästetisch & Sponsoren:</b> Apéro um 17:00 Uhr in der Thun-Expo Halle 0 im separaten Bereich, Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
-  if(withA.length&&(isOk||S.role==="ok")){const m=new Map();for(const x of withA){const k=x.apero.zeit+"|"+x.apero.ort;if(!m.has(k))m.set(k,{a:x.apero,gs:[]});m.get(k).gs.push(x.name)}
+  if(isOk||S.role==="ok"||S.role==="catering"||me.typ==="sponsor"||me.typ==="ehrengast"||g?.guest)h+=`<div class="card soft small"><b>Gästetisch & Sponsoren:</b> Apéro um 17:00 Uhr in der Thun-Expo Halle 0 im separaten Bereich, Begrüssung durch den Präsidenten um 17:10 Uhr.</div>`;
+  if(withA.length&&(isOk||S.role==="ok"||S.role==="catering")){const m=new Map();for(const x of withA){const k=x.apero.zeit+"|"+x.apero.ort;if(!m.has(k))m.set(k,{a:x.apero,gs:[]});m.get(k).gs.push(x.name)}
     h+=`<div class="sec-h"><h2>Gruppen-Apéros</h2></div>${[...m.values()].sort((p,q)=>(p.a.zeit||"99").localeCompare(q.a.zeit||"99")).map(e=>`<div class="card"><h3 style="margin:0 0 4px">${e.a.zeit?esc(e.a.zeit)+" Uhr":"Spontan"}</h3><div class="small">${e.a.zeit?aperoOrt(e.a):esc(e.a.ort)}</div><div class="chips" style="margin-top:8px">${e.gs.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div></div>`).join("")}`}
   const rows=S.groups.map(x=>({g:x,n:members(x).length,a:members(x).filter(p=>S.apero.has(p.id)).length})).filter(r=>r.a).sort((a,b)=>b.a-a.a);
   h+=`<div class="sec-h"><h2>Wer kommt? (${S.apero.size})</h2></div><div class="card scroll"><table class="t"><tr><th>Gruppe</th><th>Zusagen</th></tr>${rows.map(r=>`<tr><td>${esc(r.g.name)}</td><td>${r.a} von ${r.n}</td></tr>`).join("")||`<tr><td colspan="2" class="muted">Noch keine Zusagen.</td></tr>`}</table></div>`;
@@ -1518,23 +1534,23 @@ function vMenu(){
   const me=ME(),isOk=me.id==="ok";
   let h=back()+`<h1>Menu</h1><div class="note">Menu des 195. Herrenabends vom 12. Dezember 2026.</div>`;
   if(VORAB)h+=`<p class="small muted">Vegetarisches Menu oder Allergien? Bitte bei der Anmeldung deinem Tischobmann bzw. dem Herrenabendkassier melden.</p>`;
-  if(!isOk&&!VORAB)h+=`<div class="card"><div class="row between"><h3 style="margin:0">Mein Essenswunsch</h3><div class="row">
+  if(!isOk&&!VORAB&&S.role!=="catering")h+=`<div class="card"><div class="row between"><h3 style="margin:0">Mein Essenswunsch</h3><div class="row">
     <button class="btn sm ${me.menu==="normal"?"on":""}" data-act="menu" data-v="normal">Normal</button>
     <button class="btn sm ${me.menu==="vegi"?"on":""}" data-act="menu" data-v="vegi">Vegetarisch</button></div></div>
     <p class="muted small" style="margin:8px 0 0">Allergien bitte über <a href="#/feedback">Feedback</a> melden.</p></div>`;
   const vg=me.menu==="vegi";
   h+=`<div class="card">${MENU.map(m=>`<div class="tl-item"><div class="tm">${m.z}</div><div><div class="eyebrow" style="margin:0">${esc(m.g)}</div><div class="ttl">${esc(m.d)}</div>${vg?`<div class="who">${esc(MENU_VEGI)}</div>`:""}</div></div>`).join("")}</div>`;
   h+=`<div class="sec-h"><h2>Ab 01:00 in der Halle 0</h2></div><div class="card">${LATE.map(l=>`<div class="row between" style="padding:6px 0"><span>${esc(l.n)}</span><span class="chip">${esc(l.i)}</span></div>`).join("")}<p class="small muted" style="margin:8px 0 0">Restliches Angebot folgt.</p></div>`;
-  if(S.role==="ok"){
+  if(S.role==="ok"||S.role==="catering"){
     const cap=capTotal(),seated=S.people.filter(p=>p.tisch&&p.platz).length,haupt=(MENU.find(m=>/hauptgang/i.test(m.g))||{}).z;
     const aqG=S.groups.filter(g=>aqName(g.name)),aqTot=S.people.filter(p=>p.tisch&&isAq(p)).length;
-    h+=`<div class="sec-h"><h2>Catering-Übersicht</h2></div>
+    h+=`<div class="sec-h"><h2>Catering-Übersicht</h2><button class="btn sm primary" data-act="catpdf">🖨 Catering-PDF</button></div>
     <div class="card"><p class="small" style="margin:0 0 6px"><b>Aufdecken:</b> Alle ${cap} Plätze werden aufgedeckt. Die leeren Plätze (zurzeit ${cap-seated}) werden nach Bedarf abgeräumt, sobald alle Teilnehmer sitzen.</p>
     <p class="small" style="margin:0"><b>★ Linie-Aquavit</b> nach dem Hauptgang${haupt?` (Hauptgang ${esc(haupt)})`:""}: ${aqG.length?aqG.map(g=>`<b>${esc(g.name)}</b> (${members(g).filter(p=>p.tisch).length})`).join(" und "):`<span class="muted">keine Gruppe gewählt</span>`} – total <b>${aqTot} Gläser</b>.</p>
-    <details style="margin-top:8px"><summary class="small">Aquavit-Gruppen ändern</summary>
+    ${S.role==="ok"?`<details style="margin-top:8px"><summary class="small">Aquavit-Gruppen ändern</summary>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px;margin:8px 0">${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<label class="small row"><input type="checkbox" class="aqg" value="${esc(g.name)}" ${aqName(g.name)?"checked":""}> ${esc(g.name)}</label>`).join("")}</div>
     <p class="small muted" style="margin:0 0 6px">Gespeichert werden die Gruppennamen – sie gelten auch nächstes Jahr, solange die Gruppen gleich heissen. Tradition: ${AQUAVIT_DEFAULT.join(" und ")}.</p>
-    <button class="btn sm primary" data-act="aqsave">Aquavit-Gruppen speichern</button></details></div>
+    <button class="btn sm primary" data-act="aqsave">Aquavit-Gruppen speichern</button></details>`:""}</div>
     <div class="card scroll"><table class="t"><tr><th>Tisch</th><th>Plätze</th><th>Pers.</th><th>Vegi</th><th>Frei (aufgedeckt)</th><th>★ Aquavit</th></tr>`;
     let tp=0,tn=0,tv=0,tf=0;
     for(const t of TABLES){const ps=S.people.filter(p=>p.tisch===t.id),v=ps.filter(p=>p.menu==="vegi").length,a=ps.filter(isAq).length,sz=tsize(t),fr=Math.max(0,sz-ps.length);tp+=sz;tn+=ps.length;tv+=v;tf+=fr;
@@ -2009,7 +2025,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.33"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.35"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2038,8 +2054,8 @@ function applySession(s){
   S.feedback=(me.role==="ok"?s.feedback:s.my_feedback.map(f=>({...f,by_person:me.id}))).map(f=>({id:f.id||uid(),cat:f.cat,txt:f.txt,by:f.by_person,zeit:hm(f.created_at)}));
   S.survey=s.survey.map(x=>({r:x.ratings,wieder:x.wieder,txt:x.txt||""}));
   S.surveyDone=new Set(s.survey_done?[me.id]:[]);S.surveyOpen=s.settings&&s.settings.survey_open===true;S.seatsVisible=!!(s.settings&&s.settings.seats_visible===true);S.seatsLocked=!!(s.settings&&s.settings.seats_locked===true);TSIZE=(s.settings&&s.settings.table_sizes&&typeof s.settings.table_sizes==="object")?s.settings.table_sizes:{};AQUAVIT=(s.settings&&Array.isArray(s.settings.aquavit_groups))?s.settings.aquavit_groups.map(String):AQUAVIT_DEFAULT.slice();
-  S.stats=s.stats;S.isOkUser=me.role==="ok";S.demo=false;S.userId=null;S.meId=me.id;
-  if(!S.roleChosen)S.role=S.isOkUser?"ok":(S.groups.some(g=>g.chef===me.id)?"chef":"gast");
+  S.stats=s.stats;S.isOkUser=me.role==="ok";S.isCatering=me.role==="catering";S.demo=false;S.userId=null;S.meId=me.id;
+  if(!S.roleChosen)S.role=S.isOkUser?"ok":S.isCatering?"catering":(S.groups.some(g=>g.chef===me.id)?"chef":"gast");
   if(S.role==="ok"&&!S.isOkUser)S.role="gast";
   const rs=document.querySelector(".role");if(rs){if(rs.firstChild&&rs.firstChild.nodeType===3)rs.firstChild.textContent="Ansicht ";rs.style.display=S.isOkUser||S.groups.some(g=>g.chef===me.id)?"":"none";$("#role").value=S.role}
 }
@@ -2140,7 +2156,7 @@ const LIVEA={
   wdel:d=>call("admin_delete_target",{p_id:d.id},"Empfänger gelöscht").catch(()=>{}),
   reload:()=>loadLive().then(()=>{render();toast("Aktualisiert")}).catch(e=>toast(e.message)),
   unlock:()=>{const c=normCode($("#code").value);if(!c)return toast("Bitte den Code eingeben");const vn=cleanName($("#vname")?.value);if(vn)S.vname=vn;S.code=c;
-    loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser){toast("Die Event-Version öffnet am 5.12.");return setTimeout(leaveEventPreview,1200)}S.unlocked=true;try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}render()}).catch(e=>toast(e.message))},
+    loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser&&!S.isCatering){toast("Die Event-Version öffnet am 5.12.");return setTimeout(leaveEventPreview,1200)}S.unlocked=true;try{const u=new URL(location.href);u.searchParams.set("c",c);if(vn)u.searchParams.set("n",vn);history.replaceState(null,"",u.toString())}catch(e){}render()}).catch(e=>toast(e.message))},
 };
 /* Vorabversion: Feedback ebenfalls in die Datenbank (mit dem persönlichen Code) */
 if(VORAB){const fb0=A.sendfb;A.sendfb=()=>{if(FEEDBACK.formUrl||!S.code)return fb0();const txt=$("#fbtxt").value.trim();if(!txt)return toast("Bitte eine Nachricht eingeben");
@@ -2200,6 +2216,93 @@ A.okchefs=()=>{const intro=S.seatsVisible?`Die Tischeinteilung für den ${EVENT.
 A.okchefsgo=d=>{const test=d.t==="1";if(!test&&!confirm("Allen Tischchefs den Stand ihrer Tischgruppe mailen?"))return;
   rpc("admin_mail_chefs",{p_code:S.code,p_intro:$("#ocI").value,p_test:test}).then(j=>{$("#ocres").innerHTML=`<div class="okmsg">✓ ${test?"Testmail an dich gesendet":j.sent+" Tischchefs informiert"}${j.ohne_mail&&j.ohne_mail.length?`<br><span class="small">ohne E-Mail: ${esc(j.ohne_mail.join(", "))}</span>`:""}</div>`}).catch(e=>{$("#ocres").innerHTML=`<div class="note">${esc(e.message)}</div>`})};
 A.seatslock=()=>{const on=!S.seatsLocked;if(!confirm(on?"Tischeinteilung fixieren?\n\nAb jetzt wird niemand mehr automatisch umgesetzt. Neue Teilnehmer bleiben ohne Platz und werden separat platziert.":"Fixierung aufheben?\n\nDanach kann die App beim Import und mit «Neu verteilen» wieder Plätze ändern."))return;rpc("admin_set_setting",{p_code:S.code,p_key:"seats_locked",p_value:on}).then(()=>{S.seatsLocked=on;toast(on?"Tischeinteilung fixiert":"Fixierung aufgehoben");render()}).catch(e=>toast(e.message))};
+/* Catering-PDF: Druckansicht A4 quer (Seite 1 Saalplan, Seite 2 Gedecke pro Tisch, Ablauf & Hinweise) → «Als PDF speichern» */
+function catPrintHTML(){
+  const HX={g0:["#2b6a45","#dcefe3"],g1:["#2b5a92","#dde8f7"],g2:["#8a4d10","#f7e5d2"],g3:["#6a3a88","#ece0f4"],g4:["#226b69","#d9f0ef"],gx:["#6b625b","#efeae5"]};
+  const cm=colorMap(null),cap=capTotal(),seatedP=S.people.filter(p=>p.tisch&&p.platz),N=seatedP.length;
+  const bySeat=new Map(seatedP.map(p=>[p.platz,p]));
+  const gc=p=>HX[(p&&p.gruppe&&cm.get(p.gruppe))||"gx"];
+  const gname=p=>{const g=G(p&&p.gruppe);return g?g.name:"ohne Gruppe"};
+  const aqTot=seatedP.filter(isAq).length,aqG=S.groups.filter(g=>aqName(g.name));
+  const ranges=a=>{a=[...a].sort((x,y)=>x-y);const r=[];for(const n of a){const l=r[r.length-1];if(l&&n===l[1]+1)l[1]=n;else r.push([n,n])}return r.map(([x,y])=>x===y?x:x+"–"+y).join(", ")};
+  const now=new Date(),stand=now.toLocaleDateString("de-CH")+" "+now.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
+  const sal=PROG.find(x=>/saalöffnung/i.test(x.t)),ero=PROG.find(x=>/eröffnung/i.test(x.t));
+  const foot=pg=>`<div class="ft"><span>Männerchor Thun 1829 · ${EVENT.nr}. Herrenabend · Stand ${stand} · Änderungen bis zum Anlass möglich</span><span>Seite ${pg}/2</span></div>`;
+  const head=(t,sub)=>`<div class="hd"><div><h1>${t}</h1><p>${sub}</p></div><img src="${LOGO}" alt=""></div>`;
+  // Seite 1: Saalplan
+  let tb="";
+  for(const t of TABLES){
+    const sz=tsize(t),n=sz/2,ps=seatedP.filter(p=>p.tisch===t.id),gs=groupsAt(t.id),aq=ps.filter(isAq).length;
+    const col=Math.floor((+t.id-1)/7)+1,row=(+t.id-1)%7+1;
+    const seat=s=>{const p=bySeat.get(s);if(!p||p.tisch!==t.id)return`<i class="fr">${s}</i>`;const c=gc(p);return`<i style="background:${c[0]};border-color:${c[0]}">${s}</i>`};
+    let top="",bot="";for(let i=0;i<n;i++){top+=seat(t.start+2*i);bot+=seat(t.start+2*i+1)}
+    tb+=`<div class="tb" style="grid-column:${col};grid-row:${row}"><div class="th"><b>Tisch ${t.id}</b><span class="chips">${gs.map(x=>{const c=HX[(x.g&&cm.get(x.g.id))||"gx"];return`<em style="color:${c[0]};background:${c[1]}">${esc(x.g?x.g.name:"ohne Gruppe")}</em>`}).join("")}</span><span class="nr">${ps.length} Personen</span></div>
+      <div class="sr" style="width:${n*12.5}%;grid-template-columns:repeat(${n},1fr)">${top}</div><div class="bar${t.front?" gold":""}" style="width:${n*12.5}%"></div><div class="sr" style="width:${n*12.5}%;grid-template-columns:repeat(${n},1fr)">${bot}</div>
+      ${aq?`<div class="aq">★ Linie-Aquavit nach dem Hauptgang: ${aq}</div>`:""}</div>`}
+  const p1=`<section class="pg">${head("Tischeinteilung für das Catering",`${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)}${sal?` · Saalöffnung ${sal.z}`:""} · ${N} Teilnehmer an ${TABLES.length} Tischen · alle ${cap} Plätze aufdecken`)}
+    <div class="saal"><div class="stage">BÜHNE</div><div class="grid">${tb}</div></div>
+    <div class="lg"><span><i style="background:${HX.g0[0]}"></i> besetzter Platz, Farbe = Tischgruppe</span><span><i class="fr"></i> frei – aufgedeckt, nach Bedarf abräumen, wenn alle sitzen</span>${aqTot?`<span><b class="gold-t">★</b> Linie-Aquavit für ${aqG.map(g=>esc(g.name)).join(" und ")} nach dem Hauptgang (${aqTot} Gläser)</span>`:""}</div>${foot(1)}</section>`;
+  // Seite 2: Tabelle
+  let rows="",tv=0;
+  for(const t of TABLES){const ps=seatedP.filter(p=>p.tisch===t.id),v=ps.filter(p=>p.menu==="vegi").length,aq=ps.filter(isAq).length,gs=groupsAt(t.id);tv+=v;
+    const fr=[];for(const s of seatsOf(t).all.sort((a,b)=>a-b)){const p=bySeat.get(s);if(!p||p.tisch!==t.id)fr.push(s)}
+    rows+=`<tr><td>${t.id}${t.front?" (Gäste)":""}</td><td class="c">${ps.length}</td><td class="c">${v||"–"}</td><td class="c">${aq?`<b class="gold-t">★ ${aq}</b>`:"–"}</td><td>${gs.map(x=>{const c=HX[(x.g&&cm.get(x.g.id))||"gx"];return`<b style="color:${c[0]}">${esc(x.g?x.g.name:"ohne Gruppe")}</b> (${x.n})`}).join(" · ")||"–"}</td><td>${fr.join(", ")||"–"}</td></tr>`}
+  rows+=`<tr class="tot"><td>Total</td><td class="c">${N}</td><td class="c">${tv}</td><td class="c gold-t">${aqTot}</td><td></td><td>${cap-N} Plätze frei (aufgedeckt)</td></tr>`;
+  const ab=[];
+  if(sal)ab.push([sal.z,`Saalöffnung – alle ${cap} Plätze aufgedeckt${sal.i?" · "+esc(sal.i):""}`]);
+  if(ero)ab.push([ero.z,`${esc(ero.t)}, Gesangsblöcke – kein Service während der Darbietungen`]);
+  ab.push(["»","Sobald alle Teilnehmer sitzen: leere Plätze nach Bedarf abräumen",1]);
+  const dz=(MENU[MENU.length-1]||{}).z||"23:59";
+  for(const x of PROG){if(x.p!=="2. Teil"||x.z>dz||!(x.v==="Service"||/pause/i.test(x.t)))continue;
+    const m=MENU.find(m=>m.z===x.z);ab.push([x.z,m?`${esc(m.g)}: ${esc(m.d)}`:esc(x.t)]);
+    if(m&&/hauptgang/i.test(m.g)&&aqTot)ab.push(["★",`Nach dem Hauptgang: traditioneller Linie-Aquavit für ${aqG.map(g=>`${esc(g.name)} (${seatedP.filter(p=>p.gruppe===g.id).length})`).join(" und ")} – total ${aqTot} Gläser`,1])}
+  const aqT=TABLES.map(t=>{const ps=seatedP.filter(p=>p.tisch===t.id),a=ps.filter(isAq);if(!a.length)return"";return a.length===ps.length?`Tisch ${t.id} (${a.length})`:`Tisch ${t.id} (${a.length} – Plätze ${ranges(a.map(p=>p.platz))})`}).filter(Boolean);
+  const vg=seatedP.filter(p=>p.menu==="vegi"),oP=S.people.filter(p=>!p.tisch||!p.platz).length;
+  const hw=[`<b>Aufdecken:</b> Alle ${cap} Plätze werden aufgedeckt. Die leeren Plätze (${cap-N}) werden nach Bedarf abgeräumt, sobald alle Teilnehmer sitzen.`,
+    vg.length?`<b>Vegetarisch:</b> ${vg.length} Menus – ${TABLES.map(t=>{const n=vg.filter(p=>p.tisch===t.id).length;return n?`Tisch ${t.id} (${n})`:""}).filter(Boolean).join(", ")}.`:"<b>Vegetarisch:</b> Zum Stand dieser Liste sind keine vegetarischen Menus angemeldet. Nachmeldungen teilt das OK mit.",
+    aqT.length?`<b>Linie-Aquavit:</b> ${aqT.join(", ")}.`:"",
+    "Weinbestellung pro Tisch über den Tischchef (App) oder direkt beim Service.",
+    oP?`${oP} angemeldete Person${oP>1?"en haben":" hat"} noch keinen Platz – das OK platziert separat.`:"",
+    "Nachmeldungen platziert das OK; die aktuelle Belegung ist jederzeit in der Herrenabend-App ersichtlich."].filter(Boolean);
+  const p2=`<section class="pg">${head("Gedecke pro Tisch und Ablauf",`${EVENT.nr}. Herrenabend · ${esc(EVENT.datum)} · ${esc(EVENT.ort)}`)}
+    <div class="two"><table class="lt"><tr><th>Tisch</th><th class="c">Pers.</th><th class="c">Vegi</th><th class="c">Aquavit</th><th>Tischgruppe(n) (Anzahl)</th><th>Freie Plätze (aufgedeckt)</th></tr>${rows}</table>
+    <div class="side"><h2>Ablauf &amp; Menu</h2>${ab.map(([z,t,h])=>`<div class="ab${h?" hl":""}"><b>${z}</b><span>${t}</span></div>`).join("")}
+    <h2>Hinweise</h2><ul>${hw.map(x=>`<li>${x}</li>`).join("")}</ul></div></div>${foot(2)}</section>`;
+  const css=`@page{size:A4 landscape;margin:9mm 10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#1f1b18;background:#fff;font-size:8.5pt}
+  .bar0{position:sticky;top:0;background:#1f1b18;color:#fff;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px;z-index:2}
+  .bar0 button{background:#DE1034;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:bold;font-size:14px;cursor:pointer}
+  @media print{.bar0{display:none}}
+  @media screen{body{background:#ddd}.pg{background:#fff;margin:12px auto;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:9mm 10mm}}
+  .pg{width:277mm;height:190mm;position:relative;overflow:hidden;page-break-after:always;break-after:page}
+  @media screen{.pg{width:297mm;height:210mm}}
+  .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.7pt solid #DE1034;padding-bottom:2mm;margin-bottom:3mm}
+  .hd h1{color:#DE1034;font-size:16pt;margin:0 0 1mm}.hd p{margin:0;color:#595959;font-size:9pt}.hd img{height:12mm}
+  .saal{display:flex;gap:4mm;height:150mm}.stage{width:9mm;background:#1f1b18;color:#fff;border-radius:2mm;writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-weight:bold;letter-spacing:3pt;font-size:10pt}
+  .grid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(7,1fr);column-gap:6mm}
+  .tb{display:flex;flex-direction:column;gap:.6mm;min-width:0}
+  .th{display:flex;align-items:center;gap:1.5mm;font-size:9pt;white-space:nowrap;overflow:hidden}.th .nr{margin-left:auto;color:#DE1034;font-weight:bold}
+  .chips{display:flex;gap:1mm;overflow:hidden}.chips em{font-style:normal;font-weight:bold;font-size:6pt;padding:.3mm 1.2mm;border-radius:1mm;white-space:nowrap}
+  .sr{display:grid;gap:.8mm}
+  .sr i,.lg i{font-style:normal;display:block;height:3.8mm;line-height:3.6mm;border:.3mm solid;color:#fff;text-align:center;font-size:5.6pt}
+  .sr i.fr,.lg i.fr{background:#fff;border-color:#d9d2cb;color:#a39a92}
+  .bar{height:1.6mm;border:.3mm solid #1f1b18;background:#f3eee9}.bar.gold{background:#fdf3cf}
+  .aq{color:#b8860b;font-weight:bold;font-size:6.5pt;text-align:right}.gold-t{color:#b8860b}
+  .lg{display:flex;gap:6mm;margin-top:2mm;color:#595959;font-size:7.5pt;align-items:center}.lg span{display:flex;align-items:center;gap:1.5mm}.lg i{width:3mm;height:2.5mm;border:.3mm solid transparent}
+  .ft{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;color:#595959;font-size:7pt}
+  @media screen{.ft{left:10mm;right:10mm;bottom:9mm}}
+  .two{display:flex;gap:8mm}.lt{border-collapse:collapse;width:178mm;font-size:8pt}.lt th{background:#f3eee9;border-bottom:.8pt solid #DE1034;text-align:left;padding:1.1mm}
+  .lt td{padding:.9mm 1.1mm;border-bottom:.2pt solid #eee;vertical-align:middle}.lt tr:nth-child(even) td{background:#faf7f4}.lt .c{text-align:center}
+  .lt tr.tot td{font-weight:bold;border-top:.8pt solid #DE1034;background:#f3eee9}
+  .side{flex:1;font-size:8.3pt}.side h2{color:#DE1034;font-size:10.5pt;margin:0 0 2mm}.side h2+*{margin-top:0}
+  .ab{display:flex;gap:2mm;margin-bottom:1.4mm}.ab b{width:11mm;flex:none}.ab.hl{color:#b8860b;font-weight:bold}
+  .side ul{margin:0;padding-left:4mm}.side li{margin-bottom:1.4mm}.side h2:nth-of-type(2){margin-top:4mm}`;
+  return`<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tischeinteilung Catering ${EVENT.nr}. Herrenabend</title><style>${css}</style></head><body>
+  <div class="bar0"><button onclick="window.print()">🖨 Drucken / Als PDF speichern</button><span>Querformat A4 · bei Chrome/Edge unter «Weitere Einstellungen» «Hintergrundgrafiken» einschalten</span></div>${p1}${p2}</body></html>`}
+A.catpdf=()=>{const html=catPrintHTML(),w=window.open("","_blank");
+  if(!w){let f=document.getElementById("catframe");if(f)f.remove();f=document.createElement("iframe");f.id="catframe";f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
+    f.contentDocument.open();f.contentDocument.write(html);f.contentDocument.close();setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast("Drucken nicht möglich – bitte am Computer öffnen")}},600);return}
+  w.document.open();w.document.write(html);w.document.close();setTimeout(()=>{try{w.focus();w.print()}catch(e){}},600)};
 A.aqsave=()=>{const neu=[...document.querySelectorAll(".aqg")].filter(x=>x.checked).map(x=>x.value);
   if(!confirm(`Linie-Aquavit nach dem Hauptgang für:\n${neu.length?neu.join(", "):"keine Gruppe"}`))return;
   if(!LIVE){AQUAVIT=neu;render();toast("Aquavit-Gruppen gespeichert");return}
@@ -2266,7 +2369,7 @@ function personalManifest(code,vname){try{if(!code)return;const l=document.query
   const m={"name": "195. Herrenabend – Männerchor Thun", "short_name": "Herrenabend", "scope": "./", "display": "fullscreen", "background_color": "#ffffff", "theme_color": "#de1034", "lang": "de-CH", "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}, {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}], "display_override": ["fullscreen", "standalone"]};m.start_url=base+q;m.id=base;m.scope=base;m.icons=m.icons.map(i=>({...i,src:base+i.src}));
   l.setAttribute("href","data:application/manifest+json,"+encodeURIComponent(JSON.stringify(m)))}catch(e){}}
 function rememberMe(){personalManifest(S.code,S.vname);try{if(S.code){const u=new URL(location.href);u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);if(u.toString()!==location.href)history.replaceState(null,"",u.toString())}}catch(e){}try{if(S.code)localStorage.setItem("ha_code",S.code);if(S.vname)localStorage.setItem("ha_vname",S.vname)}catch(e){}}
-function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){if(!S.vname&&s.me.vorname){S.vname=cleanName(s.me.vorname);rememberMe()}S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
+function checkOk(){if(!S.code)return;rpc("my_chef_group",{p_code:S.code}).then(g=>{if(g){S.chefGrp=g;render();if(S.myApero===undefined){const key=APERO_CODES.get(sha256("MCT195A:"+S.code).slice(0,12))||"";S.myApero=null;rpc("my_apero",{p_code:S.code,p_key:key}).then(x=>{S.myApero=x||false;render()}).catch(()=>{S.myApero=undefined})}rpc("my_group_members",{p_code:S.code}).then(m=>{if(m){S.chefMembers=m;render()}}).catch(()=>{})}}).catch(()=>{});rpc("app_session",{p_code:S.code}).then(s=>{if(s&&!s.error&&s.me){if(s.me.role==="catering")return gotoMode("event");if(!S.vname&&s.me.vorname){S.vname=cleanName(s.me.vorname);rememberMe()}S.vorabMe={apero:!!s.me.apero,angemeldet:!!s.me.angemeldet};if(s.me.role==="ok")S.vorabOk=true;render()}}).catch(()=>{})}
 function gotoMode(m,demo){try{const u=new URL(location.href);if(m)u.searchParams.set("modus",m);else u.searchParams.delete("modus");if(demo)u.searchParams.set("demo","1");else u.searchParams.delete("demo");if(S.code)u.searchParams.set("c",S.code);if(S.vname)u.searchParams.set("n",S.vname);u.hash="#/start";location.href=u.toString()}catch(e){}}
 function leaveEventPreview(){gotoMode(null)}
 A.okevent=()=>gotoMode("event");
@@ -2316,7 +2419,7 @@ setTimeout(versionCheck,2500);setInterval(()=>{if(!document.hidden)versionCheck(
   if(VORAB){S.meId="guest";S.role="gast";S.userId=null;if(S.unlocked&&qc){S.code=qc;rememberMe()}render();if(S.code){checkOk();askApp()}return}
   if(LIVE){document.querySelector(".role").style.display="none";S.unlocked=false;S.code=qc;if(qc)rememberMe();
     if(qc){$("#app").innerHTML=`<p class="muted" style="text-align:center;margin-top:48px">Lade deine Daten …</p>`;
-      loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
+      loadLive().then(()=>{if(APP_MODE==="vorab"&&!S.isOkUser&&!S.isCatering)return leaveEventPreview();S.unlocked=true;render()}).catch(e=>{render();toast(e.message)})}else render();
     return}
   if(S.unlocked&&qc)S.code=qc;
   const tk=new URLSearchParams(location.search).get("t");
