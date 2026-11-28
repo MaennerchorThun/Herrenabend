@@ -843,12 +843,12 @@ function wishList(ws,del){
 function wishCard(g){
   const ms=members(g).sort(byName),tabs=groupTables(g),others=S.people.filter(p=>p.gruppe!==g.id&&p.platz&&tabs.includes(p.tisch)).sort(byName),ws=wishesFor(g);
   const opt=l=>l.map(p=>`<option value="${p.id}">${esc(full(p))}</option>`).join("");
-  return`<div class="card"><h3>Sitzwünsche</h3><p class="muted small">Wer möchte neben oder direkt gegenüber von wem sitzen – und wer nicht? «Neben» heisst direkt links oder rechts, «gegenüber» auf der anderen Tischseite genau vis-à-vis. «Plätze ordnen» setzt deine Gruppe an euren Tischen so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.</p>
+  return`<div class="card"><h3>Sitzwünsche</h3><p class="muted small">Wer möchte neben oder direkt gegenüber von wem sitzen – und wer nicht? «Neben» heisst direkt links oder rechts, «gegenüber» auf der anderen Tischseite genau vis-à-vis. ${S.role==="ok"?"«Plätze ordnen» setzt die Gruppe an ihren Tischen so, dass möglichst alle Wünsche erfüllt sind.":"<b>Plätze tauschst du von Hand im Saalplan:</b> Platz einer Person antippen und wählen, mit wem sie tauscht – oder auf einen freien Platz eurer Gruppe setzen. ⚠ zeigt, wo ein Wunsch noch nicht erfüllt ist."} Die Wünsche sehen nur du und das OK.</p>
     ${ws.length?wishList(ws,true):`<p class="small muted">Noch keine Wünsche erfasst.</p>`}
     <div style="display:grid;gap:6px;margin-top:10px"><select id="wa" class="input"><option value="">Person wählen …</option>${opt(ms)}</select>
     <select id="wt" class="input"><option value="neben">möchte neben</option><option value="gegenueber">möchte direkt gegenüber</option><option value="nicht">darf nicht neben</option></select>
     <select id="wb" class="input"><option value="">… wem sitzen? (Person wählen)</option><optgroup label="Deine Gruppe">${opt(ms)}</optgroup>${others.length?`<optgroup label="Andere Gruppen an euren Tischen">${opt(others)}</optgroup>`:""}</select></div>
-    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="wishadd">Wunsch hinzufügen</button><button class="btn sm primary" data-act="arrange" data-g="${g.id}" ${tabs.length?"":"disabled"}>Plätze ordnen</button></div></div>`}
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="wishadd">Wunsch hinzufügen</button>${S.role==="ok"?`<button class="btn sm primary" data-act="arrange" data-g="${g.id}" ${tabs.length?"":"disabled"}>Plätze ordnen</button>`:`<button class="btn sm primary" data-act="go" data-r="saal">Zum Saalplan – Plätze tauschen</button>`}</div></div>`}
 /* Gruppe an ihren Tischen neu ordnen: möglichst alle Wünsche erfüllen, möglichst wenige Umplatzierungen */
 function arrangeGroup(g,ownOnly=false){
   if(!g)return{n:0,viol:0,total:0};
@@ -1482,7 +1482,7 @@ function vChefInfo(){
   <div class="card"><p class="small" style="margin:0 0 4px">Jetzt erscheint die Kachel «Meine Gruppe». Du siehst und verwaltest nur deine eigene Gruppe:</p>${li([
     "<b>Übersicht:</b> alle Personen mit Tisch, Platz und Menü (normal/vegetarisch), die Tische eurer Gruppe und mit wem ihr den Tisch teilt.",
     "<b>Plätze setzen und tauschen:</b> Im Saalplan einen Platz eurer Gruppe antippen und Personen setzen oder tauschen – auch zwischen euren Tischen, wenn die Gruppe geteilt ist (z.B. Tisch 9 ↔ Tisch 16). Plätze anderer Gruppen sind gesperrt. Wer noch keinen Platz hat, setzt du mit «ohne Platz auf freie Plätze setzen» mit einem Tipp.",
-    "<b>Sitzwünsche:</b> Erfasse, wer neben wem sitzen möchte – oder wer nicht. «Neben» heisst direkt links oder rechts. «Plätze ordnen» setzt deine Gruppe so, dass möglichst alle Wünsche erfüllt sind. Die Wünsche sehen nur du und das OK.",
+    "<b>Sitzwünsche:</b> Erfasse, wer neben wem sitzen möchte – oder wer nicht. «Neben» heisst direkt links oder rechts. Die Plätze tauschst du danach von Hand im Saalplan; ⚠ zeigt, wo ein Wunsch noch nicht erfüllt ist. Die Wünsche sehen nur du und das OK.",
     "<b>Wein bestellen:</b> Du bestellst den Wein für euren Tisch direkt in der App – die Bestellung geht sofort an den Service. Mitglieder deiner Gruppe können dir Weine vorschlagen; ihre Wünsche erscheinen bei dir. Du siehst alle Bestellungen eurer Gruppe mit Total.",
     "<b>Factsheet und Gruppen-Apéro</b> kannst du weiterhin ansehen bzw. anpassen."])}</div>
   ${H(4,"Am Abend")}
@@ -2050,7 +2050,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.41"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.42"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2133,7 +2133,7 @@ const LIVEA={
     .then(async()=>{S.aperoEdit=null;S.aperoDefs=undefined;await loadLive();render();toast("Apéro gespeichert – die Gruppe sieht ihn sofort")}).catch(e=>toast(e.message))},
   apdel:d=>{if(!confirm("Diesen Apéro löschen?"))return;rpc("admin_delete_apero",{p_code:S.code,p_id:d.id}).then(async()=>{S.aperoDefs=undefined;await loadLive();render();toast("Apéro gelöscht")}).catch(e=>toast(e.message))},
   wishadd:()=>{const a=$("#wa").value,b=$("#wb").value,t=$("#wt").value;if(!a||!b)return toast("Bitte zwei Personen wählen");if(a===b)return toast("Bitte zwei verschiedene Personen wählen");
-    call("set_wish",{p_a:a,p_b:b,p_typ:t},"Wunsch gespeichert – mit «Plätze ordnen» anwenden").catch(()=>{})},
+    call("set_wish",{p_a:a,p_b:b,p_typ:t},S.role==="ok"?"Wunsch gespeichert – mit «Plätze ordnen» anwenden":"Wunsch gespeichert – Plätze im Saalplan von Hand tauschen").catch(()=>{})},
   wishdel:d=>call("delete_wish",{p_id:d.id},"Wunsch gelöscht").catch(()=>{}),
   arrange:d=>{const g=G(d.g);if(!g)return;const r=arrangeGroup(g);if(r.noTable)return toast(arrangeMsg(r));chefSave(g,r)},
   apero:()=>{const on=!S.apero.has(S.meId);call("set_apero",{p_on:on},on?"Apéro: angemeldet":"Apéro: abgemeldet").catch(()=>{})},
