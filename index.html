@@ -1852,7 +1852,7 @@ function vAdminAlt(){
       <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="fillall">Nach Regeln platzieren</button><button class="btn sm" data-act="go" data-r="saal">Von Hand im Saalplan</button></div>`:`<p class="small muted" style="margin:4px 0 0">Alle angemeldeten Teilnehmer haben einen Platz.</p>`}</div>`:""}</div>`}
   if(LIVE)h+=`<div class="card"><h3>Tischeinteilung für Gruppenchefs</h3><p class="muted small">Die Teilnehmerliste ist für die Gruppenchefs bereits offen: Sie sehen unter «Gruppenchef» auf der Startseite und unter «Apéro» alle angemeldeten Teilnehmer ihrer Tischgruppe und können sie zum Apéro an- und abmelden. <b>Tisch und Platz</b> erscheinen erst, wenn du hier freischaltest.</p><button class="btn sm ${S.seatsVisible?"on":""}" data-act="seatsvis">${S.seatsVisible?"✓ Freigeschaltet – wieder sperren":"Tischeinteilung freischalten"}</button></div>`;
   if(LIVE)h+=`<div class="card"><h3>Tischgruppen mit Webling abgleichen</h3><p class="muted small">Massgebend ist die <b>Webling-Gruppe</b> unter «Herrenabendtische» (z.B. Junioren), nicht das Feld «Herrenabend-Tisch». Wer in Webling die Gruppe gewechselt hat, kommt hier in die neue Tischgruppe; sein Platz wird frei und neu vergeben. Läuft beim Teilnehmer-Import automatisch mit.</p><button class="btn sm primary" data-act="wtsync">Abgleich prüfen</button> <button class="btn sm" data-act="wback">App → Webling zurückschreiben (Gruppe, Tisch, Platz) …</button> <button class="btn sm" data-act="grpclean">Leere Gruppen löschen …</button><div id="wtres" style="margin-top:8px"></div></div>`;
-  if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet).</p><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button></div>`;
+  if(LIVE)h+=`<div class="card"><h3>Tischchefs informieren</h3><p class="muted small">Jedem Tischchef per E-Mail den Stand der Anmeldungen seiner Tischgruppe schicken (angemeldet, noch nicht angemeldet, entschuldigt). Die Tischchefs können die noch nicht Angemeldeten danach in der App per E-Mail erinnern (Factsheet). Oder eine freie Info-Mail – z.B. über die Funktionen der App – mit persönlichem Link und Code.</p><div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm primary" data-act="okchefs">✉️ Stand an die Tischchefs mailen …</button><button class="btn sm" data-act="okchefinfo">✉️ Info-Mail mit Link & Code …</button></div></div>`;
   if(LIVE&&S.stats)h+=`<div class="card soft small"><b>Live-Datenbank:</b> ${S.stats.members} Mitglieder · ${S.stats.with_code} mit Zugangscode · ${S.stats.angemeldet} angemeldet <button class="btn sm ghost" data-act="reload">aktualisieren</button></div>`;
   if(LIVE){const ts=S.targets||[],ch=S.wch||"tgbot",tg=S.tg||{},chName={tgbot:"Telegram-Bot",telegram:"Telegram (CallMeBot)",whatsapp:"WhatsApp",email:"E-Mail"},ml=S.mail||{};
     h+=`<div class="card"><h3>Benachrichtigungen aufs Handy</h3><p class="muted small">Bei jedem Feedback und/oder jeder Weinbestellung schickt die App eine Nachricht an die hier eingetragenen Empfänger – an einzelne Personen oder an eine ganze Telegram-Gruppe (z.B. «OK Herrenabend»).</p>
@@ -2056,7 +2056,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.43"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.44"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2261,6 +2261,51 @@ A.grpclean=async()=>{const el=$("#wtres");try{const j=await rpc("admin_delete_em
   el.innerHTML=L.length?`<p class="small"><b>Gruppen ohne Teilnehmer:</b></p>${L.map(g=>`<label class="row small" style="padding:2px 0"><input type="checkbox" class="gcl" value="${g.id}" checked> ${esc(g.name)}</label>`).join("")}<button class="btn sm primary" data-act="grpcleango" style="margin-top:6px">Ausgewählte löschen</button><p class="small muted" style="margin:6px 0 0">Gelöscht wird nur die leere Gruppe in der App. In Webling ändert sich nichts.</p>`:`<div class="okmsg">✓ Keine leeren Gruppen.</div>`}catch(e){el.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
 A.grpcleango=async()=>{const ids=[...document.querySelectorAll(".gcl:checked")].map(c=>c.value);if(!ids.length)return toast("Nichts ausgewählt");
   try{const j=await rpc("admin_delete_empty_groups",{p_code:S.code,p_dry:false,p_ids:ids});await loadLive();render();toast(`✓ ${j.geloescht} Gruppe${j.geloescht===1?"":"n"} gelöscht`)}catch(e){toast(e.message)}};
+/* OK: freie Info-Mail an alle Tischchefs mit persönlichem Link und Code (admin_mail_chefs_text) */
+const CHEF_INFO_TXT=`Lieber {vorname}
+
+Herzlichen Dank, dass du am ${EVENT.nr}. Herrenabend vom ${EVENT.datum} wieder als Tischchef für die Tischgruppe «{gruppe}» da bist. Die Herrenabend-App nimmt dir einiges an Arbeit ab – hier eine kurze Übersicht, was du jetzt alles machen kannst.
+
+DEIN ZUGANG
+Persönlicher Link: {link}
+Persönlicher Code: {code}
+Am einfachsten den Link auf dem Handy öffnen. Tipp fürs iPhone: in Safari öffnen und über «Teilen → Zum Home-Bildschirm» als App ablegen. Den Code brauchst du nur, falls die App danach fragt. Bitte nicht weitergeben.
+
+DAS KANNST DU JETZT
+1. Deine Tischgruppe im Blick
+   Auf der Startseite findest du im Kasten für Tischchefs alle Angemeldeten deiner Gruppe – inklusive Tisch und Platz.
+
+2. Saalplan und Sitzordnung
+   Mit «Saalplan & Sitzordnung meiner Gruppe öffnen» siehst du euren Tisch im Saal. Plätze tauschst du von Hand: Platz einer Person antippen und wählen, mit wem sie tauscht – oder jemanden auf einen freien Platz eurer Gruppe setzen. Plätze anderer Gruppen sind gesperrt.
+   Unter «Meine Gruppe» kannst du Sitzwünsche erfassen (neben / gegenüber / nicht neben). Ein ⚠ im Saalplan zeigt, wo ein Wunsch noch nicht erfüllt ist.
+
+3. Apéro
+   Legt eure Gruppe einen eigenen Apéro fest, trägst du Zeit und Ort ein – deine Leute sehen ihn dann ganz oben auf der Apéro-Seite. Du kannst deine Mitglieder auch zum Apéro an- und abmelden.
+
+4. Factsheet: Wer ist neu, wer fehlt?
+   Das Factsheet zeigt, wer zum ersten Mal dabei ist, wer sich noch nicht angemeldet hat und wer sich entschuldigt hat. Die noch nicht Angemeldeten kannst du direkt aus dem Factsheet per E-Mail erinnern.
+
+5. Mail an deine Gruppe
+   Mit «Mail an meine Gruppe» schreibst du allen Angemeldeten, der ganzen Tischgruppe oder nur den noch Fehlenden. Jeder erhält seinen persönlichen App-Link, Antworten kommen direkt zu dir.
+
+6. Am Abend: Wein bestellen
+   Den Wein für deinen Tisch bestellst du direkt in der App – bitte vor Beginn des offiziellen Programms um 18:30 Uhr.
+
+Alles Weitere steht im «Merkblatt für Tischchefs» in der App (Startseite, zum Lesen und Drucken).
+
+Wenn sich jemand ab- oder neu anmeldet oder in eine andere Tischgruppe wechseln möchte, gib uns bitte Bescheid – das OK führt das zentral nach.
+
+Bei Fragen melde dich jederzeit.
+
+Herzliche Grüsse
+{absender}
+OK Herrenabend · Männerchor Thun 1829`;
+A.okchefinfo=()=>{const me=ME(),abs=me&&me.vorname?`${me.vorname} ${me.name||""}`.trim():"";
+  modal(`<h2>Info-Mail an die Tischchefs</h2><p class="small muted">Geht an alle Tischchefs. Platzhalter pro Person: <code>{vorname}</code> <code>{gruppe}</code> <code>{link}</code> <code>{code}</code> (persönlicher Zugang). Antworten kommen zu dir. Zuerst eine Testmail an dich schicken.</p>
+    <div style="display:grid;gap:6px"><input id="ciS" class="input" value="${esc(EVENT.nr+". Herrenabend – deine Werkzeuge als Tischchef in der App")}"><textarea id="ciT" class="input" rows="16">${esc(CHEF_INFO_TXT.replace("{absender}",abs||"OK Herrenabend"))}</textarea><div id="cires"></div>
+    <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" data-act="close">Abbrechen</button><button class="btn" data-act="okchefinfogo" data-t="1">Testmail an mich</button><button class="btn primary" data-act="okchefinfogo">An alle Tischchefs</button></div></div>`)};
+A.okchefinfogo=d=>{const test=d.t==="1";if(!test&&!confirm("Info-Mail mit persönlichem Link und Code an alle Tischchefs senden?"))return;
+  rpc("admin_mail_chefs_text",{p_code:S.code,p_subject:$("#ciS").value,p_text:$("#ciT").value,p_test:test}).then(j=>{$("#cires").innerHTML=`<div class="okmsg">✓ ${test?"Testmail an dich gesendet (mit den Angaben des ersten Tischchefs)":j.sent+" Tischchefs angeschrieben"}${j.ohne_mail&&j.ohne_mail.length?`<br><span class="small">ohne E-Mail: ${esc(j.ohne_mail.join(", "))}</span>`:""}</div>`}).catch(e=>{$("#cires").innerHTML=`<div class="note">${esc(e.message)}</div>`})};
 A.okchefs=()=>{const intro=S.seatsVisible?`Die Tischeinteilung für den ${EVENT.nr}. Herrenabend steht! Ab sofort siehst du in der Herrenabend-App unter «Meine Tischgruppe», an welchen Tischen und auf welchen Plätzen deine Gruppe sitzt. Unten findest du die Liste mit Tisch und Platz.\n\nNachmeldungen platzieren wir separat, möglichst bei ihrer Tischgruppe. Hast du einen Wunsch oder stimmt etwas nicht, melde dich bitte bis am 4. Dezember über «Feedback» in der App. Ab dem 5. Dezember sehen alle Teilnehmer ihren Platz.`:`Die Anmeldefrist für den ${EVENT.nr}. Herrenabend ist abgelaufen. Hier der aktuelle Stand deiner Tischgruppe – vielleicht magst du die noch nicht Angemeldeten persönlich ansprechen oder in der App per E-Mail erinnern.`;
   modal(`<h2>Tischchefs informieren</h2><p class="small muted">Jeder Tischchef erhält eine E-Mail mit dem Stand seiner Tischgruppe: angemeldet, noch nicht angemeldet, entschuldigt – plus seinen persönlichen Link zur App. ${S.seatsVisible?"Da die Tischeinteilung freigeschaltet ist, steht bei jeder Person auch Tisch und Platz.":"Tisch und Platz werden nicht erwähnt (erst nach dem Freischalten der Tischeinteilung)."}</p>
     <div style="display:grid;gap:6px"><label class="small muted">Einleitung (optional)</label><textarea id="ocI" class="input" rows="5">${esc(intro)}</textarea><div id="ocres"></div>
