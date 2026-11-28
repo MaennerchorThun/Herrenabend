@@ -907,20 +907,36 @@ function vAdmin(){
 }
 function adminPeople(){
   const ps=[...S.people].sort(byName);
-  return`<div class="card"><h3>Tischgemeinschaft wechseln</h3><p class="small muted">Teilnehmer wechseln von Jahr zu Jahr die Tischgemeinschaft. Hier kannst du die Gruppe einer Person ändern; ein neuer Name legt eine neue Gruppe an. Dauerhaft bitte auch in Webling («Herrenabend-Tisch») nachführen, sonst setzt der nächste Import die alte Gruppe wieder.</p>
+  const pt=S.pTab||"wechsel",tb=(k,l)=>`<button class="chip ${pt===k?"on":""}" data-act="ptab" data-k="${k}" style="cursor:pointer">${l}</button>`;
+  const glist=`<datalist id="gcglist">${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<option value="${esc(g.name)}">`).join("")}</datalist>`;
+  return`<div class="card" style="border-color:var(--brand)"><h3 style="margin:0 0 8px">Teilnehmer bearbeiten</h3>
+    <div class="chips" style="margin-bottom:10px">${tb("wechsel","⇄ Gruppenwechsel")}${tb("neu","➕ Zusätzlich anmelden")}${tb("ab","✉️ Abmelden / entschuldigen")}</div>
+    ${pt==="wechsel"?`<p class="small muted" style="margin:0 0 6px">Person in eine andere Tischgemeinschaft verschieben. Ein neuer Name legt eine neue Gruppe an. Danach mit «App → Webling zurückschreiben» (Einstellungen) auch in Webling nachführen.</p>
     <div style="display:grid;gap:6px"><input id="gcp" class="input" list="gcplist" placeholder="Person: Name Vorname" autocomplete="off"><datalist id="gcplist">${ps.map(p=>`<option value="${esc(p.name+" "+p.vorname)}">`).join("")}</datalist>
-    <input id="gcg" class="input" list="gcglist" placeholder="neue Tischgemeinschaft" autocomplete="off"><datalist id="gcglist">${[...S.groups].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>`<option value="${esc(g.name)}">`).join("")}</datalist>
+    <input id="gcg" class="input" list="gcglist" placeholder="neue Tischgemeinschaft" autocomplete="off">${glist}
     <label class="row small"><input type="checkbox" id="gcs" checked> bisherigen Tisch und Platz freigeben</label></div>
-    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="grpsave">Wechsel speichern</button></div></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="grpsave">Wechsel speichern</button></div>`
+    :pt==="neu"?`<p class="small" style="margin:0 0 4px"><b>Mitglied nachmelden</b> <span class="muted">(steht in Webling, aber noch nicht angemeldet)</span></p>
+    <input id="nrq" class="input" placeholder="Name suchen (mind. 2 Buchstaben) …" autocomplete="off"><div class="list" id="nrres" style="margin:6px 0 12px"></div>
+    <p class="small" style="margin:0 0 4px"><b>Gast hinzufügen</b> <span class="muted">(nicht in Webling, z.B. Ehrengast am Gästetisch)</span></p>
+    <div class="form2" style="grid-template-columns:1fr 1fr"><input id="apv" class="input" placeholder="Vorname"><input id="apn" class="input" placeholder="Name"></div>
+    <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:8px"><select id="apt" class="input"><option value="ehrengast">Ehrengast</option><option value="sponsor">Sponsorgast</option><option value="aktiv">Sänger</option><option value="passiv">Passivmitglied</option></select>
+    <input id="apg" class="input" list="gcglist" placeholder="Gruppe (z.B. Gästetisch)" value="Gästetisch">${glist}</div>
+    <input id="apf" class="input" placeholder="Funktion (optional, z.B. Gemeinderat Stadt Thun)" style="margin-top:8px">
+    <button class="btn sm primary" style="margin-top:8px" data-act="addperson">Gast hinzufügen</button>`
+    :`<p class="small muted" style="margin:0 0 6px">Anmeldung aufheben: Tisch, Platz und Apéro werden frei, in Webling wird «Teilnahme Herrenabend» auf «${EVENT_YEAR} Nein» gesetzt. Auch direkt in der Liste unten mit «entschuldigen».</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap"><input id="abp" class="input" list="gcplist2" placeholder="Person: Name Vorname" autocomplete="off" style="flex:1;min-width:200px"><datalist id="gcplist2">${ps.map(p=>`<option value="${esc(p.name+" "+p.vorname)}">`).join("")}</datalist><button class="btn sm primary" data-act="pabname">Entschuldigen</button></div>
+    <div class="row between" style="margin-top:12px"><b class="small">Entschuldigt${S.abgList?` (${S.abgList.length})`:""}</b><button class="btn sm" data-act="pablist">${S.abgList?"aktualisieren":"anzeigen"}</button></div>
+    ${S.abgList?(S.abgList.length?`<table class="t" style="margin-top:6px">${S.abgList.map(x=>`<tr><td>${esc(x.name)} ${esc(x.vorname)}</td><td class="small muted">${esc(x.gruppe||"")}</td><td style="text-align:right"><button class="btn sm" data-act="pan" data-p="${x.id}">wieder anmelden</button></td></tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Niemand entschuldigt.</p>`):""}`}</div>
     <input id="aq" class="input" placeholder="Name, Gruppe oder Tisch suchen …" autocomplete="off" style="margin-bottom:6px">
     <p class="small muted" id="aqn" style="margin:0 0 6px">${ps.length} Personen</p>
     <div class="card scroll" style="padding:4px 8px"><table class="t" id="atbl"><tr><th>Name</th><th>Gruppe</th><th>Tisch</th><th>Platz</th><th>Typ</th><th>Menu</th><th>Apéro</th><th></th></tr>
     ${ps.map(p=>{const g=G(p.gruppe),s=[p.name,p.vorname,g?g.name:"ohne gruppe",p.tisch?"tisch "+p.tisch:"ohne tisch",TYP[p.typ]].join(" ").toLowerCase();
-      return`<tr data-s="${esc(s)}"><td><a href="#" data-act="findp" data-p="${p.id}">${esc(p.name)} ${esc(p.vorname)}</a>${isChef(p)?` <span class="chip b">${chefLbl(chefOf(p))}</span>`:""}</td><td>${g?esc(g.name):`<span class="muted">–</span>`} <a href="#" class="small" data-act="grpchg" data-p="${p.id}">ändern</a></td><td>${p.tisch||"–"}</td><td>${p.platz||`<span class="chip w">offen</span>`}</td><td>${TYP[p.typ]}</td><td>${p.menu==="vegi"?"Vegi":""}</td><td>${S.apero.has(p.id)?"✓":""}</td><td><button class="btn sm ghost" data-act="pab" data-p="${p.id}" title="Teilnehmer entschuldigen (abmelden)">entschuldigen</button></td></tr>`}).join("")}</table></div>
-    <div class="card"><div class="row between"><h3 style="margin:0">✉️ Entschuldigt${S.abgList?` (${S.abgList.length})`:""}</h3><button class="btn sm" data-act="pablist">${S.abgList?"aktualisieren":"anzeigen"}</button></div>
-    ${S.abgList?(S.abgList.length?`<table class="t" style="margin-top:6px">${S.abgList.map(x=>`<tr><td>${esc(x.name)} ${esc(x.vorname)}</td><td class="small muted">${esc(x.gruppe||"")}</td><td style="text-align:right"><button class="btn sm" data-act="pan" data-p="${x.id}">wieder anmelden</button></td></tr>`).join("")}</table>`:`<p class="small muted" style="margin:6px 0 0">Niemand entschuldigt.</p>`):`<p class="small muted" style="margin:6px 0 0">Abgemeldete Mitglieder (aus Webling «${EVENT_YEAR} Nein» oder hier entschuldigt).</p>`}</div>`}
+      return`<tr data-s="${esc(s)}"><td><a href="#" data-act="findp" data-p="${p.id}">${esc(p.name)} ${esc(p.vorname)}</a>${isChef(p)?` <span class="chip b">${chefLbl(chefOf(p))}</span>`:""}</td><td>${g?esc(g.name):`<span class="muted">–</span>`} <a href="#" class="small" data-act="grpchg" data-p="${p.id}">ändern</a></td><td>${p.tisch||"–"}</td><td>${p.platz||`<span class="chip w">offen</span>`}</td><td>${TYP[p.typ]}</td><td>${p.menu==="vegi"?"Vegi":""}</td><td>${S.apero.has(p.id)?"✓":""}</td><td><button class="btn sm ghost" data-act="pab" data-p="${p.id}" title="Teilnehmer entschuldigen (abmelden)">entschuldigen</button></td></tr>`}).join("")}</table></div>`}
 function adminTables(){
   const wv=violSet();let h=`<p class="muted small">Alle ${TABLES.length} Tische mit Belegung, sortiert nach Platz. ★ = Gruppenchef, ⚠ = Sitzwunsch nicht erfüllt.</p>`;
+  h+=`<div class="card" style="border-color:var(--brand)"><h3>Tische tauschen – Sitzordnung bleibt</h3><p class="small muted" style="margin:0 0 8px">Alle Personen von Tisch A sitzen danach am gleichen Platz an Tisch B und umgekehrt. Die Einteilung der Tischchefs geht nicht verloren, auch die zugeordneten Tische der Gruppen werden getauscht. Funktioniert auch bei fixierter Einteilung.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><input id="tsa" class="input" type="number" min="1" max="${TABLES.length}" placeholder="Tisch A" style="width:110px">⇄<input id="tsb" class="input" type="number" min="1" max="${TABLES.length}" placeholder="Tisch B" style="width:110px"><button class="btn sm primary" data-act="tswap">Tauschen</button></div></div>`;
   h+=`<div class="card"><h3>Tischgrössen</h3><p class="small muted" style="margin:0 0 8px">Pro Tisch 16 oder 12 Plätze. Total zurzeit <b>${capTotal()} Plätze</b> für ${S.people.length} Angemeldete (${capTotal()-S.people.length} frei). Wird ein Tisch verkleinert, verlieren Personen auf den Plätzen 13–16 ihren Platz und erscheinen unter «ohne Platz».</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px">${TABLES.map(t=>`<label class="small" style="display:flex;align-items:center;gap:4px">T${t.id}<select id="ts-${t.id}" class="input" style="padding:3px 4px;width:auto"><option value="16" ${tsize(t)===16?"selected":""}>16</option><option value="12" ${tsize(t)===12?"selected":""}>12</option></select></label>`).join("")}</div>
     <div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="tsave">Tischgrössen speichern</button></div></div>`;
@@ -1877,12 +1893,7 @@ function vAdminAlt(){
     <div class="chips" style="margin-bottom:10px">${oks.map(p=>`<span class="chip b">${esc(full(p))}${p.id===S.meId?"":` <button class="btn sm ghost" style="padding:0 4px" data-act="setrole" data-p="${p.id}" data-r="member" aria-label="OK-Recht entfernen">✕</button>`}</span>`).join("")||`<span class="muted small">Noch niemand.</span>`}</div>
     <input id="oksearch" class="input" placeholder="Mitglied suchen (mind. 2 Buchstaben) …" autocomplete="off">
     <div class="list" id="okresults" style="margin-top:6px"></div></div>`}
-  if(LIVE)h+=`<div class="card"><h3>Person hinzufügen</h3><p class="muted small">Für Ehrengäste und Gäste, die nicht in der Webling-Anmeldung stehen (z.B. am Gästetisch). Den Platz danach im Saalplan zuteilen. Hinweis: Ein neuer Teilnehmer-Import entfernt diese Einträge wieder.</p>
-    <div class="form2" style="grid-template-columns:1fr 1fr"><input id="apv" class="input" placeholder="Vorname"><input id="apn" class="input" placeholder="Name"></div>
-    <div class="form2" style="grid-template-columns:1fr 1fr;margin-top:8px"><select id="apt" class="input"><option value="ehrengast">Ehrengast</option><option value="sponsor">Sponsorgast</option><option value="aktiv">Sänger</option><option value="passiv">Passivmitglied</option></select>
-    <input id="apg" class="input" list="apglist" placeholder="Gruppe (z.B. Gästetisch)" value="Gästetisch"><datalist id="apglist">${S.groups.map(g=>`<option value="${esc(g.name)}">`).join("")}</datalist></div>
-    <input id="apf" class="input" placeholder="Funktion (optional, z.B. Gemeinderat Stadt Thun)" style="margin-top:8px">
-    <button class="btn sm primary" style="margin-top:8px" data-act="addperson">Hinzufügen</button></div>`;
+  if(LIVE)h+=`<div class="card soft small">Personen hinzufügen, abmelden und die Gruppe wechseln: <a href="#" data-act="atab" data-t="teilnehmer">Teilnehmer → «Teilnehmer bearbeiten»</a>.</div>`;
   if(LIVE)h+=`<div class="card"><h3>1. Zugangscodes importieren</h3><p class="muted small">CSV mit den Spalten <code>Mitglieder ID</code>, <code>Vorname</code>, <code>Name</code>, <code>Login-Code für App</code> hochladen (Webling-Export «Alle Mitglieder»). Zusätzlich übernommen werden, falls vorhanden: <code>E-Mail</code> (für «Ich brauche meinen Code» – der Code geht nur an diese Adresse), <code>Mitglied seit</code>, <code>Herrenabend-Tisch</code> und <code>Teilnahme Herrenabend</code> (für das Factsheet). Der Code wird verschlüsselt gespeichert.</p>
     ${S.stats&&S.stats.with_code>2?`<div class="okmsg" style="margin:0 0 10px">✓ In der Datenbank: <b>${S.stats.members} Mitglieder</b>, ${S.stats.with_code} Zugangscodes insgesamt (inkl. Admin und Zusatzcodes).${S.codeInfo?`<br>Letzter Import: ${S.codeInfo.neu} neu, ${S.codeInfo.aktualisiert} aktualisiert.`:""}</div>`:""}
     ${S.busy?`<div class="note">⏳ ${esc(S.busy)}</div>`:""}
@@ -2013,6 +2024,12 @@ document.addEventListener("input",e=>{if(e.target.id!=="oksearch"||!LIVE)return;
     try{const res=await rpc("admin_search_members",{p_code:S.code,p_q:q});
       box.innerHTML=res.map(p=>`<div class="li" style="cursor:default"><div class="av">${ini(p)}</div><div class="grow"><div class="nm">${esc(p.name)} ${esc(p.vorname)}</div><div class="sub">${p.has_code?"mit Zugangscode":"ohne Zugangscode"}${p.angemeldet?" · angemeldet":""}</div></div>${p.role==="ok"?`<span class="chip g">OK</span>`:`<button class="btn sm primary" data-act="setrole" data-p="${p.id}" data-r="ok">OK-Recht geben</button>`}</div>`).join("")||`<p class="muted small">Niemand gefunden.</p>`}
     catch(err){box.innerHTML=`<p class="muted small">${esc(err.message)}</p>`}},300)});
+/* Teilnehmer bearbeiten: nicht angemeldete Mitglieder suchen (Nachmelden) */
+let nrT=null;document.addEventListener("input",e=>{if(e.target.id!=="nrq"||!LIVE)return;clearTimeout(nrT);const q=e.target.value.trim();
+  nrT=setTimeout(async()=>{const box=$("#nrres");if(!box)return;if(q.length<2){box.innerHTML="";return}
+    try{const res=await rpc("admin_search_nonreg",{p_code:S.code,p_q:q});
+      box.innerHTML=res.map(p=>`<div class="li" style="cursor:default"><div class="av">${ini(p)}</div><div class="grow"><div class="nm">${esc(p.name)} ${esc(p.vorname)}</div><div class="sub">${p.gruppe?esc(p.gruppe):"ohne Tischgruppe"}${p.abgemeldet?" · entschuldigt":""}</div></div><button class="btn sm primary" data-act="pnach" data-p="${p.id}" data-g="${esc(p.gruppe||"")}" data-n="${esc(p.vorname+" "+p.name)}">anmelden</button></div>`).join("")||`<p class="muted small">Niemand gefunden (oder bereits angemeldet).</p>`}
+    catch(err){box.innerHTML=`<p class="muted small">${esc(err.message)}</p>`}},300)});
 document.addEventListener("input",e=>{if(e.target.id==="q")renderPeople();if(e.target.id==="aq"){const q=e.target.value.toLowerCase().trim();let n=0;document.querySelectorAll("#atbl tr[data-s]").forEach(r=>{const v=!q||r.dataset.s.includes(q);r.style.display=v?"":"none";if(v)n++});const c=$("#aqn");if(c)c.textContent=n+" Personen"}});
 document.addEventListener("change",e=>{
   const el=e.target;
@@ -2032,7 +2049,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.38"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.40"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
@@ -2349,6 +2366,14 @@ A.pab=async d=>{const p=P(d.p);if(!p)return;const chef=isChef(p);
   if(!confirm(`${p.vorname} ${p.name} entschuldigen?\n\nDie Anmeldung wird aufgehoben, Tisch und Platz werden frei.${chef?"\n\nAchtung: Er ist Tischchef – bitte danach einen neuen Tischchef bestimmen.":""}\nIn Webling wird «Teilnahme Herrenabend» auf «${EVENT_YEAR} Nein» gesetzt.`))return;
   try{await rpc("admin_abmelden",{p_code:S.code,p_person:p.id,p_ab:true});const w=await weblingTeilnahme(p.id,false);S.abgList=null;await loadLive();render();
     toast(`${p.vorname} ${p.name} entschuldigt${w?" – Webling: "+w:" (auch in Webling)"}`)}catch(e){toast(e.message)}};
+A.ptab=d=>{S.pTab=d.k;if(d.k==="ab"&&!S.abgList)A.pablist();else render()};
+A.pabname=()=>{const v=($("#abp")?.value||"").trim().toLowerCase();if(!v)return toast("Bitte eine Person wählen");
+  const p=S.people.find(x=>(x.name+" "+x.vorname).toLowerCase()===v)||S.people.find(x=>(x.vorname+" "+x.name).toLowerCase()===v);if(!p)return toast("Person nicht gefunden – bitte aus der Liste wählen");A.pab({p:p.id})};
+A.pnach=async d=>{const g=prompt(`${d.n} anmelden.\n\nTischgruppe (leer lassen = ohne Gruppe):`,d.g||"");if(g===null)return;
+  try{await rpc("admin_abmelden",{p_code:S.code,p_person:d.p,p_ab:false});if(g.trim())await rpc("admin_set_group",{p_code:S.code,p_person:d.p,p_group:g.trim(),p_clear_seat:true});
+    const w=await weblingTeilnahme(d.p,true);await loadLive();allocateGroups(null,{keep:true});
+    await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});await loadLive();S.abgList=null;render();
+    const p=P(d.p);toast(`${d.n} angemeldet${p&&p.platz?` – Tisch ${p.tisch}, Platz ${p.platz}`:" – Platz im Saalplan zuteilen"}${w?" · Webling: "+w:" (auch in Webling)"}`)}catch(e){toast(e.message)}};
 A.pablist=async()=>{try{S.abgList=await rpc("admin_list_abgemeldet",{p_code:S.code});render()}catch(e){toast(e.message)}};
 A.pan=async d=>{const x=(S.abgList||[]).find(a=>a.id===d.p);if(!confirm(`${x?x.vorname+" "+x.name:"Person"} wieder anmelden?\nIn Webling wird «${EVENT_YEAR} Ja» gesetzt. Den Platz teilt die App danach bei seiner Gruppe zu (Saalplan).`))return;
   try{await rpc("admin_abmelden",{p_code:S.code,p_person:d.p,p_ab:false});const w=await weblingTeilnahme(d.p,true);await loadLive();allocateGroups(null,{keep:true});
@@ -2371,13 +2396,34 @@ A.chefapero=d=>{const on=d.on==="1";
   if(on)S.apero.add(d.p);else S.apero.delete(d.p);render()};
 A.glsave=d=>{const g=G(d.g);if(!g)return;const tis=[...new Set(($("#gt-"+d.g).value||"").split(/[^0-9]+/).filter(Boolean).map(t=>String(+t)))],pl=+$("#gp-"+d.g).value||null,st=$("#gs-"+d.g).value;
   const bad=tis.filter(t=>!T(t));if(bad.length)return toast("Unbekannter Tisch: "+bad.join(", "));
-  const changed=tis.join(",")!==(g.tische||[]).join(","),ask=()=>{const g2=G(d.g);if(!changed||!g2||!tis.length||!members(g2).length)return;
+  const oldT=(g.tische||[]).map(String),changed=tis.join(",")!==oldT.join(","),ask=()=>{const g2=G(d.g);if(!changed||!g2||!tis.length||!members(g2).length)return;
+    /* Sitzordnung mitnehmen: gleiche Anzahl Tische, Zielplätze frei → jeder behält seine Position am Tisch */
+    const ms=members(g2).filter(p=>p.platz&&oldT.includes(String(p.tisch)));
+    if(oldT.length===tis.length&&ms.length){const map=new Map(oldT.map((t,i)=>[t,tis[i]]));
+      const tgt=p=>{const nt=map.get(String(p.tisch)),off=p.platz-T(String(p.tisch)).start;return{t:nt,pl:T(nt).start+off,ok:off<tsize(T(nt))}};
+      const occ=new Set(S.people.filter(p=>p.platz&&!ms.includes(p)).map(p=>p.platz));const plan=ms.map(p=>({p,...tgt(p)}));
+      if(plan.every(x=>x.ok&&!occ.has(x.pl))){if(confirm(`${g2.name}: Sitzordnung an Tisch ${tis.join(", ")} mitnehmen?\nJeder behält seine Position am Tisch – die Einteilung des Tischchefs bleibt erhalten.`)){
+        const fn=()=>{for(const x of plan){x.p.tisch=x.t;x.p.platz=x.pl}if(!S.seatsLocked)allocateGroups(null,{keep:true})};
+        if(LIVE)saveSeatsAll(fn);else{fn();render();toast(`${g2.name}: Sitzordnung übernommen`)}return}}
+      else if(!confirm(`${g2.name}: An den neuen Tischen sitzen schon andere Personen.\nTipp: Mit «Tische tauschen» (oben im Register Tische) bleiben die Sitzordnungen beider Gruppen erhalten.\n\nTrotzdem neu platzieren?`))return}
     if(S.seatsLocked)return toast("Tische gespeichert. Die Einteilung ist fixiert – Personen bei Bedarf im Saalplan von Hand umsetzen.");
     if(!confirm(`${g2.name} jetzt an Tisch ${tis.join(", ")} setzen?\nNur diese Gruppe wird neu platziert – alle anderen bleiben, wo sie sind.`))return;
     const fn=()=>{for(const p of members(g2)){p.tisch=null;p.platz=null}allocateGroups(null,{keep:true})};
     if(LIVE)saveSeatsAll(fn);else{fn();render();toast(`${g2.name} neu platziert`)}};
   if(LIVE){call("admin_save_group_layout",{p_group:d.g,p_tische:tis,p_plaetze:pl,p_standort:st},`${g.name}: gespeichert`).then(ask).catch(()=>{});return}
   g.tische=tis;g.plaetze=pl;g.standort=st;render();toast(`${g.name}: gespeichert`);ask()};
+/* Tische tauschen mit Sitzordnung (Personen und zugeordnete Gruppentische) */
+A.tswap=async()=>{const a=String(+$("#tsa").value||""),b=String(+$("#tsb").value||"");if(!T(a)||!T(b)||a===b)return toast("Bitte zwei verschiedene, gültige Tische angeben");
+  const ta=T(a),tb=T(b),pa=S.people.filter(p=>String(p.tisch)===a&&p.platz),pb=S.people.filter(p=>String(p.tisch)===b&&p.platz);
+  const off=(p,t)=>p.platz-t.start,tooBig=[...pa.filter(p=>off(p,ta)>=tsize(tb)),...pb.filter(p=>off(p,tb)>=tsize(ta))];
+  if(tooBig.length)return toast(`Tischgrössen passen nicht (${tooBig.length} Personen auf Platz 13–16) – zuerst Tischgrösse angleichen`);
+  const ga=S.groups.filter(g=>(g.tische||[]).map(String).includes(a)),gb=S.groups.filter(g=>(g.tische||[]).map(String).includes(b));
+  if(!confirm(`Tisch ${a} (${pa.length} Pers.${ga.length?" · "+ga.map(g=>g.name).join(", "):""}) und Tisch ${b} (${pb.length} Pers.${gb.length?" · "+gb.map(g=>g.name).join(", "):""}) tauschen?\nJeder behält seine Position am Tisch.`))return;
+  for(const p of pa){p.tisch=+b;p.platz=tb.start+off(p,ta)}for(const p of pb){p.tisch=+a;p.platz=ta.start+off(p,tb)}
+  const sw=t=>t===a?b:t===b?a:t;
+  try{for(const g of [...new Set([...ga,...gb])]){const nt=(g.tische||[]).map(String).map(sw);if(LIVE)await rpc("admin_save_group_layout",{p_code:S.code,p_group:g.id,p_tische:nt,p_plaetze:g.plaetze||null,p_standort:g.standort||""});g.tische=nt}
+    if(LIVE){await rpc("admin_save_seats",{p_code:S.code,p_rows:S.people.filter(p=>p.platz).map(p=>({id:p.id,tisch:+p.tisch,platz:p.platz}))});await loadLive()}
+    render();toast(`Tisch ${a} ⇄ Tisch ${b} getauscht – Sitzordnung bleibt`)}catch(e){toast(e.message);if(LIVE){await loadLive().catch(()=>{});render()}}};
 A.cpsave=()=>{const g=S.chefGrp;const pl=+$("#cpp").value||null,st=g.standort||"";
   rpc("chef_save_group_pref",{p_code:S.code,p_group:g.id,p_plaetze:pl,p_standort:st}).then(()=>{g.plaetze=pl;g.standort=st;toast("Gespeichert – das OK berücksichtigt euren Wunsch");render()}).catch(e=>toast(e.message))};
 A.cgsave=()=>{const z=$("#cgz").value.trim(),o=$("#cgo").value.trim();if(!z&&!o)return toast("Bitte Zeit oder Ort angeben");
