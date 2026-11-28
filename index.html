@@ -1450,7 +1450,7 @@ function vChefInfo(){
     <p class="small muted" style="margin:6px 0 0">Beispiel: Eine Gruppe mit 20 Personen teilt sich die Tische 9 und 16 – 14 Personen am rechten Ende von Tisch 9, 6 am linken Anfang von Tisch 16.</p></div>`;
   return back("start")+`<div class="row between noprint" style="margin-bottom:6px"><span></span><button class="btn sm primary" onclick="window.print()">🖨 Drucken / PDF</button></div>
   <p class="eyebrow">Herrenabend-App · ${EVENT.nr}. Herrenabend, ${esc(EVENT.datum)}</p><h1 style="margin:0 0 6px">Merkblatt für Tischchefs</h1>
-  <p>Als Tischchef bist du Ansprechperson deiner Tischgruppe. Die App nimmt dir dabei einiges ab: Du siehst, wer aus deiner Gruppe angemeldet ist und wer noch fehlt, legst den Apéro fest, verteilst ab dem 5. Dezember die Plätze selbst und bestellst am Abend den Wein für euren Tisch. In der App heisst deine Rolle «Gruppenchef» (beim Gästetisch «Tischchef»). Du siehst und bearbeitest immer nur deine eigene Gruppe.</p>
+  <p>Als Tischchef bist du Ansprechperson deiner Tischgruppe. Die App nimmt dir dabei einiges ab: Du siehst, wer aus deiner Gruppe angemeldet ist und wer noch fehlt, erinnerst und informierst deine Leute per E-Mail, legst den Apéro fest, ordnest die Plätze deiner Gruppe von Hand, sobald das OK die Tischeinteilung freigeschaltet hat, und bestellst am Abend den Wein für euren Tisch. In der App heisst deine Rolle «Gruppenchef» (beim Gästetisch «Tischchef»). Du siehst und bearbeitest immer nur deine eigene Gruppe.</p>
   <div class="card" style="border-color:var(--brand)"><h3 style="margin:0 0 4px">So kommst du in deinen Bereich</h3>
     <p class="small" style="margin:0 0 6px">Öffne die App über deinen persönlichen Link oder den QR-Code: <b>herrenabend.maennerchorthun.ch</b>. Auf der Startseite erscheint die Karte «Gruppenchef · Name deiner Tischgruppe» – dort findest du alles, was nur du siehst. Tipp: «Zum Home-Bildschirm hinzufügen» (iPhone: in Safari) – dann bist du jederzeit mit einem Tipp drin.</p>
     <p class="small" style="margin:0">Code verlegt oder nie erhalten? Auf der Startseite <b>«Nein – ich brauche meinen Code»</b> wählen und Vorname, Name und E-Mail eingeben. Stimmt die E-Mail mit dem Mitgliederverzeichnis überein, kommt der Code mit Link per Mail. Das gilt auch für die Mitglieder deiner Gruppe.</p></div>
@@ -1460,11 +1460,15 @@ function vChefInfo(){
     "Die Liste zeigt den Stand der Anmeldungen beim OK. Fehlt jemand oder ist jemand falsch zugeteilt, melde es dem OK über «Feedback»."])}</div>
   <div class="card"><b>Factsheet: neu dabei & wer fehlt</b>${li([
     "«📋 Factsheet» in deiner Karte zeigt, wer <b>zum ersten Mal dabei</b> ist (Eintritt ab 7.12.2025) – ein herzliches Willkommen am Tisch freut sie bestimmt.",
-    "Dazu, wer aus deiner Tischgruppe <b>noch nicht angemeldet</b> ist (vielleicht lohnt sich ein Anruf) und wer sich <b>entschuldigt</b> hat.",
+    "Dazu, wer aus deiner Tischgruppe <b>noch nicht angemeldet</b> ist und wer sich <b>entschuldigt</b> hat.",
+    "<b>Erinnern per E-Mail:</b> Die noch nicht Angemeldeten ankreuzen und «✉️ Ausgewählte per E-Mail erinnern» tippen. Der Text ist vorbereitet und anpassbar, jeder erhält seinen persönlichen App-Link, Antworten kommen direkt zu dir. Pro Person höchstens einmal am Tag; danach steht «erinnert am …».",
     "Das Factsheet lässt sich drucken – mit QR-Code zur App für alle, die noch keinen Zugang haben. Es ist vertraulich und nur für dich und das OK."])}</div>
+  <div class="card"><b>✉️ Mail an meine Gruppe</b>${li([
+    "Mit «✉️ Mail an meine Gruppe» in deiner Karte schreibst du wahlweise <b>allen Angemeldeten</b>, der <b>ganzen Tischgruppe</b> (Angemeldete und noch nicht Angemeldete) oder <b>nur den noch nicht Angemeldeten</b>.",
+    "{vorname} und {link} werden pro Person ersetzt – jeder erhält seinen persönlichen Zugang zur App. Antworten kommen direkt zu dir. Vorher kannst du dir eine Testmail schicken."])}</div>
   <div class="card"><b>Apéro</b>${li([
     `Der Apéro für alle beginnt um ${esc(EVENT.apero)} Uhr, ${esc(EVENT.aperoOrt)}.`,
-    "Trifft sich deine Gruppe vorher separat, legst du unter «Apéro» Zeit und Ort eures Gruppen-Apéros fest. Nur die Mitglieder deiner Tischgruppe sehen ihn – sofort nach dem Speichern.",
+    "Trifft sich deine Gruppe vorher separat, legst du unter «Apéro» Zeit und Ort eures Gruppen-Apéros fest. Nur die Mitglieder deiner Tischgruppe sehen ihn – sofort nach dem Speichern und ganz oben im roten Feld der Apéro-Seite.",
     "Ebenfalls dort meldest du Personen deiner Gruppe zum Apéro an oder ab – auch dich selbst, oder wenn jemand nicht selber in die App schaut."])}</div>
   <div class="card"><b>Anzahl Plätze</b>${li([
     "Gib an, wie viele Plätze eure Tischgruppe braucht – inklusive Personen, die sich noch anmelden. Diese Plätze hält das OK für euch frei.",
@@ -1477,14 +1481,16 @@ function vChefInfo(){
   ${sk}
   <div class="card">${li([
     "Einmal vergebene Plätze bleiben. Neue Anmeldungen setzt die App auf freie Plätze bei eurer Gruppe – die anderen werden nicht umgemischt. Wer sich abmeldet, gibt seinen Platz frei.",
-    "Tisch und Platz siehst du, sobald das OK die Tischeinteilung freischaltet. Alle Teilnehmer sehen ihren Platz ab der Event-Version am 5. Dezember."])}</div>
-  ${H(3,"Ab 5. Dezember (Event-Version)")}
-  <div class="card"><p class="small" style="margin:0 0 4px">Jetzt erscheint die Kachel «Meine Gruppe». Du siehst und verwaltest nur deine eigene Gruppe:</p>${li([
+    "Tisch und Platz siehst du, sobald das OK die Tischeinteilung freischaltet. Alle Teilnehmer sehen ihren Platz ab der Event-Version am 5. Dezember.",
+    "Ändert das OK die Position eurer Tische im Saal oder tauscht es Tische zwischen Gruppen, bleibt deine Sitzordnung erhalten – jeder behält seine Position am Tisch."])}</div>
+  ${H(3,"Sobald die Tischeinteilung freigeschaltet ist")}
+  <div class="card"><p class="small" style="margin:0 0 4px">In deiner Karte erscheint der Knopf <b>«🪑 Saalplan & Sitzordnung meiner Gruppe öffnen»</b> – schon vor dem 5. Dezember. Damit kommst du in den Saalplan und unter «Meine Gruppe». Du siehst und verwaltest nur deine eigene Gruppe. <b>Die Plätze ordnest du von Hand</b> – die App setzt niemanden automatisch um:</p>${li([
     "<b>Übersicht:</b> alle Personen mit Tisch, Platz und Menü (normal/vegetarisch), die Tische eurer Gruppe und mit wem ihr den Tisch teilt.",
-    "<b>Plätze setzen und tauschen:</b> Im Saalplan einen Platz eurer Gruppe antippen und Personen setzen oder tauschen – auch zwischen euren Tischen, wenn die Gruppe geteilt ist (z.B. Tisch 9 ↔ Tisch 16). Plätze anderer Gruppen sind gesperrt. Wer noch keinen Platz hat, setzt du mit «ohne Platz auf freie Plätze setzen» mit einem Tipp.",
+    "<b>Plätze setzen und tauschen:</b> Im Saalplan einen Platz eurer Gruppe antippen und Personen setzen oder tauschen – auch zwischen euren Tischen, wenn die Gruppe geteilt ist (z.B. Tisch 9 ↔ Tisch 16). Plätze anderer Gruppen sind gesperrt. Wer noch keinen Platz hat, setzt du auf einen freien Platz eurer Gruppe.",
     "<b>Sitzwünsche:</b> Erfasse, wer neben wem sitzen möchte – oder wer nicht. «Neben» heisst direkt links oder rechts. Die Plätze tauschst du danach von Hand im Saalplan; ⚠ zeigt, wo ein Wunsch noch nicht erfüllt ist. Die Wünsche sehen nur du und das OK.",
     "<b>Wein bestellen:</b> Du bestellst den Wein für euren Tisch direkt in der App – die Bestellung geht sofort an den Service. Mitglieder deiner Gruppe können dir Weine vorschlagen; ihre Wünsche erscheinen bei dir. Du siehst alle Bestellungen eurer Gruppe mit Total.",
-    "<b>Factsheet und Gruppen-Apéro</b> kannst du weiterhin ansehen bzw. anpassen."])}</div>
+    "<b>Factsheet, Mail an meine Gruppe und Gruppen-Apéro</b> kannst du weiterhin nutzen bzw. anpassen.",
+    "<b>An-, Ab- und Ummeldungen</b> (jemand kommt doch, sagt ab oder wechselt die Tischgruppe) meldest du dem OK – es führt das zentral nach, auch in Webling."])}</div>
   ${H(4,"Am Abend")}
   <div class="card">${li([
     "Weinbestellung bitte vor 18:30 Uhr aufgeben – während der Darbietungen wird nicht serviert.",
@@ -2050,7 +2056,7 @@ document.addEventListener("change",e=>{
 /* ================= Live-Daten (Supabase) =================
    Zugriff nur über geprüfte Funktionen mit dem persönlichen Code – kein direkter Tabellenzugriff.
    Zum Vorführen mit Demo-Daten: URL-Zusatz ?demo=1 */
-const APP_VERSION="4.42"; /* bei jeder Änderung erhöhen */
+const APP_VERSION="4.43"; /* bei jeder Änderung erhöhen */
 const SUPA={url:"https://tvygwnawrkxdhzghxgfv.supabase.co",key:"sb_publishable_yO40Pv19n6Wq0Wh769VZCg_q9BRTBvd"};
 /* Tischgruppen kommen aus den Webling-Gruppen unter «Herrenabendtische» (nicht aus dem Feld «Herrenabend-Tisch») */
 const WEBLING_FN=SUPA.url+"/functions/v1/chor-webling";
